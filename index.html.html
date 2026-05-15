@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<!-- saved from url=(0060)file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html -->
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE STEPPER - 태권도 겨루기 클럽</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+:root{--red:#C8102E;--yellow:#FFE000;--navy:#0033A0;--black:#0a0a0a;--dark:#111;--gray:#1a1a1a;--white:#fff}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.96);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);padding:0 40px;height:70px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:14px;text-decoration:none}
+.nav-logo img{width:46px;height:46px;object-fit:contain}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--yellow)}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:#aaa;text-decoration:none;font-size:13px;font-weight:500;letter-spacing:1px;transition:color 0.2s}
+.nav-links a:hover{color:var(--yellow)}
+.nav-cta{background:var(--red)!important;color:var(--white)!important;padding:8px 20px;border-radius:4px;font-weight:700!important}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:100px 40px 60px}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(200,16,46,0.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(0,51,160,0.12) 0%,transparent 60%),var(--black)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:60px 60px}
+.hero-content{position:relative;z-index:2;text-align:center;max-width:900px}
+.hero-badge{display:inline-block;background:rgba(200,16,46,0.15);border:1px solid rgba(200,16,46,0.4);color:var(--red);font-size:11px;font-weight:700;letter-spacing:3px;padding:6px 20px;border-radius:20px;margin-bottom:28px;animation:fadeUp 0.8s ease forwards}
+.hero-logo-wrap{display:flex;justify-content:center;margin-bottom:28px;animation:fadeUp 0.8s 0.1s ease both}
+.hero-logo-wrap img{width:150px;height:150px;object-fit:contain;filter:drop-shadow(0 0 40px rgba(200,16,46,0.4))}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,11vw,130px);letter-spacing:8px;color:var(--white);line-height:0.9;animation:fadeUp 0.8s 0.2s ease both}
+.hero-title span{color:var(--yellow)}
+.hero-slogan{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,4vw,42px);color:var(--red);letter-spacing:4px;margin-top:20px;animation:fadeUp 0.8s 0.3s ease both}
+.hero-sub{font-family:'Black Han Sans',sans-serif;font-size:clamp(14px,2.5vw,22px);color:#aaa;margin-top:12px;letter-spacing:3px;animation:fadeUp 0.8s 0.35s ease both}
+.hero-personal-slogan{font-size:14px;color:#555;margin-top:16px;line-height:1.8;font-style:italic;animation:fadeUp 0.8s 0.4s ease both;border-left:2px solid var(--red);padding-left:16px;text-align:left;max-width:520px;margin-left:auto;margin-right:auto}
+.hero-btns{display:flex;gap:16px;justify-content:center;margin-top:36px;flex-wrap:wrap;animation:fadeUp 0.8s 0.5s ease both}
+.btn-primary{background:var(--red);color:var(--white);padding:16px 40px;font-size:15px;font-weight:700;border:none;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s}
+.btn-primary:hover{background:#a50d24;transform:translateY(-2px)}
+.btn-outline{background:transparent;color:var(--white);padding:16px 40px;font-size:15px;font-weight:700;border:2px solid #333;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s}
+.btn-outline:hover{border-color:var(--yellow);color:var(--yellow);transform:translateY(-2px)}
+.hero-stats{display:flex;gap:48px;justify-content:center;margin-top:56px;padding-top:40px;border-top:1px solid #1e1e1e;animation:fadeUp 0.8s 0.6s ease both;flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--yellow);letter-spacing:2px;line-height:1}
+.stat-label{font-size:12px;color:#555;letter-spacing:2px;margin-top:4px}
+section{padding:100px 40px;max-width:1200px;margin:0 auto}
+.section-tag{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:16px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,6vw,72px);letter-spacing:4px;line-height:1;margin-bottom:20px}
+.section-title span{color:var(--yellow)}
+.section-desc{font-size:15px;color:#666;line-height:1.8;max-width:600px}
+.divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,#222,transparent)}
+.philosophy-video-section{background:var(--dark);padding:80px 0}
+.philosophy-video-inner{max-width:900px;margin:0 auto;padding:0 40px;text-align:center}
+.video-wrap{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin-top:40px;border:1px solid #222}
+.video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+.seminar-videos{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px}
+.about-wrap{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.about-points{margin-top:40px;display:flex;flex-direction:column;gap:24px}
+.about-point{display:flex;gap:20px;align-items:flex-start}
+.point-num{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--red);opacity:0.4;line-height:1;min-width:40px}
+.point-title{font-weight:700;font-size:15px;margin-bottom:6px}
+.point-text{font-size:13px;color:#666;line-height:1.7}
+.about-card{background:var(--gray);border:1px solid #222;border-radius:12px;padding:40px;position:relative;overflow:hidden}
+.about-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--yellow))}
+.about-card-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--yellow);margin-bottom:24px}
+.philosophy-text{font-size:14px;color:#888;line-height:2;border-left:2px solid var(--red);padding-left:20px;font-style:italic}
+.accordion-item{background:var(--black);border:1px solid #1e1e1e;border-radius:8px;margin-bottom:10px;overflow:hidden;transition:border-color 0.2s}
+.accordion-item:hover{border-color:#333}
+.accordion-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;cursor:pointer;user-select:none}
+.accordion-title{font-weight:700;font-size:15px;color:var(--white)}
+.accordion-subtitle{font-size:12px;color:#555;margin-top:4px}
+.accordion-arrow{font-size:18px;color:#444;transition:transform 0.3s;flex-shrink:0;margin-left:12px}
+.accordion-arrow.open{transform:rotate(180deg);color:var(--red)}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height 0.4s ease}
+.accordion-body.open{max-height:2000px}
+.accordion-content{padding:0 24px 24px}
+.stage-badge{background:rgba(200,16,46,0.15);color:var(--red);font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;margin-right:12px;letter-spacing:1px;flex-shrink:0;white-space:nowrap}
+.card-items{list-style:none;display:flex;flex-direction:column;gap:8px}
+.card-items li{font-size:13px;color:#666;padding-left:14px;position:relative;line-height:1.6}
+.card-items li::before{content:'-';position:absolute;left:0;color:var(--red)}
+.schedule-section{background:var(--dark);padding:100px 0}
+.schedule-inner{max-width:1200px;margin:0 auto;padding:0 40px}
+.schedule-tabs{display:flex;gap:12px;margin-top:32px;margin-bottom:16px;flex-wrap:wrap}
+.schedule-tab{padding:10px 24px;border-radius:20px;border:1px solid #2a2a2a;background:transparent;color:#666;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Noto Sans KR',sans-serif}
+.schedule-tab.active{background:var(--red);border-color:var(--red);color:#fff}
+.schedule-panel{display:none}
+.schedule-panel.active{display:block}
+.schedule-item{background:var(--black);border:1px solid #1e1e1e;border-radius:8px;padding:20px 24px;margin-bottom:12px;position:relative;transition:border-color 0.2s}
+.schedule-item:hover{border-color:#333}
+.schedule-item.upcoming{border-color:rgba(200,16,46,0.3);background:rgba(200,16,46,0.04)}
+.schedule-item.upcoming::before{content:'예정';position:absolute;top:16px;right:16px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:1px}
+.schedule-date{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--yellow);letter-spacing:2px;margin-bottom:6px}
+.schedule-title{font-weight:700;font-size:14px;margin-bottom:4px}
+.schedule-detail{font-size:12px;color:#555;line-height:1.7}
+.training-info{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:24px}
+.training-info-item{text-align:center;padding:20px;background:rgba(0,0,0,0.3);border-radius:8px}
+.training-info-label{font-size:11px;color:#444;letter-spacing:2px;margin-bottom:8px}
+.training-info-value{font-size:14px;font-weight:700;color:var(--white);line-height:1.5}
+.curriculum-section{background:var(--black);padding:100px 0}
+.curriculum-inner{max-width:1200px;margin:0 auto;padding:0 40px}
+.youtube-section{text-align:center}
+.youtube-btn{display:inline-flex;align-items:center;gap:12px;background:#FF0000;color:var(--white);padding:18px 40px;border-radius:50px;font-size:16px;font-weight:700;text-decoration:none;margin-top:40px;transition:all 0.2s}
+.youtube-btn:hover{background:#cc0000;transform:translateY(-2px)}
+.contact-section{background:var(--dark);padding:100px 0}
+.contact-inner{max-width:1200px;margin:0 auto;padding:0 40px}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:60px;align-items:start}
+.contact-card{background:var(--black);border:1px solid #1e1e1e;border-radius:12px;padding:40px;transition:border-color 0.3s;margin-bottom:20px}
+.contact-card:hover{border-color:var(--red)}
+.contact-card-icon{font-size:24px;margin-bottom:16px}
+.contact-card-title{font-weight:700;font-size:18px;margin-bottom:8px}
+.contact-card-desc{font-size:13px;color:#666;line-height:1.7;margin-bottom:20px}
+.contact-phone{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);letter-spacing:3px}
+.contact-note{font-size:11px;color:#444;margin-top:6px;letter-spacing:1px}
+.ai-coming{background:linear-gradient(135deg,rgba(200,16,46,0.1),rgba(0,51,160,0.1));border:1px solid rgba(200,16,46,0.2);border-radius:12px;padding:40px;text-align:center}
+.ai-badge{display:inline-block;background:rgba(255,224,0,0.1);border:1px solid rgba(255,224,0,0.3);color:var(--yellow);font-size:10px;font-weight:700;letter-spacing:3px;padding:4px 16px;border-radius:20px;margin-bottom:20px}
+.ai-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;margin-bottom:12px}
+.ai-desc{font-size:13px;color:#666;line-height:1.7}
+footer{background:var(--black);border-top:1px solid #1a1a1a;padding:40px;text-align:center}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+.footer-sub{font-size:11px;color:#333;letter-spacing:3px;margin-bottom:16px}
+.footer-copy{font-size:11px;color:#2a2a2a}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){nav{padding:0 20px}.nav-links{display:none}.about-wrap,.contact-grid,.seminar-videos,.training-info{grid-template-columns:1fr}section{padding:60px 20px}.curriculum-inner,.contact-inner,.schedule-inner,.philosophy-video-inner{padding:0 20px}.hero-stats{gap:24px}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#" class="nav-logo">
+    <img src="./THE STEPPER - 태권도 겨루기 클럽_files/1778305222910.png" alt="THE STEPPER">
+    <span class="nav-brand">THE STEPPER</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#about">소개</a></li>
+    <li><a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#schedule">일정</a></li>
+    <li><a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#curriculum">커리큘럼</a></li>
+    <li><a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#youtube">유튜브</a></li>
+    <li><a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#contact" class="nav-cta">문의하기</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-bg"></div><div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">TAEKWONDO COMPETITION CLUB · SINCE 2021 · KOREA</div>
+    <div class="hero-logo-wrap">
+      <img src="./THE STEPPER - 태권도 겨루기 클럽_files/1778305222910.png" alt="THE STEPPER 로고">
+    </div>
+    <h1 class="hero-title">THE<br><span>STEPPER</span></h1>
+    <div class="hero-slogan">Move Fast, Kick Harder.</div>
+    <p class="hero-sub">더스텝퍼 태권도 겨루기 클럽</p>
+    <p class="hero-personal-slogan">"당신이 생각하는 한계는 내가 넘어서기 위한 출발선이다."</p>
+    <div class="hero-btns">
+      <a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#contact" class="btn-primary">세미나 신청</a>
+      <a href="file:///C:/Users/Vivobook%20Pro%2016X/Downloads/index_2.html#schedule" class="btn-outline">일정 보기</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-num">36+</div><div class="stat-label">전국 가맹점</div></div>
+      <div class="stat-item"><div class="stat-num">15</div><div class="stat-label">단계 커리큘럼</div></div>
+      <div class="stat-item"><div class="stat-num">2021</div><div class="stat-label">창단 연도</div></div>
+      <div class="stat-item"><div class="stat-num">KOR</div><div class="stat-label">종주국</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="philosophy-video-section">
+  <div class="philosophy-video-inner">
+    <div class="section-tag">OUR STORY</div>
+    <h2 class="section-title" style="text-align:center">우리는 <span>왜 이 길을</span> 선택했는가</h2>
+    <p class="section-desc" style="margin:0 auto;text-align:center">전통 태권도가 사라지고 있다. 더스텝퍼가 이 길을 선택한 이유입니다.</p>
+    <div class="video-wrap">
+      <iframe src="./THE STEPPER - 태권도 겨루기 클럽_files/z5Z5YlxJmbA.html" title="THE STEPPER 철학" allowfullscreen=""></iframe>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<section id="about">
+  <div class="about-wrap">
+    <div>
+      <div class="section-tag">ABOUT THE STEPPER</div>
+      <h2 class="section-title">왜 <span>더스텝퍼</span>인가</h2>
+      <p class="section-desc">전자 센서 호구 도입 이후 약 20년간 인파이터적 전술과 강한 기술들이 현역 세대에서 단절되어 왔습니다. 더스텝퍼는 그 기술들이 사라지기 전에 체계적으로 기록하고 전파합니다.</p>
+      <div class="about-points">
+        <div class="about-point"><div class="point-num">01</div><div><div class="point-title">사명감으로 만든 교육</div><div class="point-text">선수 출신 지도자가 몸으로 검증한 실전 겨루기 기술을 체계적으로 문서화했습니다.</div></div></div>
+        <div class="about-point"><div class="point-num">02</div><div><div class="point-title">기술과 스텝의 통합 교육</div><div class="point-text">발차기 하나를 배우면 바로 스텝과 연계해 전술을 만듭니다. 따로 배운 동작은 실전에서 쓸 수 없습니다.</div></div></div>
+        <div class="about-point"><div class="point-num">03</div><div><div class="point-title">전국 지도자 네트워크</div><div class="point-text">36개 가맹점과 함께 올바른 태권도 겨루기 교육을 전국에 보급하고 있습니다.</div></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="about-card">
+        <div class="about-card-title">교육 철학</div>
+        <p class="philosophy-text">"기술이 하나씩 더해질 때마다 전술의 경우의 수는 제곱으로 늘어납니다. 발차기와 스텝을 함께 배워야 하는 이유입니다. 하나의 기술을 배울 때마다 바로 전술로 연결합니다. 이것이 더스텝퍼 교육의 핵심 원칙입니다."</p>
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #222">
+          <div style="font-size:11px;color:#444;letter-spacing:2px;margin-bottom:8px">대표 / 캡틴 사범</div>
+          <div style="font-family:&#39;Bebas Neue&#39;,sans-serif;font-size:22px;letter-spacing:3px">KIMMINSEONG</div>
+          <div style="font-size:12px;color:#555;margin-top:4px">태권도 겨루기 선수 출신 · 전국 교육 지도자</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<div class="schedule-section" id="schedule">
+  <div class="schedule-inner">
+    <div class="section-tag">2026 SCHEDULE</div>
+    <h2 class="section-title">활동 <span>일정</span></h2>
+    <p class="section-desc">더스텝퍼의 세미나, 합동훈련, 행사 일정입니다.</p>
+
+    <div class="accordion-item" style="margin-top:40px;border-color:rgba(200,16,46,0.3);background:rgba(200,16,46,0.04)">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        <div><div class="accordion-title">성인팀 정기 훈련 참가 안내</div><div class="accordion-subtitle">매주 월요일 · 성인 누구나 참여 가능</div></div>
+        <div class="accordion-arrow">▼</div>
+      </div>
+      <div class="accordion-body">
+        <div class="accordion-content">
+          <p style="font-size:14px;color:#888;line-height:1.8;margin-bottom:20px">성인이라면 누구나 가입 후 훈련에 참여할 수 있습니다.</p>
+          <div class="training-info">
+            <div class="training-info-item"><div class="training-info-label">훈련 일정</div><div class="training-info-value">매주 월요일<br>밤 11:00~12:30</div></div>
+            <div class="training-info-item"><div class="training-info-label">장소</div><div class="training-info-value">부산·경남 지역<br>(문의 시 안내)</div></div>
+            <div class="training-info-item"><div class="training-info-label">참가 자격</div><div class="training-info-value">성인 누구나<br>가입 후 참여 가능</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="schedule-tabs">
+      <button class="schedule-tab active" onclick="switchTab(this,&#39;upcoming&#39;)">예정 일정</button>
+      <button class="schedule-tab" onclick="switchTab(this,&#39;past&#39;)">지난 일정</button>
+    </div>
+
+    <div id="upcoming" class="schedule-panel active">
+      <div class="schedule-item upcoming"><div class="schedule-date">MAY 16, 2026</div><div class="schedule-title">THE STEPPER 주니어 합동훈련</div><div class="schedule-detail">오전 10:00~12:00 전술 훈련 / 오후 2:00~4:00 스파링 친선 겨루기<br>능동중학교 · 경남 김해시 번화1로123번길 34-14</div></div>
+      <div class="schedule-item upcoming"><div class="schedule-date">MAY 19, 2026</div><div class="schedule-title">THE STEPPER 대구광역시 정기 세미나</div><div class="schedule-detail">오전 10:30~12:30<br>대구 범 태권도장 · 중앙대로 105길 25 오페라명작 B동 3층</div></div>
+      <div class="schedule-item upcoming"><div class="schedule-date">MAY 31, 2026</div><div class="schedule-title">THE STEPPER × 고수회 MOU 체결</div><div class="schedule-detail">태권도 사범회 고수회와 MOU 체결<br>경기도 수원</div></div>
+    </div>
+
+    <div id="past" class="schedule-panel">
+      <div class="schedule-item"><div class="schedule-date">APR 29, 2026</div><div class="schedule-title">THE STEPPER 충북 청주 정기 세미나</div><div class="schedule-detail">오전 10:00~12:00 · 경희대 명품 꿈나무 태권도 · 중고개로142번길 20</div></div>
+      <div class="schedule-item"><div class="schedule-date">APR 6, 2026</div><div class="schedule-title">THE STEPPER 부산·경남 정기 세미나</div><div class="schedule-detail">오전 11:00~13:00 · 태백 태권도 · 경남 김해시 계동로23번길 17</div></div>
+      <div class="schedule-item"><div class="schedule-date">MAR 18, 2026</div><div class="schedule-title">THE STEPPER 대구 정기 세미나</div><div class="schedule-detail">오전 10:00~12:00 · 아이비 태권도 (구지점) · 국가산단북로34길 74</div></div>
+      <div class="schedule-item"><div class="schedule-date">FEB 28, 2026</div><div class="schedule-title">THE STEPPER 범 태권도장 성인반 특강</div><div class="schedule-detail">오후 8:30~9:30 · 대구 범 태권도장</div></div>
+      <div class="schedule-item"><div class="schedule-date">FEB 9, 2026</div><div class="schedule-title">THE STEPPER 부산·경남 정기 세미나</div><div class="schedule-detail">밤 11:00~1:00 · 품 태권도장 (진영점) · 본산로 23-16</div></div>
+      <div class="schedule-item"><div class="schedule-date">JAN 30, 2026</div><div class="schedule-title">THE STEPPER 대구 정기 세미나</div><div class="schedule-detail">오전 10:00~12:00 · 대구 범 태권도장</div></div>
+      <div class="schedule-item"><div class="schedule-date">JAN 29, 2026</div><div class="schedule-title">THE STEPPER 주니어 친선 경기</div><div class="schedule-detail">오후 1:30~4:00 · 박종우 태권도장 (화명점) · 화명신도시로 209</div></div>
+      <div class="schedule-item"><div class="schedule-date">JAN 28, 2026</div><div class="schedule-title">THE STEPPER 충북 청주 정기 세미나</div><div class="schedule-detail">오전 10:00~12:00 · 경희대 명품 꿈나무 태권도</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="curriculum-section" id="curriculum">
+  <div class="curriculum-inner">
+    <div class="section-tag">CURRICULUM</div>
+    <h2 class="section-title">1~15단계 <span>커리큘럼</span></h2>
+    <p class="section-desc">각 단계를 눌러서 세부 내용을 확인하십시오.</p>
+    <div style="margin-top:48px">
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">01단계</span><span class="accordion-title">기초 스텝 &amp; 돌려차기</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>제자리 기본 스텝</li><li>전진 / 후진 원스텝</li><li>돌려차기 기본기</li><li>전진하며 돌려차기</li><li>연계: 원스텝 후 돌려차기</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">02단계</span><span class="accordion-title">붙여차기 &amp; 앞발 기술</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>붙여차기 (빠른발)</li><li>앞발 돌려차기</li><li>후진 원스텝 후 앞발 돌려차기</li><li>전진 원스텝 후 붙여차기</li><li>전진 / 후진 투스텝</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">03단계</span><span class="accordion-title">나래차기 &amp; 사이드 스텝</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>나래차기 (따블차기)</li><li>내려찍기</li><li>사이드 스텝</li><li>연계: 스텝 + 나래차기/내려찍기</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">04단계</span><span class="accordion-title">뒤차기 &amp; 뒤후려차기</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>뒤차기</li><li>뒤후려차기</li><li>연계: 전진 원스텝 후 공격 뒤차기</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">05단계</span><span class="accordion-title">런닝 발차기 &amp; 스텝 연결</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>런닝 발차기</li><li>짧은/긴 스텝 연결</li><li>사이드 스텝 방향 전환</li><li>앞/뒷 주먹 치기</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">06단계</span><span class="accordion-title">주먹 &amp; 커버링</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>앞 주먹 / 뒷 주먹 치기</li><li>팔 커버링</li><li>커버 후 발차기 연계</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">07단계</span><span class="accordion-title">회전 발차기 &amp; 템포 전술</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>돌개차기 (턴차기)</li><li>뒷발 주고 돌려차기</li><li>앞발 주고 돌려차기</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">08단계</span><span class="accordion-title">점프 발차기</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>점프 뒤차기</li><li>커트 발차기</li><li>자율 스텝 연계 훈련</li></ul></div></div></div>
+      <div class="accordion-item"><div class="accordion-header" onclick="toggleAccordion(this)"><div style="display:flex;align-items:center"><span class="stage-badge">09~15단계</span><span class="accordion-title">실전 전술 &amp; 겨루기 완성</span></div><div class="accordion-arrow">▼</div></div><div class="accordion-body"><div class="accordion-content"><ul class="card-items"><li>첫 번째 공격 타이밍</li><li>받아차기 &amp; 반격 전술</li><li>짧게/길게 차는 발차기</li><li>약속 겨루기 &amp; 스텝 겨루기</li><li>공/방 겨루기 완성</li></ul></div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<section id="youtube" class="youtube-section">
+  <div class="section-tag">YOUTUBE</div>
+  <h2 class="section-title">세미나 <span>현장 영상</span></h2>
+  <p class="section-desc" style="margin:0 auto">실제 세미나 현장을 직접 확인하십시오.</p>
+  <div class="seminar-videos">
+    <div class="video-wrap"><iframe src="./THE STEPPER - 태권도 겨루기 클럽_files/aMHA2mKyh8E.html" title="세미나1" allowfullscreen=""></iframe></div>
+    <div class="video-wrap"><iframe src="./THE STEPPER - 태권도 겨루기 클럽_files/hnRq2J1XRuA.html" title="세미나2" allowfullscreen=""></iframe></div>
+  </div>
+  <a href="https://www.youtube.com/@%ED%83%9C%EA%B6%8C%EB%AF%BC%EA%B5%AD" target="_blank" class="youtube-btn">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z"></path></svg>
+    태권민국 채널 전체 보기
+  </a>
+</section>
+
+<div class="divider"></div>
+
+<div class="contact-section" id="contact">
+  <div class="contact-inner">
+    <div class="section-tag">CONTACT</div>
+    <h2 class="section-title">세미나 &amp; <span>가맹 문의</span></h2>
+    <p class="section-desc">더스텝퍼 교육 세미나 참가 및 가맹점 문의는 아래 연락처로 연락주십시오.</p>
+    <div class="contact-grid">
+      <div>
+        <div class="contact-card"><div class="contact-card-icon">📞</div><div class="contact-card-title">세미나 신청</div><div class="contact-card-desc">정기 세미나 참가 신청 및 교육 일정 문의. 지도자 대상 세미나는 2개월에 1회, 2시간 진행됩니다.</div><div class="contact-phone">010-4304-7768</div><div class="contact-note">전화 또는 문자로 문의해주십시오</div></div>
+        <div class="contact-card"><div class="contact-card-icon">🥋</div><div class="contact-card-title">가맹점 문의</div><div class="contact-card-desc">더스텝퍼 가맹점 가입 및 교육 프로그램 도입 문의</div><div class="contact-phone">010-4304-7768</div><div class="contact-note">전화 또는 문자로 문의해주십시오</div></div>
+      </div>
+      <div>
+        <div class="ai-coming"><div class="ai-badge">COMING SOON</div><div class="ai-title">THE STEPPER<br>AI 교육 에이전트</div><p class="ai-desc">스텝, 발차기, 연계기술에 관한 질문을 하면 더스텝퍼 교육 데이터 기반으로 즉시 답변해드리는 AI 교육 시스템이 곧 오픈됩니다.</p><div style="margin-top:32px;padding:20px;background:rgba(0,0,0,0.3);border-radius:8px"><div style="font-size:12px;color:#444;margin-bottom:8px">예시 질문</div><div style="font-size:13px;color:#666;line-height:2">"나래차기가 잘 안돼요"<br>"받아차기 타이밍 잡는 법"<br>"붙여차기 속도가 느립니다"</div></div></div>
+        <div style="margin-top:20px;background:var(--black);border:1px solid #1e1e1e;border-radius:12px;padding:32px;text-align:center"><div style="font-size:11px;color:#444;letter-spacing:3px;margin-bottom:16px">전국 가맹점</div><div style="font-family:&#39;Bebas Neue&#39;,sans-serif;font-size:64px;color:var(--yellow);letter-spacing:2px">36+</div><div style="font-size:12px;color:#555;margin-top:4px">가맹점 위치 정보는 순차적으로 업데이트됩니다</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div style="display:flex;justify-content:center;margin-bottom:20px">
+    <img src="./THE STEPPER - 태권도 겨루기 클럽_files/1778305222910.png" alt="THE STEPPER" style="width:60px;height:60px;object-fit:contain">
+  </div>
+  <div class="footer-logo">THE STEPPER</div>
+  <div class="footer-sub">더스텝퍼 태권도 겨루기 클럽 · SINCE 2021 · KOREA</div>
+  <div class="footer-copy">© 2026 THE STEPPER. All rights reserved. | 대표: 김민성 | 문의: 010-4304-7768</div>
+</footer>
+
+<script>
+function toggleAccordion(header){
+  var body=header.nextElementSibling;
+  var arrow=header.querySelector('.accordion-arrow');
+  var isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  arrow.classList.toggle('open',!isOpen);
+}
+function switchTab(btn,tabId){
+  document.querySelectorAll('.schedule-tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.schedule-panel').forEach(function(p){p.classList.remove('active')});
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+</script>
+
+
+</body></html>

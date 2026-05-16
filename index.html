@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전국 가맹 도장 - THE STEPPER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+:root{--red:#C8102E;--yellow:#FFE000;--black:#0a0a0a;--dark:#111;--gray:#1a1a1a;--white:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;padding:0 24px;gap:16px}
+.nav-back{color:#aaa;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:color 0.2s}
+.nav-back:hover{color:var(--yellow)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--yellow)}
+
+.hero{padding:130px 24px 60px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(200,16,46,0.18),transparent 60%);position:relative;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px}
+.hero-inner{position:relative;z-index:2}
+.section-tag{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:12px}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,10vw,84px);letter-spacing:4px;color:var(--white);margin-bottom:16px;line-height:1}
+.page-title span{color:var(--yellow)}
+.page-desc{font-size:14px;color:#666;line-height:1.8;max-width:480px;margin:0 auto 32px}
+.stats-row{display:flex;justify-content:center;gap:40px;flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--yellow);line-height:1}
+.stat-label{font-size:11px;color:#555;letter-spacing:2px;margin-top:4px}
+
+/* 지역 탭 필터 */
+.filter-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:32px 24px 0;max-width:900px;margin:0 auto}
+.filter-btn{padding:8px 20px;border-radius:20px;border:1px solid #2a2a2a;background:transparent;color:#666;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Noto Sans KR',sans-serif}
+.filter-btn:hover{border-color:#555;color:#ccc}
+.filter-btn.active{background:var(--red);border-color:var(--red);color:#fff}
+
+/* 메인 레이아웃 */
+.main-layout{display:grid;grid-template-columns:1fr 420px;gap:0;max-width:1300px;margin:32px auto 0;padding:0 20px 80px}
+
+/* 도장 목록 */
+.dojang-list{padding-right:24px}
+.region-section{margin-bottom:40px}
+.region-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--white);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.region-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#222,transparent)}
+.region-badge{background:rgba(200,16,46,0.15);border:1px solid rgba(200,16,46,0.3);color:var(--red);font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;letter-spacing:1px;font-family:'Noto Sans KR',sans-serif}
+
+.dojang-card{background:var(--gray);border:1px solid #1e1e1e;border-radius:10px;padding:18px 20px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;position:relative}
+.dojang-card:hover{border-color:var(--red);transform:translateX(4px)}
+.dojang-card.active{border-color:var(--yellow);background:#1e1e14}
+.dojang-card.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--yellow);border-radius:10px 0 0 10px}
+.dojang-num{font-family:'Bebas Neue',sans-serif;font-size:11px;color:#333;letter-spacing:1px;margin-bottom:4px}
+.dojang-name{font-weight:700;font-size:15px;color:var(--white);margin-bottom:4px}
+.dojang-owner{font-size:12px;color:#888;margin-bottom:6px}
+.dojang-addr{font-size:12px;color:#555;line-height:1.6;display:flex;align-items:flex-start;gap:6px}
+.dojang-addr-icon{color:var(--red);flex-shrink:0;margin-top:1px}
+.map-link{display:inline-flex;align-items:center;gap:5px;background:rgba(200,16,46,0.1);border:1px solid rgba(200,16,46,0.25);color:var(--red);font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px;text-decoration:none;margin-top:10px;transition:all 0.2s}
+.map-link:hover{background:var(--red);color:#fff}
+
+/* 지도 패널 */
+.map-panel{position:sticky;top:90px;height:calc(100vh - 110px);display:flex;flex-direction:column;gap:12px}
+.map-info-card{background:var(--gray);border:1px solid #222;border-radius:10px;padding:16px 20px;flex-shrink:0}
+.map-info-name{font-weight:700;font-size:15px;color:var(--white);margin-bottom:4px}
+.map-info-addr{font-size:12px;color:#666;line-height:1.6}
+.map-info-empty{font-size:13px;color:#444;text-align:center;padding:8px 0}
+.map-frame-wrap{flex:1;border-radius:12px;overflow:hidden;border:1px solid #222;min-height:300px}
+.map-frame-wrap iframe{width:100%;height:100%;border:0}
+
+/* 숨김 처리 */
+.region-section.hidden{display:none}
+
+footer{background:var(--black);border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+.footer-copy{font-size:11px;color:#2a2a2a}
+
+@media(max-width:900px){
+  .main-layout{grid-template-columns:1fr;padding:0 16px 60px}
+  .dojang-list{padding-right:0}
+  .map-panel{position:static;height:auto}
+  .map-frame-wrap{height:320px}
+}
+@media(max-width:480px){
+  .filter-bar{gap:6px}
+  .filter-btn{font-size:12px;padding:6px 14px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-back">← 메인으로</a>
+  <span class="nav-logo">THE STEPPER</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="section-tag">LOCATIONS</div>
+    <h1 class="page-title">전국 <span>가맹 도장</span></h1>
+    <p class="page-desc">더스텝퍼와 함께하는 전국 가맹 도장입니다.<br>도장명을 클릭하면 지도에서 위치를 확인할 수 있습니다.</p>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num" id="cntTotal">19</div><div class="stat-label">가맹 도장</div></div>
+      <div class="stat-item"><div class="stat-num">5</div><div class="stat-label">광역시/도</div></div>
+      <div class="stat-item"><div class="stat-num">36+</div><div class="stat-label">목표 가맹점</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 지역 필터 -->
+<div class="filter-bar">
+  <button class="filter-btn active" onclick="filterRegion('all',this)">전체</button>
+  <button class="filter-btn" onclick="filterRegion('대구',this)">대구</button>
+  <button class="filter-btn" onclick="filterRegion('부산',this)">부산</button>
+  <button class="filter-btn" onclick="filterRegion('울산',this)">울산</button>
+  <button class="filter-btn" onclick="filterRegion('경남 창원',this)">경남 창원</button>
+  <button class="filter-btn" onclick="filterRegion('경남 김해',this)">경남 김해</button>
+  <button class="filter-btn" onclick="filterRegion('경남 기타',this)">경남 기타</button>
+</div>
+
+<!-- 메인 레이아웃 -->
+<div class="main-layout">
+
+  <!-- 도장 목록 -->
+  <div class="dojang-list" id="dojangList">
+
+    <!-- 대구 -->
+    <div class="region-section" data-region="대구">
+      <div class="region-title"><span class="region-badge">대구</span> DAEGU <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 2개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'범태권도장','대구광역시 북구 중앙대로105길 25 오페라명작 3층')">
+        <div class="dojang-num">01</div>
+        <div class="dojang-name">범태권도장</div>
+        <div class="dojang-owner">관장 이정안</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>대구광역시 북구 중앙대로105길 25 오페라명작 3층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/대구광역시 북구 중앙대로105길 25" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'아이비태권도장','대구광역시 달성군 구지면 국가산단북로34길 74 4층')">
+        <div class="dojang-num">02</div>
+        <div class="dojang-name">아이비태권도장</div>
+        <div class="dojang-owner">관장 서정민</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>대구광역시 달성군 구지면 국가산단북로34길 74 4층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/대구광역시 달성군 구지면 국가산단북로34길 74" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+    <!-- 부산 -->
+    <div class="region-section" data-region="부산">
+      <div class="region-title"><span class="region-badge">부산</span> BUSAN <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 1개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'경원태권도','부산광역시 연제구 중앙천로 38 3층')">
+        <div class="dojang-num">03</div>
+        <div class="dojang-name">경원태권도</div>
+        <div class="dojang-owner">관장 최성화</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>부산광역시 연제구 중앙천로 38 3층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/부산광역시 연제구 중앙천로 38" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+    <!-- 울산 -->
+    <div class="region-section" data-region="울산">
+      <div class="region-title"><span class="region-badge">울산</span> ULSAN <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 2개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'에이스승무태권도장','울산광역시 남구 문수로344번길 5-1 2층')">
+        <div class="dojang-num">04</div>
+        <div class="dojang-name">에이스승무태권도장</div>
+        <div class="dojang-owner">관장 박영민</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>울산광역시 남구 문수로344번길 5-1 2층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/울산광역시 남구 문수로344번길 5-1" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'해솔태권도장','울산광역시 북구 중산서로 18 3층')">
+        <div class="dojang-num">05</div>
+        <div class="dojang-name">해솔태권도장</div>
+        <div class="dojang-owner">관장 선창우</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>울산광역시 북구 중산서로 18 3층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/울산광역시 북구 중산서로 18" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+    <!-- 경남 창원 -->
+    <div class="region-section" data-region="경남 창원">
+      <div class="region-title"><span class="region-badge">경남 창원</span> CHANGWON <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 6개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'극동본관체육관','경상남도 창원시 성산구 연덕로184번길 32 동우상가 502호')">
+        <div class="dojang-num">06</div>
+        <div class="dojang-name">극동본관체육관</div>
+        <div class="dojang-owner">관장 한재형</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 성산구 연덕로184번길 32 동우상가 502호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 성산구 연덕로184번길 32" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'라온태권도장','경상남도 창원시 성산구 사파동 141 삼익종합상가 3층 7호')">
+        <div class="dojang-num">07</div>
+        <div class="dojang-name">라온태권도장</div>
+        <div class="dojang-owner">관장 김법성</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 성산구 사파동 141 삼익종합상가 3층 7호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 성산구 사파동 141 삼익종합상가" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'석사북성태권도','경상남도 창원시 마산회원구 석전동 273-52')">
+        <div class="dojang-num">08</div>
+        <div class="dojang-name">석사북성태권도</div>
+        <div class="dojang-owner">관장 김영진</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 마산회원구 석전동 273-52</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 마산회원구 석전동 273-52" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'진해감사랑리더십태권도장','경상남도 창원시 진해구 남영로 63 주영빌딩 4층 401호')">
+        <div class="dojang-num">09</div>
+        <div class="dojang-name">진해감사랑리더십태권도장</div>
+        <div class="dojang-owner">관장 조금호</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 진해구 남영로 63 주영빌딩 4층 401호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 진해구 남영로 63 주영빌딩" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'진해청룡태권도장','경상남도 창원시 진해구 진해대로 999 하이존상가 4층')">
+        <div class="dojang-num">10</div>
+        <div class="dojang-name">진해청룡태권도장</div>
+        <div class="dojang-owner">관장 최형우</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 진해구 진해대로 999 하이존상가 4층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 진해구 진해대로 999 하이존상가" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'한국체대청림태권도장','경상남도 창원시 진해구 신항동로 134 부영아파트 8단지 상가 2층 201호')">
+        <div class="dojang-num">11</div>
+        <div class="dojang-name">한국체대청림태권도장</div>
+        <div class="dojang-owner">관장 한상훈</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 창원시 진해구 신항동로 134 부영아파트 8단지 상가 2층 201호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/창원시 진해구 신항동로 134" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+    <!-- 경남 김해 -->
+    <div class="region-section" data-region="경남 김해">
+      <div class="region-title"><span class="region-badge">경남 김해</span> GIMHAE <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 6개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'동아대효태권도장','경상남도 김해시 능동로149번길 12 탑프라자 301호')">
+        <div class="dojang-num">12</div>
+        <div class="dojang-name">동아대효태권도장</div>
+        <div class="dojang-owner">관장 김동구</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 능동로149번길 12 탑프라자 301호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 능동로149번길 12 탑프라자" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'라온태권도장(김해)','경상남도 김해시 주촌면 천곡로7번길 15 3층')">
+        <div class="dojang-num">13</div>
+        <div class="dojang-name">라온태권도장 (김해)</div>
+        <div class="dojang-owner">관장 감우진</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 주촌면 천곡로7번길 15 3층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 주촌면 천곡로7번길 15" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'용인대청룡태권도장','경상남도 김해시 대청로 121 대청프라자B동 407호')">
+        <div class="dojang-num">14</div>
+        <div class="dojang-name">용인대청룡태권도장</div>
+        <div class="dojang-owner">관장 김찬영</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 대청로 121 대청프라자B동 407호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 대청로 121 대청프라자" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'장유경희대태권도장','경상남도 김해시 능동로21번길 4-4 3층')">
+        <div class="dojang-num">15</div>
+        <div class="dojang-name">장유경희대태권도장</div>
+        <div class="dojang-owner">관장 정한나</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 능동로21번길 4-4 3층</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 능동로21번길 4-4" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'태백태권도장','경상남도 김해시 계동로23번길 17 201호')">
+        <div class="dojang-num">16</div>
+        <div class="dojang-name">태백태권도장</div>
+        <div class="dojang-owner">관장 홍찬의</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 계동로23번길 17 201호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 계동로23번길 17" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'현인태권도장(어방)','경상남도 김해시 어방동 동원아파트 B117호 현인태권도')">
+        <div class="dojang-num">17</div>
+        <div class="dojang-name">현인태권도장 (어방)</div>
+        <div class="dojang-owner">관장 김태형</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 김해시 어방동 동원아파트 B117호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/김해시 어방동 동원아파트" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+    <!-- 경남 기타 -->
+    <div class="region-section" data-region="경남 기타">
+      <div class="region-title"><span class="region-badge">경남 기타</span> GYEONGNAM <span style="font-size:14px;color:#444;font-family:'Noto Sans KR',sans-serif;letter-spacing:0"> 2개</span></div>
+
+      <div class="dojang-card" onclick="showMap(this,'동아대태권스쿨','경상남도 함안군 칠원읍 호암길 14 DH타워 404호')">
+        <div class="dojang-num">18</div>
+        <div class="dojang-name">동아대태권스쿨</div>
+        <div class="dojang-owner">관장 유홍섭</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 함안군 칠원읍 호암길 14 DH타워 404호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/함안군 칠원읍 호암길 14 DH타워" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+
+      <div class="dojang-card" onclick="showMap(this,'원탑태권도장','경상남도 양산시 물금읍 신주로 47 2층 201호')">
+        <div class="dojang-num">19</div>
+        <div class="dojang-name">원탑태권도장</div>
+        <div class="dojang-owner">관장 박재완</div>
+        <div class="dojang-addr"><span class="dojang-addr-icon">📍</span>경상남도 양산시 물금읍 신주로 47 2층 201호</div>
+        <a class="map-link" href="https://map.kakao.com/link/search/양산시 물금읍 신주로 47" target="_blank" onclick="event.stopPropagation()">🗺 카카오맵에서 보기</a>
+      </div>
+    </div>
+
+  </div><!-- /dojang-list -->
+
+  <!-- 지도 패널 -->
+  <div class="map-panel">
+    <div class="map-info-card" id="mapInfoCard">
+      <div class="map-info-empty">도장을 선택하면 지도에서 위치를 확인할 수 있습니다.</div>
+    </div>
+    <div class="map-frame-wrap">
+      <iframe id="mapFrame"
+        src="https://map.kakao.com/link/map/THE STEPPER 가맹도장,35.2500,128.6800"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </div>
+
+</div><!-- /main-layout -->
+
+<footer>
+  <div class="footer-logo">THE STEPPER</div>
+  <div class="footer-copy">© 2026 THE STEPPER. All rights reserved. | 대표: 김민성 | 010-4304-7768</div>
+</footer>
+
+<script>
+// 지역 필터
+function filterRegion(region, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.region-section').forEach(sec => {
+    if (region === 'all' || sec.dataset.region === region) {
+      sec.classList.remove('hidden');
+    } else {
+      sec.classList.add('hidden');
+    }
+  });
+}
+
+// 지도 표시
+function showMap(card, name, addr) {
+  // 카드 활성화
+  document.querySelectorAll('.dojang-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+
+  // 정보 카드 업데이트
+  document.getElementById('mapInfoCard').innerHTML = `
+    <div class="map-info-name">🥋 ${name}</div>
+    <div class="map-info-addr">📍 ${addr}</div>
+  `;
+
+  // 카카오맵 iframe — 검색 기반
+  const encoded = encodeURIComponent(addr);
+  document.getElementById('mapFrame').src =
+    `https://map.kakao.com/link/search/${encoded}`;
+
+  // 모바일: 부드럽게 지도 패널로 스크롤
+  if (window.innerWidth <= 900) {
+    document.querySelector('.map-panel').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+</script>
+
+</body>
+</html>

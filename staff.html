@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://firebasestorage.googleapis.com">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스텝 & 코치진 소개 - THE STEPPER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+:root{--red:#C8102E;--yellow:#FFE000;--black:#0a0a0a;--gray:#1a1a1a;--white:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-back{color:#aaa;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:color 0.2s}
+.nav-back:hover{color:var(--yellow)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--yellow)}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;position:relative;z-index:1001}
+.hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #2a2a2a;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.nav-menu a{display:block;color:#ccc;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #1a1a1a;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a:last-child{border-bottom:none}
+.nav-menu a:hover{color:var(--yellow);background:rgba(200,16,46,0.08);padding-left:26px}
+.hero{padding:130px 24px 70px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(200,16,46,0.18),transparent 60%);position:relative;overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px}
+.hero-inner{position:relative;z-index:2}
+.section-tag{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:12px}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,10vw,84px);letter-spacing:4px;color:var(--white);margin-bottom:16px;line-height:1}
+.page-title span{color:var(--yellow)}
+.page-desc{font-size:14px;color:#666;line-height:1.8;max-width:480px;margin:0 auto}
+.staff-section{padding:70px 20px 100px;max-width:1100px;margin:0 auto}
+.staff-card.featured{display:grid;grid-template-columns:320px 1fr;background:var(--gray);border:1px solid #222;border-radius:16px;overflow:hidden;margin-bottom:32px;position:relative}
+.staff-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--yellow));z-index:1}
+.staff-card.featured .card-photo-wrap{height:420px;overflow:hidden;background:#1a1a1a}
+.staff-card.featured .card-photo-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center}
+.staff-card.featured .card-body{padding:44px 48px;display:flex;flex-direction:column;justify-content:center}
+.staff-card.featured .card-title-en{font-size:11px;letter-spacing:3px;color:var(--red);margin-bottom:8px;font-weight:700}
+.staff-card.featured .card-name{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:4px;color:var(--white);line-height:1;margin-bottom:8px}
+.staff-card.featured .card-title-kr{font-size:16px;font-weight:700;color:var(--yellow);letter-spacing:2px;margin-bottom:20px}
+.staff-card.featured .card-desc{font-size:14px;color:#888;line-height:2;margin-bottom:16px}
+.staff-card.featured .card-badge{display:inline-block;background:rgba(200,16,46,0.12);border:1px solid rgba(200,16,46,0.3);color:var(--red);font-size:11px;font-weight:700;letter-spacing:2px;padding:5px 16px;border-radius:20px;margin-top:4px}
+.divider-line{width:100%;height:1px;background:linear-gradient(90deg,transparent,#222,transparent);margin:40px 0}
+.sub-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:var(--white);margin-bottom:24px}
+.sub-title span{color:var(--yellow)}
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
+.staff-card:not(.featured){background:var(--gray);border:1px solid #1e1e1e;border-radius:12px;overflow:hidden;transition:all 0.3s;display:flex;flex-direction:column}
+.staff-card:not(.featured):hover{border-color:var(--red);transform:translateY(-5px)}
+.staff-card:not(.featured) .card-photo-wrap{height:260px;overflow:hidden;background:#1a1a1a;flex-shrink:0}
+.staff-card:not(.featured) .card-photo-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center}
+.no-photo{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a1a,#0d0d0d)}
+.no-photo-icon{font-size:48px;margin-bottom:12px;opacity:0.3}
+.no-photo-text{font-size:11px;color:#2a2a2a;letter-spacing:2px}
+.staff-card:not(.featured) .card-body{padding:20px;flex:1;display:flex;flex-direction:column}
+.staff-card:not(.featured) .card-title-en{font-size:10px;letter-spacing:2px;color:var(--red);margin-bottom:4px;font-weight:700}
+.staff-card:not(.featured) .card-name{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:var(--white);line-height:1;margin-bottom:4px}
+.staff-card:not(.featured) .card-title-kr{font-size:12px;font-weight:700;color:var(--yellow);letter-spacing:1px;margin-bottom:10px}
+.staff-card:not(.featured) .card-desc{font-size:12px;color:#666;line-height:1.7;margin-bottom:12px}
+.staff-card:not(.featured) .card-badge{display:inline-block;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);color:#444;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:10px;margin-top:auto}
+.profile-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 12px;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);border-radius:6px;margin-bottom:8px;font-size:12px;color:#aaa;font-weight:600;transition:all 0.2s;user-select:none}
+.profile-toggle:hover{background:rgba(200,16,46,0.15);color:var(--white)}
+.toggle-arrow{font-size:10px;transition:transform 0.25s;color:var(--red)}
+.toggle-arrow.open{transform:rotate(180deg)}
+.card-profile{list-style:none;overflow:hidden;max-height:0;transition:max-height 0.35s ease,opacity 0.3s ease;opacity:0;margin-bottom:0}
+.card-profile.open{max-height:200px;opacity:1;margin-bottom:12px}
+.staff-card.featured .card-profile li,.staff-card:not(.featured) .card-profile li{font-size:12px;color:#888;line-height:2;padding-left:14px;position:relative}
+.staff-card.featured .card-profile li::before,.staff-card:not(.featured) .card-profile li::before{content:'·';position:absolute;left:0;color:var(--red);font-size:16px;line-height:1.6}
+.staff-card.featured .profile-toggle{padding:9px 14px;font-size:13px;margin-top:4px}
+footer{background:var(--black);border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+.footer-copy{font-size:11px;color:#2a2a2a}
+@media(max-width:768px){
+  .staff-card.featured{grid-template-columns:1fr}
+  .staff-card.featured .card-photo-wrap{height:300px}
+  .staff-card.featured .card-body{padding:28px 24px}
+  .staff-card.featured .card-name{font-size:40px}
+  .staff-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:480px){.staff-grid{grid-template-columns:1fr}}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-logo-link{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-img{height:44px;width:auto}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--yellow)}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
+.hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #2a2a2a;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.nav-menu a{display:block;color:#ccc;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #1a1a1a;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a:last-child{border-bottom:none}
+.nav-menu a:hover{color:var(--yellow);background:rgba(200,16,46,0.08);padding-left:26px}
+.floating-btns{position:fixed;bottom:30px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:900}
+.float-btn{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.2s,box-shadow 0.2s}
+.float-btn:hover{transform:translateY(-3px) scale(1.08);box-shadow:0 8px 28px rgba(0,0,0,0.5)}
+.float-youtube{background:#FF0000}
+.float-kakao{background:#FEE500}
+.float-insta{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}
+.footer-sns{display:flex;justify-content:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.footer-sns a{color:#444;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:1px;transition:color 0.2s}
+.footer-sns a:hover{color:var(--yellow)}
+footer{background:var(--black);border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+.footer-copy{font-size:11px;color:#2a2a2a}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="nav-logo-link">
+      <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
+      <span class="nav-brand">THE STEPPER</span>
+    </a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="nav-menu" id="navMenu">
+  <a href="index.html" onclick="toggleMenu()">홈</a>
+  <a href="index.html#about">브랜드 스토리</a>
+  <a href="index.html#curriculum">커리큘럼</a>
+  <a href="schedule.html" onclick="toggleMenu()">세미나 일정</a>
+  <a href="staff.html" onclick="toggleMenu()">스텝 소개</a>
+  <a href="locations.html" onclick="toggleMenu()">가맹 도장</a>
+  <a href="gallery.html" onclick="toggleMenu()">활동 갤러리</a>
+  <a href="contact.html" onclick="toggleMenu()">가맹 문의</a>
+</div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="nav-menu" id="navMenu">
+  <a href="index.html">홈</a>
+  <a href="index.html#about">브랜드 스토리</a>
+  <a href="index.html#curriculum">커리큘럼</a>
+  <a href="index.html#schedule">세미나 일정</a>
+  <a href="index.html#youtube">영상</a>
+  <a href="staff.html">스텝 &amp; 코치진</a>
+  <a href="locations.html">전국 가맹 도장</a>
+  <a href="index.html#contact">가맹 문의</a>
+</div>
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div class="section-tag">OUR TEAM</div>
+    <h1 class="page-title">스텝 &amp; <span>코치진 소개</span></h1>
+    <p class="page-desc">더스텝퍼와 함께하는 사범 및 운영진을 소개합니다.<br>전국 태권도 겨루기 교육을 이끌어 나가고 있습니다.</p>
+  </div>
+</div>
+<div class="staff-section">
+  <div class="staff-card featured">
+    <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%EA%B9%80%EB%AF%BC%EC%84%B1_%EB%8C%80%ED%91%9C.png?alt=media" loading="lazy" alt="김민성"></div>
+    <div class="card-body">
+      <div class="card-title-en">CEO</div>
+      <h2 class="card-name">김민성</h2>
+      <div class="card-title-kr">대표</div>
+      <p class="card-desc">태권도 겨루기 선수 출신. 전자 센서 호구 도입 이후 단절된 인파이터 전술과 강한 기술을 체계적으로 기록·보급하기 위해 더스텝퍼를 창단했다. 15단계 커리큘럼 설계 및 전국 교육을 총괄한다.</p>
+      
+      <div class="card-badge">THE STEPPER</div>
+    </div>
+  </div>
+  <div class="divider-line"></div>
+  <div class="sub-title">운영 <span>스텝</span></div>
+  <div class="staff-grid">
+    <div class="staff-card">
+      <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%EC%86%A1%EC%A7%80%ED%9B%88_%EB%B3%B8%EB%B6%80%EC%9E%A5.png?alt=media" loading="lazy" alt="송지훈"></div>
+      <div class="card-body">
+        <div class="card-title-en">General Manager</div>
+        <h3 class="card-name">송지훈</h3>
+        <div class="card-title-kr">본부장</div>
+        <p class="card-desc">더스텝퍼 전국 세미나 운영 및 가맹점 관리를 총괄한다. 현장 지도자로서 각 지역 도장과의 네트워크를 담당한다.</p>
+        <div class="profile-toggle" onclick="toggleProfile('rfsoua')">
+          <span>경력 보기</span><span class="toggle-arrow" id="arrow-rfsoua">▼</span>
+        </div>
+        <ul class="card-profile" id="profile-rfsoua"><li>현) 경남대학교 태권도팀 감독</li><li>전) 삼성 에스원 태권도팀 선수</li><li>전) 2011 경주세계선수권대회 국가대표</li><li>전) 아시아태권도연맹 겨루기 실기 강사</li></ul>
+        <div class="card-badge">THE STEPPER</div>
+      </div>
+    </div><div class="staff-card">
+      <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%ED%95%9C%EC%8A%B9%EC%9A%A9_%EB%B3%B8%EB%B6%80%EC%9E%A5.png?alt=media" loading="lazy" alt="한승용"></div>
+      <div class="card-body">
+        <div class="card-title-en">General Manager</div>
+        <h3 class="card-name">한승용</h3>
+        <div class="card-title-kr">본부장</div>
+        <p class="card-desc">더스텝퍼 전국 세미나 운영 및 가맹점 관리를 총괄한다. 현장 지도자로서 각 지역 도장과의 네트워크를 담당한다.</p>
+        <div class="profile-toggle" onclick="toggleProfile('easdxw')">
+          <span>경력 보기</span><span class="toggle-arrow" id="arrow-easdxw">▼</span>
+        </div>
+        <ul class="card-profile" id="profile-easdxw"><li>현) 충남도청 태권도팀 감독</li><li>전) 나사렛대학교 겨루기선수단 감독 및 초빙교수</li><li>전) 2020 도쿄올림픽 뉴질랜드 태권도팀 지도자</li><li>전) 한국가스공사 태권도팀 선수</li></ul>
+        <div class="card-badge">THE STEPPER</div>
+      </div>
+    </div><div class="staff-card">
+      <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%EC%B5%9C%EC%84%B1%ED%99%94_%EB%B3%B8%EB%B6%80%EC%9E%A5.png?alt=media" loading="lazy" alt="최성화"></div>
+      <div class="card-body">
+        <div class="card-title-en">General Manager</div>
+        <h3 class="card-name">최성화</h3>
+        <div class="card-title-kr">본부장</div>
+        <p class="card-desc">전국 도장 운영에 필요한 기획 업무를 담당한다. 세미나 일정 조율부터 가맹점 지원 프로그램 설계까지 더스텝퍼의 전략적 운영을 뒷받침한다.</p>
+        <div class="profile-toggle" onclick="toggleProfile('diviqt')">
+          <span>경력 보기</span><span class="toggle-arrow" id="arrow-diviqt">▼</span>
+        </div>
+        <ul class="card-profile" id="profile-diviqt"><li>현) 경원태권도 관장</li><li>전) 대전 동구청 태권도팀 선수</li><li>전) 베스트빅토리 연구단체 회장</li><li>전) 전국 태권도 대회 겨루기 부분 1위</li></ul>
+        <div class="card-badge">THE STEPPER</div>
+      </div>
+    </div><div class="staff-card">
+      <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%EB%B0%B0%EC%A4%80%EC%84%B1_%EA%B5%90%EC%9C%A1%EC%B0%A8%EC%9E%A5.png?alt=media" loading="lazy" alt="배준성"></div>
+      <div class="card-body">
+        <div class="card-title-en">Education Deputy</div>
+        <h3 class="card-name">배준성</h3>
+        <div class="card-title-kr">교육차장</div>
+        <p class="card-desc">더스텝퍼 교육 프로그램 운영 및 커리큘럼 보조를 담당한다. 각 단계별 교육 자료 관리와 수강생 지원을 맡고 있다.</p>
+        <div class="profile-toggle" onclick="toggleProfile('milidx')">
+          <span>경력 보기</span><span class="toggle-arrow" id="arrow-milidx">▼</span>
+        </div>
+        <ul class="card-profile" id="profile-milidx"><li>현) 태권도고수회 부위원장</li><li>전) 경남대학교 겨루기 선수</li><li>현) THE STEPPER 교육 커리큘럼 연구원</li></ul>
+        <div class="card-badge">THE STEPPER</div>
+      </div>
+    </div><div class="staff-card">
+      <div class="card-photo-wrap"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/staff%2F%ED%99%8D%EC%B0%AC%EC%9D%98_%ED%99%8D%EB%B3%B4%EB%B6%80%EC%9E%A5.png?alt=media" loading="lazy" alt="홍찬의"></div>
+      <div class="card-body">
+        <div class="card-title-en">PR Manager</div>
+        <h3 class="card-name">홍찬의</h3>
+        <div class="card-title-kr">홍보부장</div>
+        <p class="card-desc">더스텝퍼의 온·오프라인 홍보 및 SNS 채널 운영을 담당한다. 태권도 겨루기 문화의 대중화를 위한 콘텐츠를 기획한다.</p>
+        <div class="profile-toggle" onclick="toggleProfile('hcahkf')">
+          <span>경력 보기</span><span class="toggle-arrow" id="arrow-hcahkf">▼</span>
+        </div>
+        <ul class="card-profile" id="profile-hcahkf"><li>현) 태권도고수회 부위원장</li><li>전) 미국태권도협회 아시아본부 부위원장</li><li>대한태권도협회장 표창장 수상</li><li>국기원장 표창장 수상</li></ul>
+        <div class="card-badge">THE STEPPER</div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="footer-sns">
+    <a href="https://www.instagram.com/the_stepper_kms" target="_blank">📷 Instagram</a>
+    <a href="https://open.kakao.com/o/gFVIg0Dh" target="_blank">💬 카카오톡</a>
+    <a href="https://www.youtube.com/@%ED%83%9C%EA%B6%8C%EB%AF%BC%EA%B5%AD" target="_blank">▶ YouTube</a>
+  </div>
+  <div class="footer-logo">THE STEPPER</div>
+  <div class="footer-copy">© 2026 THE STEPPER. All rights reserved. | 대표: 김민성 | 010-4304-7768</div>
+</footer>
+<script>
+function toggleMenu(){
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('navMenu').classList.toggle('open');
+}
+document.addEventListener('click',function(e){
+  var m=document.getElementById('navMenu'),b=document.getElementById('hamburger');
+  if(m&&b&&m.classList.contains('open')&&!m.contains(e.target)&&!b.contains(e.target)){
+    m.classList.remove('open');b.classList.remove('open');
+  }
+});
+function toggleProfile(id){
+  var l=document.getElementById('profile-'+id);
+  var a=document.getElementById('arrow-'+id);
+  var t=a.closest('.profile-toggle');
+  var o=l.classList.contains('open');
+  l.classList.toggle('open',!o);
+  a.classList.toggle('open',!o);
+  t.querySelector('span').textContent=o?'경력 보기':'경력 닫기';
+}
+</script>
+<div class="floating-btns">
+  <a href="https://www.youtube.com/@%ED%83%9C%EA%B6%8C%EB%AF%BC%EA%B5%AD" target="_blank" class="float-btn float-youtube" title="유튜브">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+  </a>
+  <a href="https://open.kakao.com/o/gFVIg0Dh" target="_blank" class="float-btn float-kakao" title="카카오톡">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.674 1.58 5.025 3.978 6.418L5 21l4.773-2.487C10.468 18.833 11.224 19 12 19c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg>
+  </a>
+  <a href="https://www.instagram.com/the_stepper_kms" target="_blank" class="float-btn float-insta" title="인스타그램">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+  </a>
+</div>
+</body>
+</html>

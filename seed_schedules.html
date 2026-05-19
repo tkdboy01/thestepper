@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>일정 초기화</title></head>
+<body>
+<h2>일정 데이터 입력 중...</h2>
+<div id="log"></div>
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const schedules = [
+  // 예정 일정
+  { date: "2026-05-16", title: "THE STEPPER 주니어 합동훈련", detail: "오전 10:00~12:00 전술 훈련 · 오후 2:00~4:00 스파링 친선 겨루기 · 📍 능동중학교 · 경남 김해시 번화1로123번길 34-14", type: "upcoming" },
+  { date: "2026-05-19", title: "THE STEPPER 대구광역시 정기 세미나", detail: "오전 10:30~12:30 · 📍 대구 범태권도장 · 중앙대로105길 25 오페라명작 B동 3층", type: "upcoming" },
+  { date: "2026-05-31", title: "THE STEPPER × 고수회(태권도 사범회) MOU 체결", detail: "태권도 사범회 고수회와 MOU 체결 · 📍 경기도 수원", type: "upcoming" },
+  // 지난 일정
+  { date: "2026-04-29", title: "THE STEPPER 충북 청주 정기 세미나", detail: "오전 10:00~12:00 · 📍 경희대 명품꿈나무 태권도 · 중고개로142번길 20 상가 2동 201호", type: "past" },
+  { date: "2026-04-06", title: "THE STEPPER 부산·경남 지역 정기 세미나", detail: "오후 11:00~1:00 · 📍 태백 태권도 · 경남 김해시 계동로23번길 17 2층", type: "past" },
+  { date: "2026-03-18", title: "THE STEPPER 대구 지역 정기 세미나", detail: "오전 10:00~12:00 · 📍 아이비 태권도(구지점) · 국가산단북로34길 74 4층", type: "past" },
+  { date: "2026-02-28", title: "THE STEPPER 범태권도장 성인반 특강", detail: "오후 8:30~9:30 · 📍 대구 범태권도장 · 중앙대로105길 25 오페라명작 B동 3층", type: "past" },
+  { date: "2026-02-09", title: "THE STEPPER 부산·경남 지역 정기 세미나", detail: "밤 11:00~1:00 · 📍 품 태권도장(진영점) · 본산로 23-16 혜종빌딩 4층", type: "past" },
+  { date: "2026-01-30", title: "THE STEPPER 대구 지역 정기 세미나", detail: "오전 10:00~12:00 · 📍 대구 범태권도장 · 중앙대로105길 25 오페라명작 B동 3층", type: "past" },
+  { date: "2026-01-29", title: "THE STEPPER 주니어 친선 경기", detail: "오후 1:30~4:00 · 📍 박종우 태권도장(화명점) · 화명신도시로 209 화명뜨란채 아파트 상가 2층", type: "past" },
+  { date: "2026-01-28", title: "THE STEPPER 충북 청주 정기 세미나", detail: "오전 10:00~12:00 · 📍 경희대 명품꿈나무 태권도 · 중고개로142번길 20 상가 2동 201호", type: "past" },
+];
+
+const log = document.getElementById('log');
+
+async function seedData() {
+  let success = 0;
+  for(const s of schedules) {
+    try {
+      await addDoc(collection(db, 'schedules'), {
+        ...s,
+        createdAt: new Date().toISOString()
+      });
+      success++;
+      log.innerHTML += '<p style="color:green">✅ ' + s.title + '</p>';
+    } catch(e) {
+      log.innerHTML += '<p style="color:red">❌ ' + s.title + ' - ' + e.message + '</p>';
+    }
+  }
+  log.innerHTML += '<h3 style="color:gold">완료! ' + success + '/' + schedules.length + '개 추가됨</h3>';
+}
+
+seedData();
+</script>
+</body>
+</html>

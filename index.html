@@ -1415,17 +1415,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  /* 왼쪽 2개, 오른쪽 2개 동시 시작 — 시작 시점을 엇갈리게 */
+  /* 한 쪽에 5개씩, 1200ms 간격으로 엇갈려 시작 → 항상 연속 흐름 */
   function initSide(container, side, count) {
     for (var i = 0; i < count; i++) {
       (function(delay) {
         setTimeout(function() { spawnBubble(container, side); }, delay);
-      })(i * 2200);
+      })(i * 1200);
     }
   }
 
-  initSide(leftEl,  'left',  2);
-  initSide(rightEl, 'right', 2);
+  initSide(leftEl,  'left',  5);
+  initSide(rightEl, 'right', 5);
 })();
 </script>
 </body>

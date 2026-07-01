@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta name="description" content="더스텝퍼 1:1 문의 게시판 - 회원 전용">
+<meta property="og:title" content="1:1 문의 - THE STEPPER">
+<meta property="og:site_name" content="THE STEPPER">
+<title>1:1 문의 - THE STEPPER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+:root{--red:#C0392B;--gold:#C9A84C;--black:#0a0a0a;--gray:#141414;--border:#222;--white:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-back{color:#aaa;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:color 0.2s}
+.nav-back:hover{color:var(--gold)}
+.nav-logo-link{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-img{height:44px;width:auto}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--gold)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user-area{display:none;align-items:center;gap:8px}
+.nav-user-email{font-size:11px;color:#555;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-logout-btn{background:transparent;border:1px solid #333;color:#666;font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s}
+.nav-logout-btn:hover{border-color:var(--red);color:var(--red)}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
+.hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #2a2a2a;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.nav-menu a{display:block;color:#ccc;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #1a1a1a;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a:last-child{border-bottom:none}
+.nav-menu a:hover{color:var(--gold);background:rgba(192,57,43,0.08);padding-left:26px}
+
+/* INIT LOADING */
+.init-loading{flex:1;display:flex;align-items:center;justify-content:center;padding-top:70px}
+.init-spinner{width:36px;height:36px;border:3px solid #222;border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* BOARD PAGE */
+.board-page{flex:1;display:none;flex-direction:column;padding-top:70px}
+.board-top-bar{background:linear-gradient(135deg,#0d0d0d,#1a0505);border-bottom:1px solid var(--border);padding:24px 24px 20px}
+.board-top-inner{max-width:800px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.board-top-left{display:flex;align-items:center;gap:12px}
+.board-page-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--white)}
+.admin-tag{display:none;align-items:center;gap:5px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.35);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:2px;padding:4px 10px;border-radius:12px}
+.board-desc{font-size:12px;color:#444;margin-top:4px;letter-spacing:0.5px}
+.write-btn{background:var(--red);border:none;color:#fff;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all 0.2s;white-space:nowrap;letter-spacing:0.5px}
+.write-btn:hover{background:#a0301f;transform:translateY(-1px)}
+
+/* SECTIONS */
+.board-section{flex:1;max-width:800px;width:100%;margin:0 auto;padding:24px 16px 60px}
+
+/* LIST */
+.section-loading{text-align:center;color:#333;font-size:13px;padding:40px 0}
+.empty-state{text-align:center;padding:60px 20px;color:#333}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:14px;line-height:1.6}
+.board-card{background:#0d0d0d;border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:all 0.18s}
+.board-card:hover{border-color:rgba(192,57,43,0.4);background:#111;transform:translateY(-1px)}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.card-title{font-size:15px;font-weight:600;color:#ddd;line-height:1.4;word-break:keep-all}
+.card-author{font-size:11px;color:#555;margin-left:auto}
+.card-date{font-size:11px;color:#444}
+.badge{font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 9px;border-radius:10px}
+.badge-pending{background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.4);color:#e08070}
+.badge-answered{background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.35);color:var(--gold)}
+
+/* FORM */
+.form-card{background:#0d0d0d;border:1px solid var(--border);border-top:2px solid var(--red);border-radius:10px;padding:28px 28px 24px}
+.form-card-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:20px;letter-spacing:0.5px}
+.form-err{display:none;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);color:#e77;font-size:12px;padding:10px 14px;border-radius:7px;margin-bottom:14px;line-height:1.5}
+.form-input{width:100%;background:#111;border:1px solid var(--border);color:var(--white);font-family:'Noto Sans KR',sans-serif;font-size:14px;padding:12px 16px;border-radius:8px;outline:none;margin-bottom:12px;transition:border-color 0.2s}
+.form-input:focus{border-color:rgba(192,57,43,0.5)}
+.form-input::placeholder{color:#333}
+.form-textarea{width:100%;background:#111;border:1px solid var(--border);color:var(--white);font-family:'Noto Sans KR',sans-serif;font-size:14px;padding:12px 16px;border-radius:8px;outline:none;resize:vertical;min-height:160px;line-height:1.7;transition:border-color 0.2s;margin-bottom:6px}
+.form-textarea:focus{border-color:rgba(192,57,43,0.5)}
+.form-textarea::placeholder{color:#333}
+.char-count{text-align:right;font-size:11px;color:#333;margin-bottom:16px}
+.form-actions{display:flex;gap:10px;justify-content:flex-end}
+.btn-cancel{background:transparent;border:1px solid #333;color:#666;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all 0.2s}
+.btn-cancel:hover{border-color:#555;color:#999}
+.btn-submit{background:var(--red);border:none;color:#fff;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px}
+.btn-submit:hover:not(:disabled){background:#a0301f}
+.btn-submit:disabled{opacity:0.5;cursor:not-allowed}
+
+/* DETAIL */
+.detail-card{background:#0d0d0d;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.detail-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.back-btn{background:transparent;border:1px solid #2a2a2a;color:#666;font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:600;padding:7px 14px;border-radius:7px;cursor:pointer;transition:all 0.2s}
+.back-btn:hover{border-color:#444;color:#aaa}
+.detail-body{padding:24px 24px 20px}
+.detail-title{font-size:18px;font-weight:700;color:var(--white);line-height:1.4;margin-bottom:10px;word-break:keep-all}
+.detail-meta{font-size:12px;color:#444;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.detail-meta-author{color:#666}
+.detail-content{font-size:14px;color:#bbb;line-height:1.9;white-space:pre-wrap;word-break:keep-all;padding:16px;background:#111;border:1px solid #1a1a1a;border-radius:8px}
+.answer-wrap{border-top:1px solid var(--border);padding:20px 24px 24px}
+.answer-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.answer-label-text{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase}
+.answer-date-text{font-size:11px;color:#444}
+.answer-content-box{font-size:14px;color:#bbb;line-height:1.9;white-space:pre-wrap;word-break:keep-all;padding:16px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:8px}
+.answer-pending-text{font-size:13px;color:#333;padding:16px;text-align:center}
+.answer-textarea{width:100%;background:#111;border:1px solid var(--border);color:var(--white);font-family:'Noto Sans KR',sans-serif;font-size:14px;padding:12px 16px;border-radius:8px;outline:none;resize:vertical;min-height:120px;line-height:1.7;transition:border-color 0.2s;margin-bottom:12px}
+.answer-textarea:focus{border-color:rgba(201,168,76,0.4)}
+.answer-textarea::placeholder{color:#333}
+.answer-edit-btn{background:transparent;border:1px solid rgba(201,168,76,0.3);color:var(--gold);font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;transition:all 0.2s;margin-left:auto}
+.answer-edit-btn:hover{background:rgba(201,168,76,0.08)}
+
+footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align:center;margin-top:auto}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;color:var(--gold);margin-bottom:6px}
+.footer-copy{font-size:11px;color:#222}
+
+@media(max-width:600px){
+  .board-top-inner{flex-direction:column;align-items:flex-start;gap:10px}
+  .write-btn{width:100%}
+  .form-card{padding:20px 16px}
+  .detail-body{padding:16px}
+  .answer-wrap{padding:16px}
+  .nav-user-email{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="nav-back">← 메인으로</a>
+    <a href="index.html" class="nav-logo-link">
+      <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
+      <span class="nav-brand">THE STEPPER</span>
+    </a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user-area" id="navUserArea">
+      <span class="nav-user-email" id="navUserEmail"></span>
+      <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="nav-menu" id="navMenu">
+  <a href="index.html" onclick="toggleMenu()">홈</a>
+  <a href="index.html#about" onclick="toggleMenu()">브랜드 스토리</a>
+  <a href="index.html#curriculum" onclick="toggleMenu()">커리큘럼</a>
+  <a href="schedule.html" onclick="toggleMenu()">세미나 일정</a>
+  <a href="staff.html" onclick="toggleMenu()">스텝 소개</a>
+  <a href="locations.html" onclick="toggleMenu()">회원 도장</a>
+  <a href="contact.html" onclick="toggleMenu()">회원 가입 문의</a>
+  <a href="ai.html" onclick="toggleMenu()">AI 겨루기 코치</a>
+  <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
+</div>
+
+<!-- 초기 로딩 -->
+<div class="init-loading" id="initLoading">
+  <div class="init-spinner"></div>
+</div>
+
+<!-- BOARD APP -->
+<div class="board-page" id="boardApp">
+
+  <!-- 상단 헤더 -->
+  <div class="board-top-bar">
+    <div class="board-top-inner">
+      <div>
+        <div class="board-top-left">
+          <div class="board-page-title">1:1 문의</div>
+          <div class="admin-tag" id="adminTag">관리자</div>
+        </div>
+        <div class="board-desc">궁금하신 점을 남겨주시면 최대한 빠르게 답변 드리겠습니다.</div>
+      </div>
+      <button class="write-btn" id="writeBtn" onclick="showForm()">+ 문의하기</button>
+    </div>
+  </div>
+
+  <!-- 목록 -->
+  <div class="board-section" id="listSection">
+    <div class="section-loading" id="listLoading">불러오는 중...</div>
+    <div id="inquiryList"></div>
+  </div>
+
+  <!-- 작성 폼 -->
+  <div class="board-section" id="formSection" style="display:none">
+    <div class="form-card">
+      <div class="form-card-title">문의 작성</div>
+      <div class="form-err" id="formErr"></div>
+      <input type="text" class="form-input" id="titleInput" placeholder="제목을 입력해주세요" maxlength="100">
+      <textarea class="form-textarea" id="contentInput" placeholder="문의 내용을 상세히 입력해주세요..." maxlength="2000" oninput="updateCharCount(this)"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / 2000</div>
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="showList()">취소</button>
+        <button class="btn-submit" id="submitBtn" onclick="submitInquiry()">등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상세 보기 -->
+  <div class="board-section" id="detailSection" style="display:none">
+    <div class="detail-card">
+      <div class="detail-head">
+        <button class="back-btn" onclick="showList()">← 목록</button>
+        <div id="detailBadge"></div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="detail-content" id="detailContent"></div>
+      </div>
+      <div class="answer-wrap">
+        <div class="answer-header">
+          <span class="answer-label-text">관리자 답변</span>
+          <span class="answer-date-text" id="answerDate"></span>
+          <!-- 관리자: 수정 버튼 -->
+          <button class="answer-edit-btn" id="answerEditBtn" style="display:none" onclick="toggleAnswerEdit()">수정</button>
+        </div>
+        <!-- 답변 내용 (유저/관리자 읽기) -->
+        <div class="answer-content-box" id="answerContentBox" style="display:none"></div>
+        <!-- 미답변 안내 -->
+        <div class="answer-pending-text" id="answerPendingText" style="display:none">아직 답변이 등록되지 않았습니다.</div>
+        <!-- 관리자 답변 입력폼 -->
+        <div id="adminAnswerForm" style="display:none">
+          <textarea class="answer-textarea" id="answerInput" placeholder="답변을 입력해주세요..."></textarea>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn-submit" id="answerBtn" onclick="submitAnswer()">답변 등록</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-logo">THE STEPPER</div>
+  <div class="footer-copy">© 2026 THE STEPPER. All rights reserved. | 대표: 김민성 | 010-4304-7768</div>
+</footer>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
+let currentUser = null;
+let isAdmin = false;
+let currentDocId = null;
+
+// ===== Firebase 초기화 =====
+firebase.initializeApp({
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ===== Auth 상태 감지 =====
+auth.onAuthStateChanged(function(user) {
+  document.getElementById('initLoading').style.display = 'none';
+  if (!user) {
+    location.href = 'ai.html';
+    return;
+  }
+  currentUser = user;
+  isAdmin = (user.email === ADMIN_EMAIL);
+  initBoard();
+});
+
+function initBoard() {
+  document.getElementById('boardApp').style.display = 'flex';
+
+  // Nav 사용자 표시
+  var area = document.getElementById('navUserArea');
+  area.style.display = 'flex';
+  var email = currentUser.email || '';
+  document.getElementById('navUserEmail').textContent = email.length > 16 ? email.slice(0, 16) + '…' : email;
+
+  if (isAdmin) {
+    document.getElementById('adminTag').style.display = 'flex';
+    document.getElementById('writeBtn').style.display = 'none';
+  }
+
+  loadInquiries();
+}
+
+// ===== 목록 로드 =====
+async function loadInquiries() {
+  document.getElementById('listLoading').style.display = 'block';
+  document.getElementById('inquiryList').innerHTML = '';
+
+  try {
+    var snap;
+    if (isAdmin) {
+      snap = await db.collection('inquiries').orderBy('createdAt', 'desc').get();
+    } else {
+      // 복합 인덱스 없이 클라이언트 정렬 사용
+      snap = await db.collection('inquiries').where('uid', '==', currentUser.uid).get();
+    }
+
+    document.getElementById('listLoading').style.display = 'none';
+
+    var docs = snap.docs;
+    if (!isAdmin) {
+      docs = docs.slice().sort(function(a, b) {
+        var at = a.data().createdAt ? a.data().createdAt.seconds : 0;
+        var bt = b.data().createdAt ? b.data().createdAt.seconds : 0;
+        return bt - at;
+      });
+    }
+
+    if (docs.length === 0) {
+      document.getElementById('inquiryList').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">아직 문의 내역이 없습니다.<br>궁금한 점을 문의해보세요.</div></div>';
+      return;
+    }
+
+    document.getElementById('inquiryList').innerHTML = docs.map(function(doc) {
+      var d = doc.data();
+      var date = d.createdAt ? d.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+      var answered = d.status === 'answered';
+      var badge = answered
+        ? '<span class="badge badge-answered">답변완료</span>'
+        : '<span class="badge badge-pending">대기중</span>';
+      var author = isAdmin
+        ? '<span class="card-author">' + escHtml(d.nickname || d.email || '') + '</span>'
+        : '';
+      return '<div class="board-card" onclick="showDetail(\'' + doc.id + '\')">' +
+        '<div class="card-top">' + badge + '<div style="flex:1"></div>' + author +
+        '<span class="card-date">' + date + '</span></div>' +
+        '<div class="card-title">' + escHtml(d.title) + '</div>' +
+        '</div>';
+    }).join('');
+
+  } catch(e) {
+    document.getElementById('listLoading').style.display = 'none';
+    document.getElementById('inquiryList').innerHTML =
+      '<div class="empty-state"><div class="empty-text">목록을 불러오지 못했습니다.<br>' + e.message + '</div></div>';
+  }
+}
+
+// ===== 화면 전환 =====
+function showList() {
+  document.getElementById('listSection').style.display = 'block';
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('detailSection').style.display = 'none';
+  document.getElementById('writeBtn').style.display = isAdmin ? 'none' : 'block';
+  currentDocId = null;
+  loadInquiries();
+}
+
+function showForm() {
+  document.getElementById('listSection').style.display = 'none';
+  document.getElementById('formSection').style.display = 'block';
+  document.getElementById('detailSection').style.display = 'none';
+  document.getElementById('writeBtn').style.display = 'none';
+  document.getElementById('titleInput').value = '';
+  document.getElementById('contentInput').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('formErr').style.display = 'none';
+}
+
+// ===== 문의 등록 =====
+async function submitInquiry() {
+  var title = document.getElementById('titleInput').value.trim();
+  var content = document.getElementById('contentInput').value.trim();
+  if (!title) { showFormErr('제목을 입력해주세요.'); return; }
+  if (!content) { showFormErr('내용을 입력해주세요.'); return; }
+
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '등록 중...';
+
+  try {
+    // users 컬렉션에서 닉네임 조회
+    var nickname = currentUser.displayName || '';
+    try {
+      var userDoc = await db.collection('users').doc(currentUser.uid).get();
+      if (userDoc.exists) nickname = userDoc.data().nickname || nickname;
+    } catch(_) {}
+
+    await db.collection('inquiries').add({
+      title: title,
+      content: content,
+      uid: currentUser.uid,
+      email: currentUser.email || '',
+      nickname: nickname,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      answer: '',
+      answeredAt: null,
+      status: 'pending'
+    });
+
+    showList();
+  } catch(e) {
+    showFormErr('등록에 실패했습니다. 다시 시도해주세요.');
+    btn.disabled = false; btn.textContent = '등록하기';
+  }
+}
+
+function showFormErr(msg) {
+  var el = document.getElementById('formErr');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function updateCharCount(el) {
+  document.getElementById('charCount').textContent = el.value.length;
+}
+
+// ===== 상세 보기 =====
+async function showDetail(docId) {
+  currentDocId = docId;
+  document.getElementById('listSection').style.display = 'none';
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('detailSection').style.display = 'block';
+  document.getElementById('writeBtn').style.display = 'none';
+
+  try {
+    var doc = await db.collection('inquiries').doc(docId).get();
+    if (!doc.exists) { showList(); return; }
+    var d = doc.data();
+    var answered = d.status === 'answered';
+
+    // 뱃지
+    document.getElementById('detailBadge').innerHTML = answered
+      ? '<span class="badge badge-answered">답변완료</span>'
+      : '<span class="badge badge-pending">대기중</span>';
+
+    // 제목
+    document.getElementById('detailTitle').textContent = d.title || '';
+
+    // 메타
+    var dateStr = d.createdAt ? d.createdAt.toDate().toLocaleString('ko-KR', {
+      year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+    }) : '';
+    var authorStr = isAdmin ? '<span class="detail-meta-author">' + escHtml(d.nickname || d.email || '') + '</span>' : '';
+    document.getElementById('detailMeta').innerHTML = (authorStr ? authorStr + ' · ' : '') + dateStr;
+
+    // 내용
+    document.getElementById('detailContent').textContent = d.content || '';
+
+    // 답변 영역
+    renderAnswerArea(d, answered);
+
+  } catch(e) {
+    showList();
+  }
+}
+
+function renderAnswerArea(d, answered) {
+  var answerContent = document.getElementById('answerContentBox');
+  var answerPending = document.getElementById('answerPendingText');
+  var adminForm = document.getElementById('adminAnswerForm');
+  var editBtn = document.getElementById('answerEditBtn');
+  var dateEl = document.getElementById('answerDate');
+
+  // 초기화
+  answerContent.style.display = 'none';
+  answerPending.style.display = 'none';
+  adminForm.style.display = 'none';
+  editBtn.style.display = 'none';
+
+  if (isAdmin) {
+    editBtn.style.display = 'block';
+    editBtn.textContent = answered ? '수정' : '작성';
+    if (answered) {
+      answerContent.textContent = d.answer || '';
+      answerContent.style.display = 'block';
+      var aDate = d.answeredAt ? d.answeredAt.toDate().toLocaleDateString('ko-KR') : '';
+      dateEl.textContent = aDate;
+      // 폼 초기값
+      document.getElementById('answerInput').value = d.answer || '';
+    } else {
+      answerPending.style.display = 'block';
+      dateEl.textContent = '';
+      document.getElementById('answerInput').value = '';
+      // 처음 작성은 폼 바로 표시
+      adminForm.style.display = 'block';
+      editBtn.textContent = '접기';
+    }
+  } else {
+    // 일반 유저: 읽기 전용
+    editBtn.style.display = 'none';
+    if (answered && d.answer) {
+      answerContent.textContent = d.answer;
+      answerContent.style.display = 'block';
+      var aDate = d.answeredAt ? d.answeredAt.toDate().toLocaleDateString('ko-KR') : '';
+      dateEl.textContent = aDate;
+    } else {
+      answerPending.style.display = 'block';
+    }
+  }
+}
+
+function toggleAnswerEdit() {
+  var form = document.getElementById('adminAnswerForm');
+  var btn = document.getElementById('answerEditBtn');
+  var isVisible = form.style.display !== 'none';
+  form.style.display = isVisible ? 'none' : 'block';
+  btn.textContent = isVisible ? '수정' : '접기';
+}
+
+// ===== 답변 등록 (관리자) =====
+async function submitAnswer() {
+  var answer = document.getElementById('answerInput').value.trim();
+  if (!answer) return;
+
+  var btn = document.getElementById('answerBtn');
+  btn.disabled = true; btn.textContent = '등록 중...';
+
+  try {
+    await db.collection('inquiries').doc(currentDocId).update({
+      answer: answer,
+      answeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'answered'
+    });
+    // 상세 화면 갱신
+    await showDetail(currentDocId);
+  } catch(e) {
+    alert('답변 등록에 실패했습니다.');
+  } finally {
+    btn.disabled = false; btn.textContent = '답변 등록';
+  }
+}
+
+// ===== 로그아웃 =====
+async function doLogout() {
+  await auth.signOut();
+  location.href = 'ai.html';
+}
+
+// ===== Nav =====
+function toggleMenu() {
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('navMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var m = document.getElementById('navMenu'), b = document.getElementById('hamburger');
+  if (m && b && m.classList.contains('open') && !m.contains(e.target) && !b.contains(e.target)) {
+    m.classList.remove('open'); b.classList.remove('open');
+  }
+});
+
+// ===== 유틸 =====
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

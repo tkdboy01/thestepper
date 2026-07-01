@@ -294,6 +294,27 @@ footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align
     <div class="auth-footer">이미 계정이 있으신가요? <span class="auth-link" onclick="showLogin()">로그인</span></div>
   </div>
 
+  <!-- 이메일 인증 카드 -->
+  <div class="auth-card" id="verifyCard" style="display:none">
+    <div class="auth-brand">
+      <div class="auth-logo">THE STEPPER</div>
+      <div class="auth-subtitle">AI 겨루기 코치</div>
+    </div>
+    <div style="text-align:center;padding:8px 0 22px">
+      <div style="font-size:44px;margin-bottom:14px">✉️</div>
+      <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px">이메일 인증이 필요합니다</div>
+      <div style="font-size:13px;color:#555;line-height:1.9">
+        <span id="verifyEmail" style="color:#888"></span>으로<br>
+        인증 이메일을 발송했습니다.<br>
+        이메일 확인 후 아래 버튼을 눌러주세요.
+      </div>
+    </div>
+    <div id="verifyMsg" style="display:none;font-size:12px;color:var(--gold);text-align:center;margin-bottom:14px;padding:9px 12px;background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:7px;line-height:1.6"></div>
+    <button class="auth-btn" onclick="checkVerification()">인증 완료 · 계속하기</button>
+    <button class="auth-btn-google" onclick="resendVerification()">인증 이메일 재발송</button>
+    <div class="auth-footer" style="margin-top:8px"><span class="auth-link" onclick="doLogout()">다른 계정으로 로그인</span></div>
+  </div>
+
 </div>
 
 <!-- CHAT SECTION -->
@@ -378,6 +399,10 @@ auth.onAuthStateChanged(function(user) {
 });
 
 function onLoggedIn(user) {
+  if (!user.emailVerified) {
+    showVerifyCard(user);
+    return;
+  }
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'flex';
   document.getElementById('chatInputArea').style.display = 'block';
@@ -393,6 +418,7 @@ function onLoggedOut() {
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chatInputArea').style.display = 'none';
   document.getElementById('navUserArea').style.display = 'none';
+  showLogin();
 }
 
 // ===== 남은 횟수 로드 =====
@@ -420,15 +446,59 @@ async function loadRemainingCount(uid) {
 function showRegister() {
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('registerCard').style.display = 'block';
+  document.getElementById('verifyCard').style.display = 'none';
   document.getElementById('loginError').style.display = 'none';
   document.getElementById('registerError').style.display = 'none';
 }
 
 function showLogin() {
-  document.getElementById('registerCard').style.display = 'none';
   document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('registerCard').style.display = 'none';
+  document.getElementById('verifyCard').style.display = 'none';
   document.getElementById('loginError').style.display = 'none';
-  document.getElementById('registerError').style.display = 'none';
+}
+
+function showVerifyCard(user) {
+  document.getElementById('loginCard').style.display = 'none';
+  document.getElementById('registerCard').style.display = 'none';
+  document.getElementById('verifyCard').style.display = 'block';
+  document.getElementById('authSection').style.display = 'flex';
+  document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('chatInputArea').style.display = 'none';
+  document.getElementById('navUserArea').style.display = 'none';
+  document.getElementById('verifyEmail').textContent = user.email || '';
+  document.getElementById('verifyMsg').style.display = 'none';
+}
+
+async function checkVerification() {
+  try {
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) {
+      await auth.currentUser.getIdToken(true); // 토큰 강제 갱신 (email_verified 클레임 업데이트)
+      onLoggedIn(auth.currentUser);
+    } else {
+      showVerifyMsg('아직 인증이 완료되지 않았습니다. 이메일을 확인해주세요.');
+    }
+  } catch(e) {
+    showVerifyMsg('오류가 발생했습니다. 다시 시도해주세요.');
+  }
+}
+
+async function resendVerification() {
+  try {
+    await auth.currentUser.sendEmailVerification();
+    showVerifyMsg('인증 이메일을 재발송했습니다.');
+  } catch(e) {
+    showVerifyMsg(e.code === 'auth/too-many-requests'
+      ? '잠시 후 다시 시도해주세요.'
+      : '재발송에 실패했습니다.');
+  }
+}
+
+function showVerifyMsg(msg) {
+  var el = document.getElementById('verifyMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
 function showErr(id, msg) {
@@ -521,6 +591,7 @@ async function doRegister() {
 
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await cred.user.sendEmailVerification();
     await db.collection('users').doc(cred.user.uid).set({
       name:         name,
       nickname:     nickname,
@@ -543,7 +614,7 @@ async function doRegister() {
 async function doLogout() {
   resetChat();
   await auth.signOut();
-  showLogin();
+  // onAuthStateChanged → onLoggedOut() → showLogin() 자동 호출
 }
 
 function resetChat() {

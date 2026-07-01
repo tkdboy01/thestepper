@@ -1009,8 +1009,8 @@ counters.forEach(function(c){if(parseInt(c.getAttribute('data-target'))>0)observ
 </script>
 <!-- Firebase 방문자 카운터 -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, increment, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
@@ -1021,7 +1021,7 @@ counters.forEach(function(c){if(parseInt(c.getAttribute('data-target'))>0)observ
     appId: "1:787224576231:web:04d4003f42ecace9016242"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
   async function updateVisitor() {
@@ -1079,8 +1079,8 @@ function closeLightbox(){
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLightbox();});
 </script>
 <script type="module">
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getStorage, ref, listAll, getDownloadURL, getMetadata } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-storage.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getStorage, ref, listAll, getDownloadURL, getMetadata } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
   const firebaseConfig={
     apiKey:"AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
     authDomain:"thestepper-c9bfb.firebaseapp.com",

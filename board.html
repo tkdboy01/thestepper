@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<meta name="description" content="더스텝퍼 1:1 문의 게시판 - 회원 전용">
+<meta name="description" content="더스텝퍼 1:1 문의 게시판">
 <meta property="og:title" content="1:1 문의 - THE STEPPER">
 <meta property="og:site_name" content="THE STEPPER">
 <title>1:1 문의 - THE STEPPER</title>
@@ -27,6 +27,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.
 .nav-user-email{font-size:11px;color:#555;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-logout-btn{background:transparent;border:1px solid #333;color:#666;font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s}
 .nav-logout-btn:hover{border-color:var(--red);color:var(--red)}
+.nav-login-btn{background:var(--red);border:none;color:#fff;font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all 0.2s;display:none;letter-spacing:0.5px}
+.nav-login-btn:hover{background:#a0301f}
 .hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
 .hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
@@ -100,11 +102,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.
 .detail-meta{font-size:12px;color:#444;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .detail-meta-author{color:#666}
 .detail-content{font-size:14px;color:#bbb;line-height:1.9;white-space:pre-wrap;word-break:keep-all;padding:16px;background:#111;border:1px solid #1a1a1a;border-radius:8px}
+.detail-content.private{color:#333;font-style:italic;text-align:center;padding:24px 16px}
 .answer-wrap{border-top:1px solid var(--border);padding:20px 24px 24px}
 .answer-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .answer-label-text{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase}
 .answer-date-text{font-size:11px;color:#444}
 .answer-content-box{font-size:14px;color:#bbb;line-height:1.9;white-space:pre-wrap;word-break:keep-all;padding:16px;background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:8px}
+.answer-content-box.private{color:#333;font-style:italic;text-align:center;padding:24px 16px;background:#0d0d0d;border-color:#1a1a1a}
 .answer-pending-text{font-size:13px;color:#333;padding:16px;text-align:center}
 .answer-textarea{width:100%;background:#111;border:1px solid var(--border);color:var(--white);font-family:'Noto Sans KR',sans-serif;font-size:14px;padding:12px 16px;border-radius:8px;outline:none;resize:vertical;min-height:120px;line-height:1.7;transition:border-color 0.2s;margin-bottom:12px}
 .answer-textarea:focus{border-color:rgba(201,168,76,0.4)}
@@ -142,6 +146,7 @@ footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align
       <span class="nav-user-email" id="navUserEmail"></span>
       <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
+    <button class="nav-login-btn" id="navLoginBtn" onclick="goLogin()">로그인</button>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </button>
@@ -178,6 +183,7 @@ footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align
         </div>
         <div class="board-desc">궁금하신 점을 남겨주시면 최대한 빠르게 답변 드리겠습니다.</div>
       </div>
+      <!-- 관리자는 작성 버튼 없음 -->
       <button class="write-btn" id="writeBtn" onclick="showForm()">+ 문의하기</button>
     </div>
   </div>
@@ -219,14 +225,10 @@ footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align
         <div class="answer-header">
           <span class="answer-label-text">관리자 답변</span>
           <span class="answer-date-text" id="answerDate"></span>
-          <!-- 관리자: 수정 버튼 -->
           <button class="answer-edit-btn" id="answerEditBtn" style="display:none" onclick="toggleAnswerEdit()">수정</button>
         </div>
-        <!-- 답변 내용 (유저/관리자 읽기) -->
         <div class="answer-content-box" id="answerContentBox" style="display:none"></div>
-        <!-- 미답변 안내 -->
         <div class="answer-pending-text" id="answerPendingText" style="display:none">아직 답변이 등록되지 않았습니다.</div>
-        <!-- 관리자 답변 입력폼 -->
         <div id="adminAnswerForm" style="display:none">
           <textarea class="answer-textarea" id="answerInput" placeholder="답변을 입력해주세요..."></textarea>
           <div style="display:flex;justify-content:flex-end">
@@ -268,75 +270,67 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ===== Auth 상태 감지 =====
+// 비회원도 목록 열람 가능 — 리다이렉트 없음
 auth.onAuthStateChanged(function(user) {
   document.getElementById('initLoading').style.display = 'none';
-  if (!user) {
-    location.href = 'ai.html';
-    return;
-  }
-  currentUser = user;
-  isAdmin = (user.email === ADMIN_EMAIL);
+  currentUser = user || null;
+  isAdmin = user ? (user.email === ADMIN_EMAIL) : false;
   initBoard();
 });
 
 function initBoard() {
   document.getElementById('boardApp').style.display = 'flex';
 
-  // Nav 사용자 표시
-  var area = document.getElementById('navUserArea');
-  area.style.display = 'flex';
-  var email = currentUser.email || '';
-  document.getElementById('navUserEmail').textContent = email.length > 16 ? email.slice(0, 16) + '…' : email;
+  if (currentUser) {
+    // 로그인 상태: 사용자 정보 표시
+    var area = document.getElementById('navUserArea');
+    area.style.display = 'flex';
+    var email = currentUser.email || '';
+    document.getElementById('navUserEmail').textContent = email.length > 16 ? email.slice(0, 16) + '…' : email;
+    document.getElementById('navLoginBtn').style.display = 'none';
+  } else {
+    // 비로그인: 로그인 버튼만 표시
+    document.getElementById('navUserArea').style.display = 'none';
+    document.getElementById('navLoginBtn').style.display = 'block';
+  }
 
+  // 관리자 처리
   if (isAdmin) {
     document.getElementById('adminTag').style.display = 'flex';
     document.getElementById('writeBtn').style.display = 'none';
+  } else {
+    document.getElementById('writeBtn').style.display = 'block';
   }
 
   loadInquiries();
 }
 
-// ===== 목록 로드 =====
+// ===== 목록 로드 (전체 공개) =====
 async function loadInquiries() {
   document.getElementById('listLoading').style.display = 'block';
   document.getElementById('inquiryList').innerHTML = '';
 
   try {
-    var snap;
-    if (isAdmin) {
-      snap = await db.collection('inquiries').orderBy('createdAt', 'desc').get();
-    } else {
-      // 복합 인덱스 없이 클라이언트 정렬 사용
-      snap = await db.collection('inquiries').where('uid', '==', currentUser.uid).get();
-    }
+    // 비회원 포함 전체 목록 조회 (Firestore 규칙: allow read: if true)
+    var snap = await db.collection('inquiries').orderBy('createdAt', 'desc').get();
 
     document.getElementById('listLoading').style.display = 'none';
 
-    var docs = snap.docs;
-    if (!isAdmin) {
-      docs = docs.slice().sort(function(a, b) {
-        var at = a.data().createdAt ? a.data().createdAt.seconds : 0;
-        var bt = b.data().createdAt ? b.data().createdAt.seconds : 0;
-        return bt - at;
-      });
-    }
-
-    if (docs.length === 0) {
+    if (snap.empty) {
       document.getElementById('inquiryList').innerHTML =
         '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">아직 문의 내역이 없습니다.<br>궁금한 점을 문의해보세요.</div></div>';
       return;
     }
 
-    document.getElementById('inquiryList').innerHTML = docs.map(function(doc) {
+    document.getElementById('inquiryList').innerHTML = snap.docs.map(function(doc) {
       var d = doc.data();
       var date = d.createdAt ? d.createdAt.toDate().toLocaleDateString('ko-KR') : '';
       var answered = d.status === 'answered';
       var badge = answered
         ? '<span class="badge badge-answered">답변완료</span>'
         : '<span class="badge badge-pending">대기중</span>';
-      var author = isAdmin
-        ? '<span class="card-author">' + escHtml(d.nickname || d.email || '') + '</span>'
-        : '';
+      // 목록에는 닉네임 항상 표시
+      var author = '<span class="card-author">' + escHtml(d.nickname || '익명') + '</span>';
       return '<div class="board-card" onclick="showDetail(\'' + doc.id + '\')">' +
         '<div class="card-top">' + badge + '<div style="flex:1"></div>' + author +
         '<span class="card-date">' + date + '</span></div>' +
@@ -347,7 +341,7 @@ async function loadInquiries() {
   } catch(e) {
     document.getElementById('listLoading').style.display = 'none';
     document.getElementById('inquiryList').innerHTML =
-      '<div class="empty-state"><div class="empty-text">목록을 불러오지 못했습니다.<br>' + e.message + '</div></div>';
+      '<div class="empty-state"><div class="empty-text">목록을 불러오지 못했습니다.<br>' + escHtml(e.message) + '</div></div>';
   }
 }
 
@@ -362,6 +356,12 @@ function showList() {
 }
 
 function showForm() {
+  // 비로그인 시 로그인 안내 후 이동
+  if (!currentUser) {
+    alert('로그인이 필요합니다.\n로그인 후 문의를 작성할 수 있습니다.');
+    location.href = 'ai.html';
+    return;
+  }
   document.getElementById('listSection').style.display = 'none';
   document.getElementById('formSection').style.display = 'block';
   document.getElementById('detailSection').style.display = 'none';
@@ -383,7 +383,6 @@ async function submitInquiry() {
   btn.disabled = true; btn.textContent = '등록 중...';
 
   try {
-    // users 컬렉션에서 닉네임 조회
     var nickname = currentUser.displayName || '';
     try {
       var userDoc = await db.collection('users').doc(currentUser.uid).get();
@@ -433,46 +432,60 @@ async function showDetail(docId) {
     var d = doc.data();
     var answered = d.status === 'answered';
 
+    // 본인 글 또는 관리자만 내용 열람 가능
+    var isOwner = currentUser && (d.uid === currentUser.uid);
+    var canView = isAdmin || isOwner;
+
     // 뱃지
     document.getElementById('detailBadge').innerHTML = answered
       ? '<span class="badge badge-answered">답변완료</span>'
       : '<span class="badge badge-pending">대기중</span>';
 
-    // 제목
+    // 제목 (전체 공개)
     document.getElementById('detailTitle').textContent = d.title || '';
 
-    // 메타
+    // 메타: 관리자는 작성자 이름 표시
     var dateStr = d.createdAt ? d.createdAt.toDate().toLocaleString('ko-KR', {
       year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
     }) : '';
-    var authorStr = isAdmin ? '<span class="detail-meta-author">' + escHtml(d.nickname || d.email || '') + '</span>' : '';
+    var authorStr = isAdmin
+      ? '<span class="detail-meta-author">' + escHtml(d.nickname || d.email || '') + '</span>'
+      : '';
     document.getElementById('detailMeta').innerHTML = (authorStr ? authorStr + ' · ' : '') + dateStr;
 
-    // 내용
-    document.getElementById('detailContent').textContent = d.content || '';
+    // 내용: 본인/관리자만 공개
+    var contentEl = document.getElementById('detailContent');
+    if (canView) {
+      contentEl.textContent = d.content || '';
+      contentEl.classList.remove('private');
+    } else {
+      contentEl.textContent = '비공개 문의입니다.';
+      contentEl.classList.add('private');
+    }
 
     // 답변 영역
-    renderAnswerArea(d, answered);
+    renderAnswerArea(d, answered, canView);
 
   } catch(e) {
     showList();
   }
 }
 
-function renderAnswerArea(d, answered) {
+function renderAnswerArea(d, answered, canView) {
   var answerContent = document.getElementById('answerContentBox');
   var answerPending = document.getElementById('answerPendingText');
   var adminForm = document.getElementById('adminAnswerForm');
   var editBtn = document.getElementById('answerEditBtn');
   var dateEl = document.getElementById('answerDate');
 
-  // 초기화
   answerContent.style.display = 'none';
+  answerContent.classList.remove('private');
   answerPending.style.display = 'none';
   adminForm.style.display = 'none';
   editBtn.style.display = 'none';
 
   if (isAdmin) {
+    // 관리자: 답변 작성/수정
     editBtn.style.display = 'block';
     editBtn.textContent = answered ? '수정' : '작성';
     if (answered) {
@@ -480,19 +493,16 @@ function renderAnswerArea(d, answered) {
       answerContent.style.display = 'block';
       var aDate = d.answeredAt ? d.answeredAt.toDate().toLocaleDateString('ko-KR') : '';
       dateEl.textContent = aDate;
-      // 폼 초기값
       document.getElementById('answerInput').value = d.answer || '';
     } else {
       answerPending.style.display = 'block';
       dateEl.textContent = '';
       document.getElementById('answerInput').value = '';
-      // 처음 작성은 폼 바로 표시
       adminForm.style.display = 'block';
       editBtn.textContent = '접기';
     }
-  } else {
-    // 일반 유저: 읽기 전용
-    editBtn.style.display = 'none';
+  } else if (canView) {
+    // 본인 글: 답변 읽기 가능
     if (answered && d.answer) {
       answerContent.textContent = d.answer;
       answerContent.style.display = 'block';
@@ -501,6 +511,12 @@ function renderAnswerArea(d, answered) {
     } else {
       answerPending.style.display = 'block';
     }
+  } else {
+    // 타인 글 / 비로그인: 답변 비공개
+    answerContent.textContent = '비공개입니다.';
+    answerContent.classList.add('private');
+    answerContent.style.display = 'block';
+    dateEl.textContent = '';
   }
 }
 
@@ -526,7 +542,6 @@ async function submitAnswer() {
       answeredAt: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'answered'
     });
-    // 상세 화면 갱신
     await showDetail(currentDocId);
   } catch(e) {
     alert('답변 등록에 실패했습니다.');
@@ -535,9 +550,13 @@ async function submitAnswer() {
   }
 }
 
-// ===== 로그아웃 =====
+// ===== 로그아웃 / 로그인 이동 =====
 async function doLogout() {
   await auth.signOut();
+  location.reload();
+}
+
+function goLogin() {
   location.href = 'ai.html';
 }
 

@@ -72,6 +72,25 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.
 .auth-link{color:var(--gold);cursor:pointer;font-weight:600;transition:opacity 0.2s}
 .auth-link:hover{opacity:0.8}
 
+/* REGISTER FORM */
+.auth-card.wide{max-width:480px}
+.reg-section{margin-bottom:20px}
+.reg-section-label{font-size:10px;font-weight:700;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:block}
+.reg-opts{display:flex;flex-wrap:wrap;gap:6px}
+.reg-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #252525;border-radius:7px;cursor:pointer;font-size:13px;color:#777;transition:all 0.15s;user-select:none}
+.reg-opt:hover{border-color:#3a3a3a;color:#bbb}
+.reg-opt input[type="radio"],.reg-opt input[type="checkbox"]{display:none}
+.reg-opt-mark{width:15px;height:15px;border:2px solid #333;border-radius:50%;flex-shrink:0;transition:all 0.15s;position:relative;display:inline-block}
+.reg-opt input[type="radio"]:checked+.reg-opt-mark{border-color:var(--red);background:var(--red);box-shadow:inset 0 0 0 3px #0d0d0d}
+.reg-opt-cb .reg-opt-mark{border-radius:3px}
+.reg-opt-cb input[type="checkbox"]:checked+.reg-opt-mark{border-color:var(--red);background:var(--red)}
+.reg-opt-cb input[type="checkbox"]:checked+.reg-opt-mark::after{content:'';position:absolute;left:2px;top:-1px;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg)}
+.reg-opt:has(input:checked){border-color:rgba(192,57,43,0.5);color:var(--white);background:rgba(192,57,43,0.07)}
+.reg-sub{display:none;margin-top:8px;padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid #1e1e1e;border-radius:8px}
+.reg-sub.show{display:block}
+.reg-sub-label{font-size:11px;color:#555;margin-bottom:8px}
+.reg-hr{border:none;border-top:1px solid #1a1a1a;margin:20px 0 18px}
+
 /* CHAT SECTION */
 .chat-section{flex:1;display:none;flex-direction:column;padding-top:70px}
 .ai-header{background:linear-gradient(135deg,#0d0d0d,#1a0505);border-bottom:1px solid var(--border);padding:28px 24px 24px;text-align:center}
@@ -199,16 +218,78 @@ footer{background:#050505;border-top:1px solid #111;padding:28px 24px;text-align
   </div>
 
   <!-- 회원가입 카드 -->
-  <div class="auth-card" id="registerCard" style="display:none">
+  <div class="auth-card wide" id="registerCard" style="display:none">
     <div class="auth-brand">
       <div class="auth-logo">THE STEPPER</div>
       <div class="auth-subtitle">AI 겨루기 코치</div>
     </div>
     <div class="auth-title">회원가입</div>
     <div class="auth-error" id="registerError"></div>
+
+    <!-- 계정 정보 -->
+    <span class="reg-section-label">계정 정보</span>
     <input type="email" class="auth-input" id="regEmail" placeholder="이메일" autocomplete="email">
     <input type="password" class="auth-input" id="regPassword" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
     <input type="password" class="auth-input" id="regConfirm" placeholder="비밀번호 확인" autocomplete="new-password">
+
+    <hr class="reg-hr">
+
+    <!-- 기본 정보 -->
+    <span class="reg-section-label">기본 정보</span>
+    <input type="text" class="auth-input" id="regName" placeholder="이름" autocomplete="name">
+    <input type="text" class="auth-input" id="regNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
+    <input type="text" class="auth-input" id="regRegion" placeholder="거주 지역">
+
+    <div class="reg-section">
+      <span class="reg-section-label">구분</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="role" value="지도자"><span class="reg-opt-mark"></span>지도자</label>
+        <label class="reg-opt"><input type="radio" name="role" value="수련생"><span class="reg-opt-mark"></span>수련생</label>
+        <label class="reg-opt"><input type="radio" name="role" value="비수련생"><span class="reg-opt-mark"></span>비수련생</label>
+      </div>
+    </div>
+
+    <hr class="reg-hr">
+
+    <!-- 태권도 관련 -->
+    <span class="reg-section-label">태권도 관련</span>
+
+    <div class="reg-section">
+      <span class="reg-section-label">수련 목적</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="purpose" value="성인 겨루기"><span class="reg-opt-mark"></span>성인 겨루기</label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="대학 입시"><span class="reg-opt-mark"></span>대학 입시</label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="선수"><span class="reg-opt-mark"></span>선수</label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="단증 취득"><span class="reg-opt-mark"></span>단증 취득</label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="취미"><span class="reg-opt-mark"></span>취미</label>
+      </div>
+    </div>
+
+    <div class="reg-section">
+      <span class="reg-section-label">현재 수준</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="level" value="초보" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>초보</label>
+        <label class="reg-opt"><input type="radio" name="level" value="중급" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>중급</label>
+        <label class="reg-opt"><input type="radio" name="level" value="선수 출신" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>선수 출신</label>
+      </div>
+      <div class="reg-sub" id="athleteSubGroup">
+        <div class="reg-sub-label">선수 종목 (복수 선택 가능)</div>
+        <div class="reg-opts">
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="겨루기"><span class="reg-opt-mark"></span>겨루기</label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="품새"><span class="reg-opt-mark"></span>품새</label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="시범단"><span class="reg-opt-mark"></span>시범단</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="reg-section">
+      <span class="reg-section-label">소속 도장</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="gym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span>더스텝퍼 회원 도장</label>
+        <label class="reg-opt"><input type="radio" name="gym" value="비회원 도장"><span class="reg-opt-mark"></span>비회원 도장</label>
+      </div>
+    </div>
+
     <button class="auth-btn" id="registerBtn" onclick="doRegister()">가입하기</button>
     <div class="auth-footer">이미 계정이 있으신가요? <span class="auth-link" onclick="showLogin()">로그인</span></div>
   </div>
@@ -397,17 +478,62 @@ async function doGoogleLogin() {
   }
 }
 
+function toggleAthleteTypes(val) {
+  document.getElementById('athleteSubGroup').classList.toggle('show', val === '선수 출신');
+}
+
 async function doRegister() {
-  var email = document.getElementById('regEmail').value.trim();
-  var pw = document.getElementById('regPassword').value;
-  var confirm = document.getElementById('regConfirm').value;
-  if (!email || !pw) { showErr('registerError', '이메일과 비밀번호를 입력해주세요.'); return; }
-  if (pw.length < 6) { showErr('registerError', '비밀번호는 6자 이상이어야 합니다.'); return; }
-  if (pw !== confirm) { showErr('registerError', '비밀번호가 일치하지 않습니다.'); return; }
+  var email    = document.getElementById('regEmail').value.trim();
+  var pw       = document.getElementById('regPassword').value;
+  var confirm  = document.getElementById('regConfirm').value;
+  var name     = document.getElementById('regName').value.trim();
+  var nickname = document.getElementById('regNickname').value.trim();
+  var region   = document.getElementById('regRegion').value.trim();
+
+  // 기본 유효성 검사
+  if (!name)               { showErr('registerError', '이름을 입력해주세요.'); return; }
+  if (!nickname)           { showErr('registerError', '닉네임을 입력해주세요.'); return; }
+  if (!email || !pw)       { showErr('registerError', '이메일과 비밀번호를 입력해주세요.'); return; }
+  if (pw.length < 6)       { showErr('registerError', '비밀번호는 6자 이상이어야 합니다.'); return; }
+  if (pw !== confirm)      { showErr('registerError', '비밀번호가 일치하지 않습니다.'); return; }
+
+  // 라디오 버튼 수집
+  var roleEl    = document.querySelector('input[name="role"]:checked');
+  var purposeEl = document.querySelector('input[name="purpose"]:checked');
+  var levelEl   = document.querySelector('input[name="level"]:checked');
+  var gymEl     = document.querySelector('input[name="gym"]:checked');
+
+  if (!roleEl)    { showErr('registerError', '구분을 선택해주세요.'); return; }
+  if (!purposeEl) { showErr('registerError', '수련 목적을 선택해주세요.'); return; }
+  if (!levelEl)   { showErr('registerError', '현재 수준을 선택해주세요.'); return; }
+  if (!gymEl)     { showErr('registerError', '소속 도장을 선택해주세요.'); return; }
+
+  // 선수 출신 종목 체크박스
+  var athleteTypes = [];
+  if (levelEl.value === '선수 출신') {
+    document.querySelectorAll('input[name="athleteType"]:checked').forEach(function(cb) {
+      athleteTypes.push(cb.value);
+    });
+  }
+
   var btn = document.getElementById('registerBtn');
   btn.disabled = true; btn.textContent = '가입 중...';
+
   try {
-    await auth.createUserWithEmailAndPassword(email, pw);
+    var cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await db.collection('users').doc(cred.user.uid).set({
+      name:         name,
+      nickname:     nickname,
+      region:       region,
+      role:         roleEl.value,
+      purpose:      purposeEl.value,
+      level:        levelEl.value,
+      athleteTypes: athleteTypes,
+      gym:          gymEl.value,
+      email:        email,
+      createdAt:    firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // onAuthStateChanged → onLoggedIn() 자동 호출
   } catch(e) {
     showErr('registerError', getFirebaseMsg(e.code));
     btn.disabled = false; btn.textContent = '가입하기';

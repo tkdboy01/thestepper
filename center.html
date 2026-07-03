@@ -7,38 +7,38 @@
   <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" type="image/png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; font-family: 'Noto Sans KR', sans-serif; overflow-x: hidden; }
+    body { background: #ffffff; font-family: 'Noto Sans KR', sans-serif; overflow-x: hidden; }
 
     /* 네비게이션 */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      background: rgba(10,10,10,0.92);
+      background: rgba(255,255,255,0.97);box-shadow:0 2px 8px rgba(0,0,0,0.08);
       border-bottom: 2px solid #C0392B;
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 24px; backdrop-filter: blur(8px);
     }
     .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .nav-logo img { height: 36px; }
-    .nav-logo span { color: #fff; font-weight: 700; font-size: 16px; }
+    .nav-logo span { color: #1d1d1f; font-weight: 700; font-size: 16px; }
     .nav-back {
       color: #C9A84C; text-decoration: none; font-size: 14px; font-weight: 600;
       border: 1px solid #C9A84C; padding: 6px 14px; border-radius: 4px; transition: all 0.3s;
     }
     .nav-back:hover { background: #C9A84C; color: #000; }
     .hamburger { cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 4px; }
-    .hamburger span { display: block; width: 24px; height: 2px; background: #fff; transition: all 0.3s; }
+    .hamburger span { display: block; width: 24px; height: 2px; background: #1d1d1f; transition: all 0.3s; }
 
     /* 햄버거 메뉴 */
     .menu-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(10,10,10,0.98); z-index: 2000;
+      background: rgba(255,255,255,0.99); z-index: 2000;
       flex-direction: column; align-items: center; justify-content: center; gap: 28px;
     }
     .menu-overlay.active { display: flex; }
-    .menu-overlay a { color: #fff; text-decoration: none; font-size: 22px; font-weight: 700; transition: color 0.3s; }
+    .menu-overlay a { color: #1d1d1f; text-decoration: none; font-size: 22px; font-weight: 700; transition: color 0.3s; }
     .menu-overlay a:hover { color: #C9A84C; }
     .menu-overlay a.active-menu { color: #C0392B; }
-    .menu-close { position: absolute; top: 20px; right: 24px; color: #fff; font-size: 32px; cursor: pointer; background: none; border: none; }
+    .menu-close { position: absolute; top: 20px; right: 24px; color: #1d1d1f; font-size: 32px; cursor: pointer; background: none; border: none; }
 
     /* 풀스크린 슬라이더 */
     .slider-wrap {
@@ -66,7 +66,7 @@
     /* 이전/다음 버튼 */
     .prev-btn, .next-btn {
       position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.5); color: #1d1d1f; border: 1px solid rgba(255,255,255,0.2);
       width: 48px; height: 48px; border-radius: 50%; cursor: pointer;
       font-size: 22px; display: flex; align-items: center; justify-content: center;
       z-index: 10; transition: all 0.3s;

@@ -26,84 +26,84 @@
 <title>스텝 소개 - THE STEPPER</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
-:root{--red:#C8102E;--yellow:#FFE000;--black:#0a0a0a;--dark:#111;--gray:#1a1a1a;--white:#fff}
+:root{--red:#C0392B;--gold:#C9A84C;--black:#0a0a0a;--dark:#f5f5f7;--gray:#f5f5f7;--white:#fff;--text:#1d1d1f;--text2:#6e6e73;--border:#e5e5e7;--card:#ffffff}
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
-nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+body{background:#ffffff;color:#1d1d1f;font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);box-shadow:0 2px 8px rgba(0,0,0,0.08);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
 .nav-left{display:flex;align-items:center;gap:10px}
 .nav-logo-link{display:flex;align-items:center;gap:10px;text-decoration:none}
 .nav-logo-img{height:44px;width:auto}
-.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--yellow)}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--gold)}
 .hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
-.hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
+.hamburger span{display:block;width:24px;height:2px;background:#1d1d1f;transition:all 0.3s}
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #2a2a2a;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:#ffffff;border:1px solid #e5e5e7;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
-.nav-menu a{display:block;color:#ccc;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #1a1a1a;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a{display:block;color:#1d1d1f;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #f0f0f2;letter-spacing:0.5px;transition:all 0.15s}
 .nav-menu a:last-child{border-bottom:none}
-.nav-menu a:hover{color:var(--yellow);background:rgba(200,16,46,0.08);padding-left:26px}
+.nav-menu a:hover{color:var(--gold);background:rgba(200,16,46,0.08);padding-left:26px}
 .floating-btns{position:fixed;bottom:30px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:900}
-.float-btn{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.2s,box-shadow 0.2s}
+.float-btn{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 2px 12px rgba(0,0,0,0.08);transition:transform 0.2s,box-shadow 0.2s}
 .float-btn:hover{transform:translateY(-3px) scale(1.08);box-shadow:0 8px 28px rgba(0,0,0,0.5)}
 .float-youtube{background:#FF0000}
 .float-kakao{background:#FEE500}
 .float-insta{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}
-footer{background:var(--black);border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
+footer{background:#ffffff;border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
 .footer-sns{display:flex;justify-content:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
-.footer-sns a{color:#444;text-decoration:none;font-size:13px;font-weight:600;transition:color 0.2s}
-.footer-sns a:hover{color:var(--yellow)}
-.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+.footer-sns a{color:#3d3d3f;text-decoration:none;font-size:13px;font-weight:600;transition:color 0.2s}
+.footer-sns a:hover{color:var(--gold)}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--gold);margin-bottom:8px}
 .footer-copy{font-size:11px;color:#2a2a2a}
 .section-tag{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:12px}
-.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,72px);letter-spacing:4px;color:var(--white);line-height:1}
-.section-title span{color:var(--yellow)}
-.section-desc{font-size:14px;color:#666;line-height:1.8;max-width:600px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,8vw,72px);letter-spacing:4px;color:#1d1d1f;line-height:1}
+.section-title span{color:var(--gold)}
+.section-desc{font-size:14px;color:#6e6e73;line-height:1.8;max-width:600px}
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
 :root{--red:#C8102E;--yellow:#FFE000;--black:#0a0a0a;--gray:#1a1a1a;--white:#fff}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
-nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+body{background:#ffffff;color:#1d1d1f;font-family:'Noto Sans KR',sans-serif;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);box-shadow:0 2px 8px rgba(0,0,0,0.08);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
 .nav-left{display:flex;align-items:center;gap:16px}
-.nav-back{color:#aaa;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:color 0.2s}
-.nav-back:hover{color:var(--yellow)}
-.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--yellow)}
+.nav-back{color:#6e6e73;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:color 0.2s}
+.nav-back:hover{color:var(--gold)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:var(--gold)}
 .hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;position:relative;z-index:1001}
-.hamburger span{display:block;width:24px;height:2px;background:var(--white);transition:all 0.3s}
+.hamburger span{display:block;width:24px;height:2px;background:#1d1d1f;transition:all 0.3s}
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #2a2a2a;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:#ffffff;border:1px solid #e5e5e7;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
-.nav-menu a{display:block;color:#ccc;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #1a1a1a;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a{display:block;color:#1d1d1f;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #f0f0f2;letter-spacing:0.5px;transition:all 0.15s}
 .nav-menu a:last-child{border-bottom:none}
-.nav-menu a:hover{color:var(--yellow);background:rgba(200,16,46,0.08);padding-left:26px}
+.nav-menu a:hover{color:var(--gold);background:rgba(200,16,46,0.08);padding-left:26px}
 .hero{padding:130px 24px 70px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(200,16,46,0.18),transparent 60%);position:relative;overflow:hidden}
 .hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px}
 .hero-inner{position:relative;z-index:2}
 .section-tag{font-size:11px;font-weight:700;letter-spacing:4px;color:var(--red);margin-bottom:12px}
-.page-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,10vw,84px);letter-spacing:4px;color:var(--white);margin-bottom:16px;line-height:1}
-.page-title span{color:var(--yellow)}
-.page-desc{font-size:14px;color:#666;line-height:1.8;max-width:480px;margin:0 auto}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,10vw,84px);letter-spacing:4px;color:#1d1d1f;margin-bottom:16px;line-height:1}
+.page-title span{color:var(--gold)}
+.page-desc{font-size:14px;color:#6e6e73;line-height:1.8;max-width:480px;margin:0 auto}
 .staff-section{padding:70px 20px 100px;max-width:1100px;margin:0 auto}
-.staff-card.featured{display:grid;grid-template-columns:320px 1fr;background:var(--gray);border:1px solid #222;border-radius:16px;overflow:hidden;margin-bottom:32px;position:relative}
+.staff-card.featured{display:grid;grid-template-columns:320px 1fr;background:#f5f5f7;border:1px solid #e5e5e7;border-radius:16px;overflow:hidden;margin-bottom:32px;position:relative}
 .staff-card.featured::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--yellow));z-index:1}
 .staff-card.featured .card-photo-wrap{height:420px;overflow:hidden;background:#1a1a1a}
 .staff-card.featured .card-photo-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center}
 .staff-card.featured .card-body{padding:44px 48px;display:flex;flex-direction:column;justify-content:center}
 .staff-card.featured .card-title-en{font-size:11px;letter-spacing:3px;color:var(--red);margin-bottom:8px;font-weight:700}
-.staff-card.featured .card-name{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:4px;color:var(--white);line-height:1;margin-bottom:8px}
-.staff-card.featured .card-title-kr{font-size:16px;font-weight:700;color:var(--yellow);letter-spacing:2px;margin-bottom:20px}
-.staff-card.featured .card-desc{font-size:14px;color:#888;line-height:2;margin-bottom:16px}
+.staff-card.featured .card-name{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:4px;color:#1d1d1f;line-height:1;margin-bottom:8px}
+.staff-card.featured .card-title-kr{font-size:16px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:20px}
+.staff-card.featured .card-desc{font-size:14px;color:#6e6e73;line-height:2;margin-bottom:16px}
 .staff-card.featured .card-badge{display:inline-block;background:rgba(200,16,46,0.12);border:1px solid rgba(200,16,46,0.3);color:var(--red);font-size:11px;font-weight:700;letter-spacing:2px;padding:5px 16px;border-radius:20px;margin-top:4px}
 .divider-line{width:100%;height:1px;background:linear-gradient(90deg,transparent,#222,transparent);margin:40px 0}
-.sub-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:var(--white);margin-bottom:24px}
-.sub-title span{color:var(--yellow)}
+.sub-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#1d1d1f;margin-bottom:24px}
+.sub-title span{color:var(--gold)}
 .staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
-.staff-card:not(.featured){background:var(--gray);border:1px solid #1e1e1e;border-radius:12px;overflow:hidden;transition:all 0.3s;display:flex;flex-direction:column}
+.staff-card:not(.featured){background:#f5f5f7;border:1px solid #1e1e1e;border-radius:12px;overflow:hidden;transition:all 0.3s;display:flex;flex-direction:column}
 .staff-card:not(.featured):hover{border-color:var(--red);transform:translateY(-5px)}
 .staff-card:not(.featured) .card-photo-wrap{height:260px;overflow:hidden;background:#1a1a1a;flex-shrink:0}
 .staff-card:not(.featured) .card-photo-wrap img{width:100%;height:100%;object-fit:cover;object-position:top center}
@@ -112,21 +112,21 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.
 .no-photo-text{font-size:11px;color:#2a2a2a;letter-spacing:2px}
 .staff-card:not(.featured) .card-body{padding:20px;flex:1;display:flex;flex-direction:column}
 .staff-card:not(.featured) .card-title-en{font-size:10px;letter-spacing:2px;color:var(--red);margin-bottom:4px;font-weight:700}
-.staff-card:not(.featured) .card-name{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:var(--white);line-height:1;margin-bottom:4px}
-.staff-card:not(.featured) .card-title-kr{font-size:12px;font-weight:700;color:var(--yellow);letter-spacing:1px;margin-bottom:10px}
-.staff-card:not(.featured) .card-desc{font-size:12px;color:#666;line-height:1.7;margin-bottom:12px}
-.staff-card:not(.featured) .card-badge{display:inline-block;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);color:#444;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:10px;margin-top:auto}
-.profile-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 12px;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);border-radius:6px;margin-bottom:8px;font-size:12px;color:#aaa;font-weight:600;transition:all 0.2s;user-select:none}
-.profile-toggle:hover{background:rgba(200,16,46,0.15);color:var(--white)}
+.staff-card:not(.featured) .card-name{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;color:#1d1d1f;line-height:1;margin-bottom:4px}
+.staff-card:not(.featured) .card-title-kr{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:10px}
+.staff-card:not(.featured) .card-desc{font-size:12px;color:#6e6e73;line-height:1.7;margin-bottom:12px}
+.staff-card:not(.featured) .card-badge{display:inline-block;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);color:#3d3d3f;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:10px;margin-top:auto}
+.profile-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 12px;background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.2);border-radius:6px;margin-bottom:8px;font-size:12px;color:#6e6e73;font-weight:600;transition:all 0.2s;user-select:none}
+.profile-toggle:hover{background:rgba(200,16,46,0.15);color:#1d1d1f}
 .toggle-arrow{font-size:10px;transition:transform 0.25s;color:var(--red)}
 .toggle-arrow.open{transform:rotate(180deg)}
 .card-profile{list-style:none;overflow:hidden;max-height:0;transition:max-height 0.35s ease,opacity 0.3s ease;opacity:0;margin-bottom:0}
 .card-profile.open{max-height:200px;opacity:1;margin-bottom:12px}
-.staff-card.featured .card-profile li,.staff-card:not(.featured) .card-profile li{font-size:12px;color:#888;line-height:2;padding-left:14px;position:relative}
+.staff-card.featured .card-profile li,.staff-card:not(.featured) .card-profile li{font-size:12px;color:#6e6e73;line-height:2;padding-left:14px;position:relative}
 .staff-card.featured .card-profile li::before,.staff-card:not(.featured) .card-profile li::before{content:'·';position:absolute;left:0;color:var(--red);font-size:16px;line-height:1.6}
 .staff-card.featured .profile-toggle{padding:9px 14px;font-size:13px;margin-top:4px}
-footer{background:var(--black);border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
-.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
+footer{background:#ffffff;border-top:1px solid #1a1a1a;padding:36px 24px;text-align:center}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;color:var(--gold);margin-bottom:8px}
 .footer-copy{font-size:11px;color:#2a2a2a}
 @media(max-width:768px){
   .staff-card.featured{grid-template-columns:1fr}

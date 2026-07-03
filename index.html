@@ -77,7 +77,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-
+.nav-quick{display:flex;align-items:center;gap:6px}
+.nav-quick-btn{font-size:11px;font-weight:700;text-decoration:none;padding:5px 12px;border-radius:14px;letter-spacing:0.5px;white-space:nowrap;transition:all 0.2s}
+.nqb-red{background:var(--red);color:#fff}
+.nqb-red:hover{background:#a00d24}
+.nqb-gold{background:transparent;border:1.5px solid var(--yellow);color:var(--yellow)}
+.nqb-gold:hover{background:rgba(201,168,76,0.12)}
+.nqb-ai{background:transparent;border:1.5px solid #888;color:#555}
+.nqb-ai:hover{background:rgba(0,0,0,0.06)}
+@media(max-width:600px){.nav-quick{display:none}}
 
 .nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #DDE3EA;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
@@ -426,26 +434,11 @@ footer{background:var(--black);border-top:1px solid #E8EDF3;padding:36px 24px;te
       <span class="nav-brand">THE STEPPER</span>
     </a>
   </div>
-  <a href="center.html"
-    style="display:flex;align-items:center;gap:5px;text-decoration:none;
-           background:#C8102E;border:2px solid #C8102E;
-           border-radius:20px;padding:7px 16px;transition:all 0.25s;margin-right:4px;
-           font-size:12px;font-weight:800;color:#fff;letter-spacing:0.5px;white-space:nowrap;
-           box-shadow:0 2px 8px rgba(200,16,46,0.35)"
-    onmouseover="this.style.background='#a00d24';this.style.borderColor='#a00d24';this.style.boxShadow='0 4px 14px rgba(200,16,46,0.5)'"
-    onmouseout="this.style.background='#C8102E';this.style.borderColor='#C8102E';this.style.boxShadow='0 2px 8px rgba(200,16,46,0.35)'">
-    🥋 성인부&amp;입시센터
-  </a>
-  
-  <a href="virtual.html"
-    style="display:flex;align-items:center;gap:5px;text-decoration:none;
-           background:transparent;border:2px solid #C9A84C;
-           border-radius:20px;padding:7px 14px;transition:all 0.25s;margin-right:4px;
-           font-size:12px;font-weight:800;color:#C9A84C;letter-spacing:0.5px;white-space:nowrap;"
-    onmouseover="this.style.background='rgba(201,168,76,0.14)';this.style.boxShadow='0 4px 14px rgba(201,168,76,0.35)'"
-    onmouseout="this.style.background='transparent';this.style.boxShadow='none'">
-    VR 버추얼 태권도
-  </a>
+  <div class="nav-quick">
+    <a href="center.html" class="nav-quick-btn nqb-red">성인&amp;입시</a>
+    <a href="virtual.html" class="nav-quick-btn nqb-gold">VR 태권도</a>
+    <a href="ai.html" class="nav-quick-btn nqb-ai">AI 코치</a>
+  </div>
 
   <button class="hamburger" id="hamburger" onclick="toggleMenu()">
     <span></span><span></span><span></span>

@@ -451,8 +451,8 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script type="module">
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
@@ -506,6 +506,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch(e) {
       console.log('일정 로드 오류:', e);
+      var errMsg = '<div style="text-align:center;padding:40px;color:#999;font-size:14px">일정을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>';
+      var upEl = document.getElementById('upcomingList');
+      var paEl2 = document.getElementById('pastList');
+      if (upEl) upEl.innerHTML = errMsg;
+      if (paEl2) paEl2.innerHTML = '';
     }
   }
 

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta name="description" content="THE STEPPER VR 버추얼 태권도 시스템 - PICO 독점 계약, 현실과 가상의 경계를 허무는 새로운 태권도 경험">
+<meta property="og:title" content="VR 버추얼 태권도 - THE STEPPER">
+<meta property="og:description" content="격파 챌린지, AI 1:1 대전, PVP 대전 - PICO 4 Ultra 기반 국내 유일 VR 태권도 콘텐츠">
+<meta property="og:site_name" content="THE STEPPER">
+<title>VR 버추얼 태권도 - THE STEPPER</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
+
+:root {
+  --red: #C0392B;
+  --gold: #C9A84C;
+  --black: #0a0a0a;
+  --gray: #141414;
+  --border: #1e1e1e;
+  --white: #fff;
+  --vr-blue: #1a2a4a;
+  --vr-purple: #2d1b4e;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Noto Sans KR', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(10,10,10,0.97); backdrop-filter: blur(10px);
+  border-bottom: 2px solid var(--red);
+  height: 70px; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 24px;
+}
+.nav-left { display: flex; align-items: center; gap: 16px; }
+.nav-back {
+  color: #aaa; text-decoration: none; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px; transition: color 0.2s;
+}
+.nav-back:hover { color: var(--gold); }
+.nav-logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-img { height: 44px; width: auto; }
+.nav-brand { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px; color: var(--gold); }
+.hamburger {
+  background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px; padding: 4px; z-index: 1001;
+}
+.hamburger span { display: block; width: 24px; height: 2px; background: var(--white); transition: all 0.3s; }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-menu {
+  position: fixed; top: 62px; right: 20px; width: 220px;
+  background: rgba(12,12,12,0.98); border: 1px solid #2a2a2a;
+  border-top: 2px solid var(--red); border-radius: 0 0 10px 10px;
+  z-index: 999; opacity: 0; pointer-events: none;
+  transform: translateY(-8px); transition: opacity 0.22s ease, transform 0.22s ease;
+  padding: 8px 0; box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+}
+.nav-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.nav-menu a {
+  display: block; color: #ccc; text-decoration: none;
+  font-size: 14px; font-weight: 600; padding: 13px 20px;
+  border-bottom: 1px solid #1a1a1a; letter-spacing: 0.5px; transition: all 0.15s;
+}
+.nav-menu a:last-child { border-bottom: none; }
+.nav-menu a:hover { color: var(--gold); background: rgba(192,57,43,0.08); padding-left: 26px; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #000 0%, #0a0014 30%, #001020 60%, #050010 100%);
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(192,57,43,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(192,57,43,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridPulse 6s ease-in-out infinite;
+}
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.hero-glow {
+  position: absolute; width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192,57,43,0.12) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  animation: glowPulse 4s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+.hero-particles {
+  position: absolute; inset: 0; overflow: hidden;
+}
+.particle {
+  position: absolute; width: 2px; height: 2px;
+  background: var(--gold); border-radius: 50%;
+  animation: float linear infinite;
+  opacity: 0;
+}
+@keyframes float {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-100px) translateX(40px); opacity: 0; }
+}
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center; padding: 140px 24px 80px;
+  max-width: 900px; margin: 0 auto;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(192,57,43,0.15); border: 1px solid rgba(192,57,43,0.4);
+  color: var(--red); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; padding: 8px 20px; border-radius: 20px;
+  margin-bottom: 32px; text-transform: uppercase;
+}
+.hero-badge::before { content: ''; width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+.hero-title {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: clamp(26px, 5vw, 52px);
+  font-weight: 900; line-height: 1.25;
+  color: var(--white); margin-bottom: 20px;
+  word-break: keep-all;
+}
+.hero-title em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--red), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: clamp(14px, 2.5vw, 20px);
+  color: #7a8a9a; font-weight: 400; letter-spacing: 1px;
+  margin-bottom: 52px; line-height: 1.6;
+}
+.hero-keywords {
+  display: flex; justify-content: center; gap: 20px;
+  flex-wrap: wrap; margin-bottom: 52px;
+}
+.keyword-item {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(22px, 4vw, 42px);
+  letter-spacing: 6px;
+  position: relative;
+}
+.keyword-item:nth-child(1) { color: var(--white); }
+.keyword-item:nth-child(2) { color: var(--red); }
+.keyword-item:nth-child(3) { color: var(--gold); }
+.keyword-sep {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; color: #333;
+  display: flex; align-items: center;
+}
+.hero-scroll {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; color: #333; font-size: 11px; letter-spacing: 2px;
+  animation: bounceDown 2s ease-in-out infinite;
+}
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+.hero-scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, #333, transparent); }
+
+/* ── SECTION COMMON ── */
+section { padding: 100px 24px; }
+.section-inner { max-width: 1100px; margin: 0 auto; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 3px;
+  color: var(--red); text-transform: uppercase; margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: clamp(24px, 4vw, 42px);
+  font-weight: 900; line-height: 1.3;
+  color: var(--white); margin-bottom: 16px;
+  word-break: keep-all;
+}
+.section-desc {
+  font-size: 15px; color: #666; line-height: 1.9;
+  max-width: 640px; word-break: keep-all;
+}
+.gold-line {
+  width: 48px; height: 3px;
+  background: linear-gradient(to right, var(--red), var(--gold));
+  border-radius: 2px; margin: 20px 0 40px;
+}
+
+/* ── VR INTRO ── */
+.vr-intro { background: var(--black); }
+.vr-intro-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: start;
+}
+.vr-what {
+  background: linear-gradient(135deg, #0d0d0d, #111);
+  border: 1px solid var(--border); border-radius: 16px;
+  padding: 36px;
+}
+.vr-what-title {
+  font-size: 18px; font-weight: 700; color: var(--gold);
+  margin-bottom: 16px; letter-spacing: 1px;
+}
+.vr-what-text {
+  font-size: 14px; color: #888; line-height: 2; word-break: keep-all;
+}
+.pico-card {
+  background: linear-gradient(135deg, #0d1218, #0a0d12);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-top: 2px solid var(--red);
+  border-radius: 16px; padding: 36px;
+}
+.pico-badge {
+  display: inline-block;
+  background: rgba(192,57,43,0.12); border: 1px solid rgba(192,57,43,0.35);
+  color: var(--red); font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; padding: 4px 12px; border-radius: 10px;
+  margin-bottom: 16px; text-transform: uppercase;
+}
+.pico-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; letter-spacing: 3px; color: var(--white);
+  margin-bottom: 8px;
+}
+.pico-sub { font-size: 13px; color: var(--gold); margin-bottom: 20px; font-weight: 600; }
+.pico-desc { font-size: 13px; color: #666; line-height: 1.9; margin-bottom: 24px; word-break: keep-all; }
+.pico-specs {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.spec-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid #1a1a1a;
+  border-radius: 8px;
+}
+.spec-icon {
+  font-size: 20px; flex-shrink: 0; margin-top: 2px;
+}
+.spec-name {
+  font-size: 12px; font-weight: 700; color: var(--gold);
+  letter-spacing: 1px; margin-bottom: 3px; text-transform: uppercase;
+}
+.spec-desc { font-size: 12px; color: #666; line-height: 1.6; word-break: keep-all; }
+
+/* ── VR MODES ── */
+.vr-modes {
+  background: linear-gradient(180deg, var(--black) 0%, #06030f 50%, var(--black) 100%);
+}
+.modes-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 20px; margin-top: 20px;
+}
+.mode-card {
+  background: linear-gradient(135deg, #0d0d0d, #100d16);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px 28px;
+  position: relative; overflow: hidden;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.mode-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(192,57,43,0.35);
+  box-shadow: 0 16px 40px rgba(192,57,43,0.08);
+}
+.mode-card.coming-soon {
+  border-color: rgba(201,168,76,0.2);
+  opacity: 0.75;
+}
+.mode-card.coming-soon:hover {
+  border-color: rgba(201,168,76,0.4);
+  box-shadow: 0 16px 40px rgba(201,168,76,0.06);
+}
+.mode-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 60px; color: rgba(192,57,43,0.08);
+  position: absolute; top: 16px; right: 20px;
+  line-height: 1; pointer-events: none;
+}
+.mode-card.coming-soon .mode-num { color: rgba(201,168,76,0.08); }
+.mode-icon { font-size: 36px; margin-bottom: 16px; display: block; }
+.mode-tag {
+  display: inline-block;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+  padding: 3px 10px; border-radius: 8px; margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.mode-tag.red { background: rgba(192,57,43,0.12); border: 1px solid rgba(192,57,43,0.3); color: #e08070; }
+.mode-tag.gold { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); }
+.mode-title {
+  font-size: 20px; font-weight: 800; color: var(--white);
+  margin-bottom: 12px; word-break: keep-all; line-height: 1.3;
+}
+.mode-desc {
+  font-size: 13px; color: #666; line-height: 1.9;
+  word-break: keep-all; margin-bottom: 16px;
+}
+.mode-feature {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: #888; margin-bottom: 6px;
+}
+.mode-feature::before { content: '▸'; color: var(--red); font-size: 10px; flex-shrink: 0; }
+.mode-card.coming-soon .mode-feature::before { color: var(--gold); }
+.coming-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold); font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; padding: 5px 12px; border-radius: 10px;
+  margin-top: 8px; text-transform: uppercase;
+}
+
+/* ── DOJANG EFFECT ── */
+.dojang-effect { background: var(--black); }
+.effect-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px; margin-top: 20px;
+}
+.effect-card {
+  background: #0d0d0d; border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 24px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.effect-card:hover { transform: translateY(-3px); border-color: rgba(192,57,43,0.3); }
+.effect-icon { font-size: 32px; margin-bottom: 14px; display: block; }
+.effect-title { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.effect-desc { font-size: 13px; color: #666; line-height: 1.8; word-break: keep-all; }
+.effect-card .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.effect-card .tag {
+  font-size: 10px; font-weight: 600; color: var(--gold);
+  background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.2);
+  padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px;
+}
+.effect-intro {
+  background: linear-gradient(135deg, #0d0d0d, #100d16);
+  border: 1px solid rgba(192,57,43,0.15);
+  border-left: 3px solid var(--red);
+  border-radius: 12px; padding: 24px 28px;
+  margin-bottom: 28px; font-size: 15px; color: #aaa;
+  line-height: 1.9; word-break: keep-all;
+}
+.effect-intro strong { color: var(--white); }
+
+/* ── CTA ── */
+.cta-section {
+  background: linear-gradient(135deg, #050010, #0a0005, #000);
+  position: relative; overflow: hidden;
+  padding: 120px 24px;
+}
+.cta-bg-line {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(192,57,43,0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(192,57,43,0.04) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+.cta-inner {
+  position: relative; z-index: 2;
+  max-width: 700px; margin: 0 auto; text-align: center;
+}
+.cta-title {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: clamp(22px, 4vw, 40px);
+  font-weight: 900; color: var(--white);
+  margin-bottom: 14px; line-height: 1.3; word-break: keep-all;
+}
+.cta-sub {
+  font-size: 15px; color: #555; margin-bottom: 48px;
+  line-height: 1.7; word-break: keep-all;
+}
+.cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn-call {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--red); color: #fff;
+  text-decoration: none; font-size: 15px; font-weight: 700;
+  padding: 16px 32px; border-radius: 10px;
+  letter-spacing: 0.5px; transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(192,57,43,0.35);
+}
+.btn-call:hover {
+  background: #a0301f;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(192,57,43,0.5);
+}
+.btn-kakao {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #FEE500; color: #3A1D1D;
+  text-decoration: none; font-size: 15px; font-weight: 700;
+  padding: 16px 32px; border-radius: 10px;
+  letter-spacing: 0.5px; transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(254,229,0,0.2);
+}
+.btn-kakao:hover {
+  background: #f5dc00;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(254,229,0,0.3);
+}
+.btn-icon { font-size: 20px; }
+
+/* ── FOOTER ── */
+footer {
+  background: #050505; border-top: 1px solid #111;
+  padding: 28px 24px; text-align: center;
+}
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 4px; color: var(--gold); margin-bottom: 6px; }
+.footer-copy { font-size: 11px; color: #222; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .vr-intro-grid { grid-template-columns: 1fr; gap: 24px; }
+  .modes-grid { grid-template-columns: 1fr; }
+  .effect-grid { grid-template-columns: 1fr; }
+  section { padding: 70px 20px; }
+  .pico-card, .vr-what { padding: 24px 20px; }
+  .mode-card { padding: 24px 20px; }
+}
+@media (max-width: 480px) {
+  .cta-buttons { flex-direction: column; align-items: stretch; }
+  .btn-call, .btn-kakao { justify-content: center; }
+  .hero-keywords { gap: 10px; }
+  .keyword-sep { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="nav-back">← 메인으로</a>
+    <a href="index.html" class="nav-logo-link">
+      <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
+      <span class="nav-brand">THE STEPPER</span>
+    </a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="nav-menu" id="navMenu">
+  <a href="index.html" onclick="toggleMenu()">홈</a>
+  <a href="index.html#about" onclick="toggleMenu()">브랜드 스토리</a>
+  <a href="index.html#curriculum" onclick="toggleMenu()">커리큘럼</a>
+  <a href="schedule.html" onclick="toggleMenu()">세미나 일정</a>
+  <a href="staff.html" onclick="toggleMenu()">스텝 소개</a>
+  <a href="locations.html" onclick="toggleMenu()">회원 도장</a>
+  <a href="contact.html" onclick="toggleMenu()">회원 가입 문의</a>
+  <a href="ai.html" onclick="toggleMenu()">AI 겨루기 코치</a>
+  <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
+  <a href="virtual.html" onclick="toggleMenu()">VR 버추얼 태권도</a>
+</div>
+
+<!-- ── 1섹션: 히어로 ── -->
+<section class="hero" id="top">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-particles" id="particles"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">THE STEPPER · VR TAEKWONDO SYSTEM</div>
+
+    <h1 class="hero-title">
+      현실과 가상의 경계를<br>
+      <em>허무는 새로운 경험</em>
+    </h1>
+    <p class="hero-sub">THE STEPPER VR 버추얼 태권도 시스템</p>
+
+    <div class="hero-keywords">
+      <span class="keyword-item">UNLIMITED</span>
+      <span class="keyword-sep">/</span>
+      <span class="keyword-item">NEW</span>
+      <span class="keyword-sep">/</span>
+      <span class="keyword-item">CHALLENGE</span>
+    </div>
+
+    <div class="hero-scroll">
+      <div class="hero-scroll-line"></div>
+      <span>SCROLL</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── 2섹션: VR이란? ── -->
+<section class="vr-intro" id="intro">
+  <div class="section-inner">
+    <div class="section-label">What is VR?</div>
+    <h2 class="section-title">VR, 그게 뭔가요?</h2>
+    <div class="gold-line"></div>
+
+    <div class="vr-intro-grid">
+      <div class="vr-what">
+        <div class="vr-what-title">🥽 가상현실(VR)이란?</div>
+        <p class="vr-what-text">
+          VR(Virtual Reality, 가상현실)은 헤드셋을 착용하면 완전히 다른 세계 속에 들어온 것처럼 느껴지는 기술입니다.<br><br>
+          눈앞에 펼쳐지는 360° 화면, 손과 발의 움직임을 실시간으로 추적하는 센서 덕분에 마치 진짜 그 공간에 있는 것처럼 생생하게 체험할 수 있습니다.<br><br>
+          게임이나 영화를 넘어서 스포츠·교육·재활·훈련 분야에서도 활발하게 활용되고 있으며, 태권도 역시 VR을 통해 완전히 새로운 차원의 훈련이 가능해졌습니다.
+        </p>
+      </div>
+
+      <div class="pico-card">
+        <div class="pico-badge">EXCLUSIVE PARTNER</div>
+        <div class="pico-title">PICO 4 Ultra</div>
+        <div class="pico-sub">국내외 유일무이한 VR 태권도 콘텐츠 — PICO 독점 계약</div>
+        <p class="pico-desc">
+          더 스텝퍼는 PICO와 독점 파트너십을 체결, 전 세계 어디에도 없는 정통 태권도 VR 콘텐츠를 단독으로 제공합니다.
+        </p>
+
+        <div class="pico-specs">
+          <div class="spec-item">
+            <span class="spec-icon">🥽</span>
+            <div>
+              <div class="spec-name">헤드셋</div>
+              <div class="spec-desc">PICO 4 Ultra — 고해상도 디스플레이와 와이드 시야각으로 완전한 몰입감을 제공합니다. 무선 착용으로 자유롭게 움직일 수 있습니다.</div>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-icon">🎮</span>
+            <div>
+              <div class="spec-name">컨트롤러</div>
+              <div class="spec-desc">손의 위치·방향·속도를 정밀하게 추적합니다. 주먹 지르기, 막기, 잡기 동작을 가상 공간에서 그대로 구현합니다.</div>
+            </div>
+          </div>
+          <div class="spec-item">
+            <span class="spec-icon">🦵</span>
+            <div>
+              <div class="spec-name">모션 트래커</div>
+              <div class="spec-desc">발목에 부착하는 전용 트래커가 발차기 동작을 실시간으로 인식합니다. 돌려차기·앞차기·옆차기 등 모든 태권도 기술을 VR 안에서 그대로 시현합니다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 3섹션: 4가지 VR 모드 ── -->
+<section class="vr-modes" id="modes">
+  <div class="section-inner">
+    <div class="section-label">VR Modes</div>
+    <h2 class="section-title">4가지 VR 모드</h2>
+    <div class="gold-line"></div>
+    <p class="section-desc">수준과 목적에 맞는 다양한 모드로 누구나 즐길 수 있는 태권도 VR 경험을 제공합니다.</p>
+
+    <div class="modes-grid">
+
+      <!-- 격파 챌린지 -->
+      <div class="mode-card">
+        <div class="mode-num">01</div>
+        <span class="mode-icon">🧱</span>
+        <span class="mode-tag red">격파 챌린지</span>
+        <div class="mode-title">안전하고 몰입감 넘치는<br>격파 체험</div>
+        <p class="mode-desc">
+          손과 발로 허공의 디스크를 격파하는 VR 격파 챌린지. 실제 격파대나 부상 위험 없이 짜릿한 격파의 쾌감을 느낄 수 있습니다.
+        </p>
+        <div class="mode-feature">손과 발을 사용해 가상 디스크 격파</div>
+        <div class="mode-feature">부위별 타격 정확도 실시간 피드백</div>
+        <div class="mode-feature">단계별 난이도로 실력 향상 가능</div>
+      </div>
+
+      <!-- AI 1:1 대전 -->
+      <div class="mode-card">
+        <div class="mode-num">02</div>
+        <span class="mode-icon">🤖</span>
+        <span class="mode-tag red">인공지능 1:1 대전</span>
+        <div class="mode-title">언제 어디서나<br>AI 상대와 겨루기 연습</div>
+        <p class="mode-desc">
+          부상 걱정 없이 언제 어디서나 겨루기 연습을 할 수 있습니다. AI 상대는 수련자의 수준에 맞춰 반응하며 실전 같은 훈련 환경을 제공합니다.
+        </p>
+        <div class="mode-feature">15단계 차별화된 레벨 시스템</div>
+        <div class="mode-feature">실전 겨루기 패턴 AI 학습 적용</div>
+        <div class="mode-feature">반응속도·공격 타이밍 분석 리포트</div>
+      </div>
+
+      <!-- PVP -->
+      <div class="mode-card">
+        <div class="mode-num">03</div>
+        <span class="mode-icon">🌐</span>
+        <span class="mode-tag red">1:1 PVP 대전</span>
+        <div class="mode-title">전 세계 유저와<br>실시간 1:1 겨루기</div>
+        <p class="mode-desc">
+          인터넷만 있으면 거리·시간 제약 없이 전 세계 태권도인과 VR 겨루기 대전을 펼칠 수 있습니다.
+        </p>
+        <div class="mode-feature">글로벌 랭킹 시스템 운영</div>
+        <div class="mode-feature">매칭 시스템으로 비슷한 실력의 상대 연결</div>
+        <div class="mode-feature">경기 결과 기록 및 통계 제공</div>
+      </div>
+
+      <!-- AI 품새 마스터 (Coming Soon) -->
+      <div class="mode-card coming-soon">
+        <div class="mode-num">04</div>
+        <span class="mode-icon">🏆</span>
+        <span class="mode-tag gold">AI 품새 마스터</span>
+        <div class="mode-title">빅데이터 기반<br>정밀 동작 인식 및 평가</div>
+        <p class="mode-desc">
+          AI가 수련자의 품새 동작을 분석하여 각도·속도·균형까지 정밀하게 평가합니다. 객관적인 지표로 실력을 확인하고 교정 방향을 안내받을 수 있습니다.
+        </p>
+        <div class="mode-feature">빅데이터 기반 정밀 동작 인식</div>
+        <div class="mode-feature">객관적 실력 평가 지표 제공</div>
+        <div class="mode-feature">개인 맞춤형 교정 가이드</div>
+        <div class="coming-badge">COMING SOON</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── 4섹션: 도장 도입 효과 ── -->
+<section class="dojang-effect" id="effect">
+  <div class="section-inner">
+    <div class="section-label">For Dojang</div>
+    <h2 class="section-title">도장 도입 효과</h2>
+    <div class="gold-line"></div>
+
+    <div class="effect-intro">
+      VR 태권도는 도장에 <strong>새로운 활기</strong>를 불어넣습니다.<br>
+      기존 수련 방식에 VR이 더해지면 마케팅·교육·심사 전반이 업그레이드됩니다.
+    </div>
+
+    <div class="effect-grid">
+      <div class="effect-card">
+        <span class="effect-icon">📣</span>
+        <div class="effect-title">수련생 모집 효과</div>
+        <p class="effect-desc">
+          "VR 태권도 체험 가능"이라는 한 줄이 도장의 경쟁력이 됩니다. SNS 홍보, 체험행사, 시범 시연 등 눈에 띄는 마케팅 효과를 경험하세요.
+        </p>
+        <div class="tag-list">
+          <span class="tag">SNS 바이럴</span>
+          <span class="tag">체험 행사</span>
+          <span class="tag">시범 시연</span>
+        </div>
+      </div>
+
+      <div class="effect-card">
+        <span class="effect-icon">🏋️</span>
+        <div class="effect-title">훈련 프로그램 다양화</div>
+        <p class="effect-desc">
+          품새·겨루기·반응훈련·자세교정까지 — VR이 기존 수련 커리큘럼의 폭을 넓혀줍니다. 수련생 흥미와 집중도가 눈에 띄게 향상됩니다.
+        </p>
+        <div class="tag-list">
+          <span class="tag">품새 교정</span>
+          <span class="tag">겨루기 전술</span>
+          <span class="tag">반응훈련</span>
+        </div>
+      </div>
+
+      <div class="effect-card">
+        <span class="effect-icon">📊</span>
+        <div class="effect-title">심사 및 피드백 자동화</div>
+        <p class="effect-desc">
+          AI 동작 분석이 심사의 기준을 객관화합니다. 난이도 판별, 동작 정확도, 속도 등의 데이터를 바탕으로 체계적인 피드백이 가능합니다.
+        </p>
+        <div class="tag-list">
+          <span class="tag">AI 동작 분석</span>
+          <span class="tag">난이도 판별</span>
+          <span class="tag">객관적 평가</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 5섹션: 도입 문의 ── -->
+<section class="cta-section" id="contact">
+  <div class="cta-bg-line"></div>
+  <div class="cta-inner">
+    <div class="section-label" style="text-align:center;margin-bottom:20px">Contact Us</div>
+    <h2 class="cta-title">
+      더스텝퍼와 함께<br>
+      VR 버추얼 태권도를 시작하세요
+    </h2>
+    <p class="cta-sub">
+      도입 상담부터 설치·운영 교육까지 전 과정을 함께합니다.<br>
+      지금 바로 연락 주시면 전문 담당자가 안내해 드립니다.
+    </p>
+    <div class="cta-buttons">
+      <a href="tel:010-4304-7768" class="btn-call">
+        <span class="btn-icon">📞</span>
+        <span>010-4304-7768</span>
+      </a>
+      <a href="https://open.kakao.com/o/gFVIg0Dh" target="_blank" rel="noopener noreferrer" class="btn-kakao">
+        <span class="btn-icon">💬</span>
+        <span>카카오톡 문의</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">THE STEPPER</div>
+  <div class="footer-copy">© 2026 THE STEPPER. All rights reserved. | 대표: 김민성 | 010-4304-7768</div>
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb"
+});
+
+// ── 파티클 생성 ──
+(function() {
+  var container = document.getElementById('particles');
+  for (var i = 0; i < 20; i++) {
+    var p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (6 + Math.random() * 10) + 's';
+    p.style.animationDelay = (Math.random() * 8) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+    container.appendChild(p);
+  }
+})();
+
+// ── 네비게이션 ──
+function toggleMenu() {
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('navMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var m = document.getElementById('navMenu'), b = document.getElementById('hamburger');
+  if (m && b && m.classList.contains('open') && !m.contains(e.target) && !b.contains(e.target)) {
+    m.classList.remove('open'); b.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>

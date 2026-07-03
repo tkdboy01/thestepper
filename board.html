@@ -34,11 +34,22 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:#ffffff;border:1px solid #e5e5e7;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+/* ── NAV QUICK LINKS (desktop only) ── */
+.nav-quick{display:flex;align-items:center;gap:6px;margin-right:8px}
+.nav-quick-btn{text-decoration:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;letter-spacing:0.3px;white-space:nowrap;transition:all 0.2s}
+.nqb-red{background:#C0392B;color:#fff}
+.nqb-red:hover{background:#a0301f;transform:translateY(-1px)}
+.nqb-gold{background:transparent;color:#C9A84C;border:1.5px solid #C9A84C}
+.nqb-gold:hover{background:rgba(201,168,76,0.12);transform:translateY(-1px)}
+.nqb-ai{background:transparent;color:#6e6e73;border:1.5px solid #d2d2d7}
+.nqb-ai:hover{border-color:#1d1d1f;color:#1d1d1f;transform:translateY(-1px)}
+@media(max-width:768px){.nav-quick{display:none}}
+
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(10,10,10,0.97);border:1px solid rgba(255,255,255,0.08);border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
-.nav-menu a{display:block;color:#1d1d1f;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #f0f0f2;letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a{display:block;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,0.08);letter-spacing:0.5px;transition:all 0.15s}
 .nav-menu a:last-child{border-bottom:none}
-.nav-menu a:hover{color:var(--gold);background:rgba(192,57,43,0.08);padding-left:26px}
+.nav-menu a:hover{color:var(--gold);background:rgba(255,255,255,0.06);padding-left:26px}
 
 /* INIT LOADING */
 .init-loading{flex:1;display:flex;align-items:center;justify-content:center;padding-top:70px}
@@ -140,6 +151,11 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
       <span class="nav-brand">THE STEPPER</span>
     </a>
+  </div>
+  <div class="nav-quick">
+    <a href="center.html" class="nav-quick-btn nqb-red">성인&amp;입시</a>
+    <a href="virtual.html" class="nav-quick-btn nqb-gold">VR 태권도</a>
+    <a href="ai.html" class="nav-quick-btn nqb-ai">AI 코치</a>
   </div>
   <div class="nav-right">
     <div class="nav-user-area" id="navUserArea">

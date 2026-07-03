@@ -31,14 +31,14 @@
     /* 햄버거 메뉴 */
     .menu-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255,255,255,0.99); z-index: 2000;
+      background: rgba(10,10,10,0.97); z-index: 2000;
       flex-direction: column; align-items: center; justify-content: center; gap: 28px;
     }
     .menu-overlay.active { display: flex; }
-    .menu-overlay a { color: #1d1d1f; text-decoration: none; font-size: 22px; font-weight: 700; transition: color 0.3s; }
+    .menu-overlay a { color: #ffffff; text-decoration: none; font-size: 22px; font-weight: 700; transition: color 0.3s; }
     .menu-overlay a:hover { color: #C9A84C; }
     .menu-overlay a.active-menu { color: #C0392B; }
-    .menu-close { position: absolute; top: 20px; right: 24px; color: #1d1d1f; font-size: 32px; cursor: pointer; background: none; border: none; }
+    .menu-close { position: absolute; top: 20px; right: 24px; color: #ffffff; font-size: 32px; cursor: pointer; background: none; border: none; }
 
     /* 풀스크린 슬라이더 */
     .slider-wrap {
@@ -125,6 +125,11 @@
     <span>THE STEPPER</span>
   </a>
   <a href="index.html" class="nav-back">← 홈으로</a>
+  <div class="nav-quick">
+    <a href="center.html" class="nav-quick-btn nqb-red">성인&amp;입시</a>
+    <a href="virtual.html" class="nav-quick-btn nqb-gold">VR 태권도</a>
+    <a href="ai.html" class="nav-quick-btn nqb-ai">AI 코치</a>
+  </div>
   <div class="hamburger" onclick="toggleMenu()">
     <span></span><span></span><span></span>
   </div>

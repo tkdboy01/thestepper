@@ -55,18 +55,26 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 
 /* GUIDE */
 .guide-section{margin-bottom:28px}
-.guide-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;transition:all 0.2s;text-align:left}
-.guide-toggle:hover{border-color:var(--red);background:rgba(192,57,43,0.02)}
+.guide-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;transition:border-color 0.2s,background 0.2s,border-radius 0.01s;text-align:left}
+.guide-toggle:hover{border-color:rgba(192,57,43,0.5);background:rgba(192,57,43,0.02)}
 .guide-toggle.open{border-radius:12px 12px 0 0;border-bottom-color:transparent}
 .guide-toggle-left{display:flex;align-items:center;gap:10px}
 .guide-toggle-icon{font-size:18px}
 .guide-toggle-title{font-size:14px;font-weight:700;color:var(--text)}
 .guide-toggle-sub{font-size:11px;color:var(--text2);margin-top:2px}
-.guide-arrow{font-size:12px;color:var(--text2);transition:transform 0.25s}
+.guide-arrow{font-size:12px;color:var(--text2);transition:transform 0.3s ease}
 .guide-toggle.open .guide-arrow{transform:rotate(180deg)}
-.guide-body{display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;background:#fff}
-.guide-body.open{display:block}
-.guide-body img{width:100%;max-width:100%;display:block;cursor:zoom-in}
+/* 아코디언 본체: max-height 애니메이션 — overflow는 JS로 제어 */
+.guide-body{
+  max-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+  transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
+}
+.guide-body img{width:100%;max-width:100%;display:block;cursor:zoom-in;border-radius:0}
 .guide-caption{font-size:12px;color:var(--text2);text-align:center;padding:10px 16px 14px;line-height:1.6}
 
 /* LIGHTBOX */
@@ -211,8 +219,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
       <span class="guide-arrow">▼</span>
     </button>
     <div class="guide-body" id="guideBody">
-      <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media"
-           alt="동작 분석 촬영 가이드" loading="lazy" onclick="openLightbox(this.src)">
+      <img id="guideImg"
+           src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media"
+           alt="동작 분석 촬영 가이드" loading="eager" onclick="openLightbox(this.src)">
       <div class="guide-caption">정확한 분석을 위해 촬영 가이드를 꼭 확인해주세요</div>
     </div>
   </div>
@@ -386,9 +395,51 @@ function doLogout() {
 function toggleGuide() {
   var toggle = document.getElementById('guideToggle');
   var body   = document.getElementById('guideBody');
+  var opening = !toggle.classList.contains('open');
+
   toggle.classList.toggle('open');
-  body.classList.toggle('open');
+
+  if (opening) {
+    // 열기: 실제 scrollHeight로 max-height 설정 후 transition
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    // transition 완료 후 overflow:visible로 풀어서 clipping 방지
+    setTimeout(function() {
+      if (toggle.classList.contains('open')) {
+        body.style.maxHeight = 'none';
+        body.style.overflow  = 'visible';
+      }
+    }, 420);
+  } else {
+    // 닫기: 현재 높이를 명시적으로 지정한 뒤 0으로 애니메이션
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        body.style.maxHeight = '0';
+      });
+    });
+  }
 }
+
+// 이미지 로드 완료 시 아코디언이 열려있으면 높이 재계산
+(function() {
+  var guideImg = document.getElementById('guideImg');
+  if (!guideImg) return;
+  guideImg.addEventListener('load', function() {
+    var toggle = document.getElementById('guideToggle');
+    var body   = document.getElementById('guideBody');
+    if (toggle && toggle.classList.contains('open') && body.style.maxHeight !== 'none') {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      setTimeout(function() {
+        if (toggle.classList.contains('open')) {
+          body.style.maxHeight = 'none';
+          body.style.overflow  = 'visible';
+        }
+      }, 420);
+    }
+  });
+})();
 function openLightbox(src) {
   document.getElementById('lightboxImg').src = src;
   document.getElementById('lightbox').classList.add('open');

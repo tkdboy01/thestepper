@@ -177,7 +177,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
   <div class="nav-left">
     <a href="index.html" class="nav-back">← 메인</a>
     <a href="index.html" class="nav-logo-link">
-      <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
+      <picture><source srcset="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.webp?alt=media" type="image/webp"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="eager"></picture>
       <span class="nav-brand">THE STEPPER</span>
     </a>
   </div>
@@ -235,9 +235,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
       <span class="guide-arrow">▼</span>
     </button>
     <div class="guide-body" id="guideBody">
-      <img id="guideImg"
-           src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media&v=3"
-           alt="동작 분석 촬영 가이드" loading="eager" onclick="openLightbox(this.src)">
+      <picture>
+        <source srcset="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.webp?alt=media" type="image/webp">
+        <img id="guideImg"
+             src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media&v=4"
+             alt="동작 분석 촬영 가이드" loading="eager" onclick="openLightbox(this.src)">
+      </picture>
       <div class="guide-caption">정확한 분석을 위해 촬영 가이드를 꼭 확인해주세요</div>
     </div>
   </div>

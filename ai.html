@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" id="htmlRoot">
 <head>
 <meta charset="UTF-8">
 <meta name="naver-site-verification" content="0da3555bb1677b32a902d1e71e413e1dd7141200" />
@@ -14,7 +14,7 @@
 <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Fog_image.png?alt=media">
 <meta property="og:site_name" content="THE STEPPER">
 <meta property="og:locale" content="ko_KR">
-<title>AI 겨루기 코치 - THE STEPPER</title>
+<title>AI Coach - THE STEPPER</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
 :root{--red:#C0392B;--gold:#C9A84C;--black:#0a0a0a;--gray:#f5f5f7;--border:#e5e5e7;--white:#fff;--text:#1d1d1f;--text2:#6e6e73;--card:#ffffff}
@@ -49,6 +49,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .nqb-ai{background:transparent;color:#6e6e73;border:1.5px solid #d2d2d7}
 .nqb-ai:hover{border-color:#1d1d1f;color:#1d1d1f;transform:translateY(-1px)}
 @media(max-width:768px){.nav-quick{display:none}}
+
+/* LANG TOGGLE */
+.lang-toggle{display:flex;align-items:center;background:#f0f0f2;border:1px solid #e0e0e2;border-radius:20px;padding:2px;margin-right:2px;flex-shrink:0}
+.lang-btn{background:none;border:none;font-family:'Noto Sans KR',sans-serif;font-size:10px;font-weight:700;color:#6e6e73;padding:3px 9px;border-radius:14px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px;line-height:1.4}
+.lang-btn.active{background:#fff;color:#1d1d1f;box-shadow:0 1px 3px rgba(0,0,0,0.12)}
 
 .nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(10,10,10,0.97);border:1px solid rgba(255,255,255,0.08);border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
@@ -149,7 +154,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .chat-send:hover:not(:disabled){background:#a0301f;transform:scale(1.05)}
 .chat-send:disabled{background:#2a0a0a;cursor:not-allowed;opacity:0.5}
 .chat-send svg{width:18px;height:18px;fill:currentColor}
-.remaining-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.03);border:1px solid #e5e5e7;border-radius:20px;padding:4px 12px;font-size:11px;color:#6e6e73}
+.remaining-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.03);border:1px solid #e5e5e7;border-radius:20px;padding:4px 12px;font-size:11px;color:#6e6e73}
 .remaining-badge b{color:#6e6e73}
 footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-align:center}
 .footer-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;color:var(--gold);margin-bottom:6px}
@@ -168,7 +173,7 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 <!-- NAV -->
 <nav>
   <div class="nav-left">
-    <a href="index.html" class="nav-back">← 메인으로</a>
+    <a href="index.html" class="nav-back" id="navBack">← 메인으로</a>
     <a href="index.html" class="nav-logo-link">
       <img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="lazy">
       <span class="nav-brand">THE STEPPER</span>
@@ -180,9 +185,13 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     <a href="ai.html" class="nav-quick-btn nqb-ai">AI 코치</a>
   </div>
   <div class="nav-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btnKo" onclick="setLang('ko')">KOR</button>
+      <button class="lang-btn" id="btnEn" onclick="setLang('en')">ENG</button>
+    </div>
     <div class="nav-user-area" id="navUserArea">
       <span class="nav-user-email" id="navUserEmail"></span>
-      <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
+      <button class="nav-logout-btn" id="navLogoutBtn" onclick="doLogout()">로그아웃</button>
     </div>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
@@ -216,22 +225,22 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       <div class="auth-logo">THE STEPPER</div>
       <div class="auth-subtitle">AI 겨루기 코치</div>
     </div>
-    <div class="auth-title">로그인</div>
+    <div class="auth-title" id="loginTitle">로그인</div>
     <div class="auth-error" id="loginError"></div>
     <input type="email" class="auth-input" id="loginEmail" placeholder="이메일" autocomplete="email">
     <input type="password" class="auth-input" id="loginPassword" placeholder="비밀번호" autocomplete="current-password">
     <button class="auth-btn" id="loginBtn" onclick="doEmailLogin()">로그인</button>
-    <div class="auth-divider"><span>또는</span></div>
-    <button class="auth-btn-google" onclick="doGoogleLogin()">
+    <div class="auth-divider"><span id="loginDivider">또는</span></div>
+    <button class="auth-btn-google" id="loginGoogleBtn" onclick="doGoogleLogin()">
       <svg viewBox="0 0 24 24" width="18" height="18">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
       </svg>
-      Google로 로그인
+      <span id="loginGoogleText">Google로 로그인</span>
     </button>
-    <div class="auth-footer">계정이 없으신가요? <span class="auth-link" onclick="showRegister()">회원가입</span></div>
+    <div class="auth-footer"><span id="loginFooterText">계정이 없으신가요?</span> <span class="auth-link" id="loginFooterLink" onclick="showRegister()">회원가입</span></div>
   </div>
 
   <!-- 회원가입 카드 -->
@@ -240,11 +249,11 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       <div class="auth-logo">THE STEPPER</div>
       <div class="auth-subtitle">AI 겨루기 코치</div>
     </div>
-    <div class="auth-title">회원가입</div>
+    <div class="auth-title" id="registerTitle">회원가입</div>
     <div class="auth-error" id="registerError"></div>
 
     <!-- 계정 정보 -->
-    <span class="reg-section-label">계정 정보</span>
+    <span class="reg-section-label" id="regLabelAccount">계정 정보</span>
     <input type="email" class="auth-input" id="regEmail" placeholder="이메일" autocomplete="email">
     <input type="password" class="auth-input" id="regPassword" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
     <input type="password" class="auth-input" id="regConfirm" placeholder="비밀번호 확인" autocomplete="new-password">
@@ -252,63 +261,63 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     <hr class="reg-hr">
 
     <!-- 기본 정보 -->
-    <span class="reg-section-label">기본 정보</span>
+    <span class="reg-section-label" id="regLabelBasic">기본 정보</span>
     <input type="text" class="auth-input" id="regName" placeholder="이름" autocomplete="name">
     <input type="text" class="auth-input" id="regNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
     <input type="text" class="auth-input" id="regRegion" placeholder="거주 지역">
 
     <div class="reg-section">
-      <span class="reg-section-label">구분</span>
+      <span class="reg-section-label" id="regLabelRole">구분</span>
       <div class="reg-opts">
-        <label class="reg-opt"><input type="radio" name="role" value="지도자"><span class="reg-opt-mark"></span>지도자</label>
-        <label class="reg-opt"><input type="radio" name="role" value="수련생"><span class="reg-opt-mark"></span>수련생</label>
-        <label class="reg-opt"><input type="radio" name="role" value="비수련생"><span class="reg-opt-mark"></span>비수련생</label>
+        <label class="reg-opt"><input type="radio" name="role" value="지도자"><span class="reg-opt-mark"></span><span data-ko="지도자" data-en="Instructor">지도자</span></label>
+        <label class="reg-opt"><input type="radio" name="role" value="수련생"><span class="reg-opt-mark"></span><span data-ko="수련생" data-en="Student">수련생</span></label>
+        <label class="reg-opt"><input type="radio" name="role" value="비수련생"><span class="reg-opt-mark"></span><span data-ko="비수련생" data-en="Non-student">비수련생</span></label>
       </div>
     </div>
 
     <hr class="reg-hr">
 
     <!-- 태권도 관련 -->
-    <span class="reg-section-label">태권도 관련</span>
+    <span class="reg-section-label" id="regLabelTkd">태권도 관련</span>
 
     <div class="reg-section">
-      <span class="reg-section-label">수련 목적</span>
+      <span class="reg-section-label" id="regLabelPurpose">수련 목적</span>
       <div class="reg-opts">
-        <label class="reg-opt"><input type="radio" name="purpose" value="성인 겨루기"><span class="reg-opt-mark"></span>성인 겨루기</label>
-        <label class="reg-opt"><input type="radio" name="purpose" value="대학 입시"><span class="reg-opt-mark"></span>대학 입시</label>
-        <label class="reg-opt"><input type="radio" name="purpose" value="선수"><span class="reg-opt-mark"></span>선수</label>
-        <label class="reg-opt"><input type="radio" name="purpose" value="단증 취득"><span class="reg-opt-mark"></span>단증 취득</label>
-        <label class="reg-opt"><input type="radio" name="purpose" value="취미"><span class="reg-opt-mark"></span>취미</label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="성인 겨루기"><span class="reg-opt-mark"></span><span data-ko="성인 겨루기" data-en="Adult Kyorugi">성인 겨루기</span></label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="대학 입시"><span class="reg-opt-mark"></span><span data-ko="대학 입시" data-en="University Entrance">대학 입시</span></label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="선수"><span class="reg-opt-mark"></span><span data-ko="선수" data-en="Competitive Athlete">선수</span></label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="단증 취득"><span class="reg-opt-mark"></span><span data-ko="단증 취득" data-en="Dan Certification">단증 취득</span></label>
+        <label class="reg-opt"><input type="radio" name="purpose" value="취미"><span class="reg-opt-mark"></span><span data-ko="취미" data-en="Hobby">취미</span></label>
       </div>
     </div>
 
     <div class="reg-section">
-      <span class="reg-section-label">현재 수준</span>
+      <span class="reg-section-label" id="regLabelLevel">현재 수준</span>
       <div class="reg-opts">
-        <label class="reg-opt"><input type="radio" name="level" value="초보" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>초보</label>
-        <label class="reg-opt"><input type="radio" name="level" value="중급" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>중급</label>
-        <label class="reg-opt"><input type="radio" name="level" value="선수 출신" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span>선수 출신</label>
+        <label class="reg-opt"><input type="radio" name="level" value="초보" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span><span data-ko="초보" data-en="Beginner">초보</span></label>
+        <label class="reg-opt"><input type="radio" name="level" value="중급" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span><span data-ko="중급" data-en="Intermediate">중급</span></label>
+        <label class="reg-opt"><input type="radio" name="level" value="선수 출신" onchange="toggleAthleteTypes(this.value)"><span class="reg-opt-mark"></span><span data-ko="선수 출신" data-en="Former Athlete">선수 출신</span></label>
       </div>
       <div class="reg-sub" id="athleteSubGroup">
-        <div class="reg-sub-label">선수 종목 (복수 선택 가능)</div>
+        <div class="reg-sub-label" id="regAthleteTypeLabel">선수 종목 (복수 선택 가능)</div>
         <div class="reg-opts">
-          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="겨루기"><span class="reg-opt-mark"></span>겨루기</label>
-          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="품새"><span class="reg-opt-mark"></span>품새</label>
-          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="시범단"><span class="reg-opt-mark"></span>시범단</label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="겨루기"><span class="reg-opt-mark"></span><span data-ko="겨루기" data-en="Kyorugi (Sparring)">겨루기</span></label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="품새"><span class="reg-opt-mark"></span><span data-ko="품새" data-en="Poomsae (Forms)">품새</span></label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" name="athleteType" value="시범단"><span class="reg-opt-mark"></span><span data-ko="시범단" data-en="Demo Team">시범단</span></label>
         </div>
       </div>
     </div>
 
     <div class="reg-section">
-      <span class="reg-section-label">소속 도장</span>
+      <span class="reg-section-label" id="regLabelGym">소속 도장</span>
       <div class="reg-opts">
-        <label class="reg-opt"><input type="radio" name="gym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span>더스텝퍼 회원 도장</label>
-        <label class="reg-opt"><input type="radio" name="gym" value="비회원 도장"><span class="reg-opt-mark"></span>비회원 도장</label>
+        <label class="reg-opt"><input type="radio" name="gym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span><span data-ko="더스텝퍼 회원 도장" data-en="THE STEPPER Member Gym">더스텝퍼 회원 도장</span></label>
+        <label class="reg-opt"><input type="radio" name="gym" value="비회원 도장"><span class="reg-opt-mark"></span><span data-ko="비회원 도장" data-en="Other Gym">비회원 도장</span></label>
       </div>
     </div>
 
     <button class="auth-btn" id="registerBtn" onclick="doRegister()">가입하기</button>
-    <div class="auth-footer">이미 계정이 있으신가요? <span class="auth-link" onclick="showLogin()">로그인</span></div>
+    <div class="auth-footer"><span id="registerFooterText">이미 계정이 있으신가요?</span> <span class="auth-link" id="registerFooterLink" onclick="showLogin()">로그인</span></div>
   </div>
 
   <!-- 이메일 인증 카드 -->
@@ -319,17 +328,17 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     </div>
     <div style="text-align:center;padding:8px 0 22px">
       <div style="font-size:44px;margin-bottom:14px">✉️</div>
-      <div style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px">이메일 인증이 필요합니다</div>
-      <div style="font-size:13px;color:#555;line-height:1.9">
+      <div id="verifyTitle" style="font-size:16px;font-weight:700;color:var(--white);margin-bottom:12px">이메일 인증이 필요합니다</div>
+      <div id="verifyDesc" style="font-size:13px;color:#555;line-height:1.9">
         <span id="verifyEmail" style="color:#888"></span>으로<br>
         인증 이메일을 발송했습니다.<br>
         이메일 확인 후 아래 버튼을 눌러주세요.
       </div>
     </div>
     <div id="verifyMsg" style="display:none;font-size:12px;color:var(--gold);text-align:center;margin-bottom:14px;padding:9px 12px;background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);border-radius:7px;line-height:1.6"></div>
-    <button class="auth-btn" onclick="checkVerification()">인증 완료 · 계속하기</button>
-    <button class="auth-btn-google" onclick="resendVerification()">인증 이메일 재발송</button>
-    <div class="auth-footer" style="margin-top:8px"><span class="auth-link" onclick="doLogout()">다른 계정으로 로그인</span></div>
+    <button class="auth-btn" id="verifyBtn" onclick="checkVerification()">인증 완료 · 계속하기</button>
+    <button class="auth-btn-google" id="verifyResendBtn" onclick="resendVerification()">인증 이메일 재발송</button>
+    <div class="auth-footer" style="margin-top:8px"><span class="auth-link" id="verifyOtherLink" onclick="doLogout()">다른 계정으로 로그인</span></div>
   </div>
 
 </div>
@@ -342,15 +351,15 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       AI COACH ONLINE
     </div>
     <div class="ai-header-title">AI <span>겨루기 코치</span></div>
-    <div class="ai-header-desc">15단계 커리큘럼 기반 · 하루 5회 무료 이용</div>
+    <div class="ai-header-desc" id="chatHeaderDesc">15단계 커리큘럼 기반 · 하루 5회 무료 이용</div>
   </div>
   <div class="chat-wrapper">
     <div class="chat-messages" id="chatMessages">
       <div class="chat-welcome" id="chatWelcome">
         <div class="welcome-icon">🥋</div>
-        <div class="welcome-title">THE STEPPER AI 겨루기 코치입니다</div>
-        <div class="welcome-desc">더스텝퍼 15단계 커리큘럼을 기반으로<br>태권도 겨루기 전술·기술 질문에 답변드립니다.<br><span style="color:#333">커리큘럼 범위 외 질문에는 답변하지 않습니다.</span></div>
-        <div class="welcome-chips">
+        <div class="welcome-title" id="welcomeTitle">THE STEPPER AI 겨루기 코치입니다</div>
+        <div class="welcome-desc" id="welcomeDesc">더스텝퍼 15단계 커리큘럼을 기반으로<br>태권도 겨루기 전술·기술 질문에 답변드립니다.<br><span style="color:#333">커리큘럼 범위 외 질문에는 답변하지 않습니다.</span></div>
+        <div class="welcome-chips" id="welcomeChips">
           <div class="chip" onclick="sendChip(this)">1단계 원스텝이 뭔가요?</div>
           <div class="chip" onclick="sendChip(this)">돌려차기 전술 알려주세요</div>
           <div class="chip" onclick="sendChip(this)">페인트 기술은 몇 단계인가요?</div>
@@ -365,7 +374,9 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 <div class="chat-input-area" id="chatInputArea">
   <div class="chat-input-inner">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <div class="remaining-badge">오늘 남은 질문: <b id="remainCount">5</b>회</div>
+      <div class="remaining-badge">
+        <span id="remainingPrefix">오늘 남은 질문: </span><b id="remainCount">5</b><span id="remainingSuffix">회</span>
+      </div>
       <div class="chat-limit"><span id="charCount">0</span> / 500</div>
     </div>
     <div class="chat-row">
@@ -392,6 +403,252 @@ const API_URL = 'https://thestepper-api.vercel.app/api/coach';
 const DAILY_LIMIT = 5;
 let remaining = DAILY_LIMIT;
 let isLoading = false;
+
+// ===== i18n =====
+var T = {
+  ko: {
+    navBack: '← 메인으로',
+    navLogout: '로그아웃',
+    authSubtitle: 'AI 겨루기 코치',
+    loginTitle: '로그인',
+    loginEmailPh: '이메일',
+    loginPasswordPh: '비밀번호',
+    loginBtn: '로그인',
+    loginBtnLoading: '로그인 중...',
+    loginDivider: '또는',
+    loginGoogle: 'Google로 로그인',
+    loginFooterText: '계정이 없으신가요?',
+    loginFooterLink: '회원가입',
+    registerTitle: '회원가입',
+    regLabelAccount: '계정 정보',
+    regEmailPh: '이메일',
+    regPasswordPh: '비밀번호 (6자 이상)',
+    regConfirmPh: '비밀번호 확인',
+    regLabelBasic: '기본 정보',
+    regNamePh: '이름',
+    regNicknamePh: '닉네임 (홈페이지에서 사용될 이름)',
+    regRegionPh: '거주 지역',
+    regLabelRole: '구분',
+    regLabelTkd: '태권도 관련',
+    regLabelPurpose: '수련 목적',
+    regLabelLevel: '현재 수준',
+    regAthleteTypeLabel: '선수 종목 (복수 선택 가능)',
+    regLabelGym: '소속 도장',
+    registerBtn: '가입하기',
+    registerBtnLoading: '가입 중...',
+    registerFooterText: '이미 계정이 있으신가요?',
+    registerFooterLink: '로그인',
+    verifyTitle: '이메일 인증이 필요합니다',
+    verifyBtn: '인증 완료 · 계속하기',
+    verifyResend: '인증 이메일 재발송',
+    verifyOtherAccount: '다른 계정으로 로그인',
+    chatHeaderDesc: '15단계 커리큘럼 기반 · 하루 5회 무료 이용',
+    welcomeTitle: 'THE STEPPER AI 겨루기 코치입니다',
+    welcomeDesc: '더스텝퍼 15단계 커리큘럼을 기반으로<br>태권도 겨루기 전술·기술 질문에 답변드립니다.<br><span style="color:#333">커리큘럼 범위 외 질문에는 답변하지 않습니다.</span>',
+    welcomeChips: ['1단계 원스텝이 뭔가요?', '돌려차기 전술 알려주세요', '페인트 기술은 몇 단계인가요?', '카운터 공격 방법이 궁합해요'],
+    chatPlaceholder: '겨루기 전술에 대해 질문해보세요...',
+    remainingPrefix: '오늘 남은 질문: ',
+    remainingSuffix: '회',
+    errLoginEmpty: '이메일과 비밀번호를 입력해주세요.',
+    errName: '이름을 입력해주세요.',
+    errNickname: '닉네임을 입력해주세요.',
+    errEmailPw: '이메일과 비밀번호를 입력해주세요.',
+    errPwShort: '비밀번호는 6자 이상이어야 합니다.',
+    errPwMismatch: '비밀번호가 일치하지 않습니다.',
+    errRole: '구분을 선택해주세요.',
+    errPurpose: '수련 목적을 선택해주세요.',
+    errLevel: '현재 수준을 선택해주세요.',
+    errGym: '소속 도장을 선택해주세요.',
+    errDailyLimit: '오늘의 무료 사용 횟수(5회)를 모두 사용했습니다. 내일 다시 이용해주세요.',
+    errSession: '세션이 만료되었습니다. 다시 로그인해주세요.',
+    errNetwork: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.',
+    errGeneral: '오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    verifyNotDone: '아직 인증이 완료되지 않았습니다. 이메일을 확인해주세요.',
+    verifyErrGeneral: '오류가 발생했습니다. 다시 시도해주세요.',
+    resendOk: '인증 이메일을 재발송했습니다.',
+    resendWait: '잠시 후 다시 시도해주세요.',
+    resendFail: '재발송에 실패했습니다.',
+    fb: {
+      'auth/user-not-found': '등록되지 않은 이메일입니다.',
+      'auth/wrong-password': '비밀번호가 틀렸습니다.',
+      'auth/invalid-credential': '이메일 또는 비밀번호가 올바르지 않습니다.',
+      'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
+      'auth/weak-password': '비밀번호는 6자 이상이어야 합니다.',
+      'auth/invalid-email': '올바르지 않은 이메일 형식입니다.',
+      'auth/too-many-requests': '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+      'auth/popup-closed-by-user': '로그인 창이 닫혔습니다.',
+      'auth/cancelled-popup-request': '로그인 창이 취소되었습니다.',
+      'auth/network-request-failed': '네트워크 오류가 발생했습니다.'
+    }
+  },
+  en: {
+    navBack: '← Back to Main',
+    navLogout: 'Logout',
+    authSubtitle: 'AI Sparring Coach',
+    loginTitle: 'Sign In',
+    loginEmailPh: 'Email',
+    loginPasswordPh: 'Password',
+    loginBtn: 'Sign In',
+    loginBtnLoading: 'Signing in...',
+    loginDivider: 'or',
+    loginGoogle: 'Sign in with Google',
+    loginFooterText: "Don't have an account?",
+    loginFooterLink: 'Sign Up',
+    registerTitle: 'Create Account',
+    regLabelAccount: 'Account Info',
+    regEmailPh: 'Email',
+    regPasswordPh: 'Password (min. 6 characters)',
+    regConfirmPh: 'Confirm Password',
+    regLabelBasic: 'Basic Info',
+    regNamePh: 'Full Name',
+    regNicknamePh: 'Nickname (shown on site)',
+    regRegionPh: 'Region / Location',
+    regLabelRole: 'Role',
+    regLabelTkd: 'Taekwondo Background',
+    regLabelPurpose: 'Training Purpose',
+    regLabelLevel: 'Current Level',
+    regAthleteTypeLabel: 'Athlete Type (multiple allowed)',
+    regLabelGym: 'Home Gym',
+    registerBtn: 'Create Account',
+    registerBtnLoading: 'Creating...',
+    registerFooterText: 'Already have an account?',
+    registerFooterLink: 'Sign In',
+    verifyTitle: 'Email Verification Required',
+    verifyBtn: 'Verified · Continue',
+    verifyResend: 'Resend Verification Email',
+    verifyOtherAccount: 'Sign in with another account',
+    chatHeaderDesc: '15-Level Kyorugi Curriculum · 5 Free Questions / Day',
+    welcomeTitle: 'THE STEPPER AI Kyorugi Coach',
+    welcomeDesc: 'Powered by THE STEPPER\'s 15-level Kyorugi (Sparring) curriculum,<br>ask anything about taekwondo sparring tactics & techniques.<br><span style="color:#333">Questions outside the curriculum will not be answered.</span>',
+    welcomeChips: ['What is Step 1 One-Step?', 'Dollyeo Chagi (Roundhouse) tactics', 'Which level covers feints?', 'How do I counter-attack?'],
+    chatPlaceholder: 'Ask about Kyorugi (sparring) tactics...',
+    remainingPrefix: 'Questions left: ',
+    remainingSuffix: '',
+    errLoginEmpty: 'Please enter your email and password.',
+    errName: 'Please enter your name.',
+    errNickname: 'Please enter a nickname.',
+    errEmailPw: 'Please enter your email and password.',
+    errPwShort: 'Password must be at least 6 characters.',
+    errPwMismatch: 'Passwords do not match.',
+    errRole: 'Please select a role.',
+    errPurpose: 'Please select a training purpose.',
+    errLevel: 'Please select your current level.',
+    errGym: 'Please select a gym.',
+    errDailyLimit: "You've used all 5 free questions for today. Come back tomorrow!",
+    errSession: 'Session expired. Please sign in again.',
+    errNetwork: 'Cannot connect to server. Please try again later.',
+    errGeneral: 'An error occurred. Please try again.',
+    verifyNotDone: 'Verification not complete. Please check your email.',
+    verifyErrGeneral: 'An error occurred. Please try again.',
+    resendOk: 'Verification email has been resent.',
+    resendWait: 'Please wait before trying again.',
+    resendFail: 'Failed to resend. Please try again.',
+    fb: {
+      'auth/user-not-found': 'No account found with this email.',
+      'auth/wrong-password': 'Incorrect password.',
+      'auth/invalid-credential': 'Invalid email or password.',
+      'auth/email-already-in-use': 'This email is already registered.',
+      'auth/weak-password': 'Password must be at least 6 characters.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/too-many-requests': 'Too many requests. Please try again later.',
+      'auth/popup-closed-by-user': 'Sign-in window was closed.',
+      'auth/cancelled-popup-request': 'Sign-in was cancelled.',
+      'auth/network-request-failed': 'Network error occurred.'
+    }
+  }
+};
+
+var currentLang = 'ko';
+
+function t(key) { return (T[currentLang] && T[currentLang][key]) || (T.ko && T.ko[key]) || key; }
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('stepper_lang', lang);
+  document.getElementById('htmlRoot').lang = lang === 'ko' ? 'ko' : 'en';
+  document.getElementById('btnKo').classList.toggle('active', lang === 'ko');
+  document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+
+  // Nav
+  document.getElementById('navBack').textContent = t('navBack');
+  document.getElementById('navLogoutBtn').textContent = t('navLogout');
+
+  // All auth-subtitle instances
+  document.querySelectorAll('.auth-subtitle').forEach(function(el) { el.textContent = t('authSubtitle'); });
+
+  // Login card
+  document.getElementById('loginTitle').textContent = t('loginTitle');
+  document.getElementById('loginEmail').placeholder = t('loginEmailPh');
+  document.getElementById('loginPassword').placeholder = t('loginPasswordPh');
+  var lb = document.getElementById('loginBtn');
+  if (!lb.disabled) lb.textContent = t('loginBtn');
+  document.getElementById('loginDivider').textContent = t('loginDivider');
+  document.getElementById('loginGoogleText').textContent = t('loginGoogle');
+  document.getElementById('loginFooterText').textContent = t('loginFooterText');
+  document.getElementById('loginFooterLink').textContent = t('loginFooterLink');
+
+  // Register card
+  document.getElementById('registerTitle').textContent = t('registerTitle');
+  document.getElementById('regLabelAccount').textContent = t('regLabelAccount');
+  document.getElementById('regEmail').placeholder = t('regEmailPh');
+  document.getElementById('regPassword').placeholder = t('regPasswordPh');
+  document.getElementById('regConfirm').placeholder = t('regConfirmPh');
+  document.getElementById('regLabelBasic').textContent = t('regLabelBasic');
+  document.getElementById('regName').placeholder = t('regNamePh');
+  document.getElementById('regNickname').placeholder = t('regNicknamePh');
+  document.getElementById('regRegion').placeholder = t('regRegionPh');
+  document.getElementById('regLabelRole').textContent = t('regLabelRole');
+  document.getElementById('regLabelTkd').textContent = t('regLabelTkd');
+  document.getElementById('regLabelPurpose').textContent = t('regLabelPurpose');
+  document.getElementById('regLabelLevel').textContent = t('regLabelLevel');
+  document.getElementById('regAthleteTypeLabel').textContent = t('regAthleteTypeLabel');
+  document.getElementById('regLabelGym').textContent = t('regLabelGym');
+
+  // Radio/checkbox option labels (data-ko / data-en spans)
+  document.querySelectorAll('[data-ko][data-en]').forEach(function(el) {
+    el.textContent = lang === 'ko' ? el.dataset.ko : el.dataset.en;
+  });
+
+  var rb = document.getElementById('registerBtn');
+  if (!rb.disabled) rb.textContent = t('registerBtn');
+  document.getElementById('registerFooterText').textContent = t('registerFooterText');
+  document.getElementById('registerFooterLink').textContent = t('registerFooterLink');
+
+  // Verify card
+  document.getElementById('verifyTitle').textContent = t('verifyTitle');
+  document.getElementById('verifyBtn').textContent = t('verifyBtn');
+  document.getElementById('verifyResendBtn').textContent = t('verifyResend');
+  document.getElementById('verifyOtherLink').textContent = t('verifyOtherAccount');
+  var verifyCard = document.getElementById('verifyCard');
+  if (verifyCard && verifyCard.style.display !== 'none' && auth && auth.currentUser) {
+    updateVerifyDesc(auth.currentUser.email || '');
+  }
+
+  // Chat
+  var chatHeaderDesc = document.getElementById('chatHeaderDesc');
+  if (chatHeaderDesc) chatHeaderDesc.textContent = t('chatHeaderDesc');
+  var welcomeTitle = document.getElementById('welcomeTitle');
+  if (welcomeTitle) welcomeTitle.textContent = t('welcomeTitle');
+  var welcomeDesc = document.getElementById('welcomeDesc');
+  if (welcomeDesc) welcomeDesc.innerHTML = t('welcomeDesc');
+  var welcomeChips = document.getElementById('welcomeChips');
+  if (welcomeChips) {
+    var chips = t('welcomeChips');
+    welcomeChips.innerHTML = chips.map(function(c) {
+      return '<div class="chip" onclick="sendChip(this)">' + c + '</div>';
+    }).join('');
+  }
+  var chatInput = document.getElementById('chatInput');
+  if (chatInput) chatInput.placeholder = t('chatPlaceholder');
+  document.getElementById('remainingPrefix').textContent = t('remainingPrefix');
+  document.getElementById('remainingSuffix').textContent = t('remainingSuffix');
+}
+
+function initLang() {
+  var saved = localStorage.getItem('stepper_lang');
+  var lang = saved || (navigator.language && navigator.language.startsWith('ko') ? 'ko' : 'en');
+  setLang(lang);
+}
 
 // ===== Firebase 초기화 =====
 firebase.initializeApp({
@@ -475,6 +732,16 @@ function showLogin() {
   document.getElementById('loginError').style.display = 'none';
 }
 
+function updateVerifyDesc(email) {
+  var el = document.getElementById('verifyDesc');
+  if (!el) return;
+  if (currentLang === 'en') {
+    el.innerHTML = 'A verification email has been sent to<br><span id="verifyEmail" style="color:#888">' + email + '</span>.<br>Please check your inbox and click the button below.';
+  } else {
+    el.innerHTML = '<span id="verifyEmail" style="color:#888">' + email + '</span>으로<br>인증 이메일을 발송했습니다.<br>이메일 확인 후 아래 버튼을 눌러주세요.';
+  }
+}
+
 function showVerifyCard(user) {
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('registerCard').style.display = 'none';
@@ -483,32 +750,30 @@ function showVerifyCard(user) {
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chatInputArea').style.display = 'none';
   document.getElementById('navUserArea').style.display = 'none';
-  document.getElementById('verifyEmail').textContent = user.email || '';
   document.getElementById('verifyMsg').style.display = 'none';
+  updateVerifyDesc(user.email || '');
 }
 
 async function checkVerification() {
   try {
     await auth.currentUser.reload();
     if (auth.currentUser.emailVerified) {
-      await auth.currentUser.getIdToken(true); // 토큰 강제 갱신 (email_verified 클레임 업데이트)
+      await auth.currentUser.getIdToken(true);
       onLoggedIn(auth.currentUser);
     } else {
-      showVerifyMsg('아직 인증이 완료되지 않았습니다. 이메일을 확인해주세요.');
+      showVerifyMsg(t('verifyNotDone'));
     }
   } catch(e) {
-    showVerifyMsg('오류가 발생했습니다. 다시 시도해주세요.');
+    showVerifyMsg(t('verifyErrGeneral'));
   }
 }
 
 async function resendVerification() {
   try {
     await auth.currentUser.sendEmailVerification();
-    showVerifyMsg('인증 이메일을 재발송했습니다.');
+    showVerifyMsg(t('resendOk'));
   } catch(e) {
-    showVerifyMsg(e.code === 'auth/too-many-requests'
-      ? '잠시 후 다시 시도해주세요.'
-      : '재발송에 실패했습니다.');
+    showVerifyMsg(e.code === 'auth/too-many-requests' ? t('resendWait') : t('resendFail'));
   }
 }
 
@@ -525,32 +790,20 @@ function showErr(id, msg) {
 }
 
 function getFirebaseMsg(code) {
-  var map = {
-    'auth/user-not-found': '등록되지 않은 이메일입니다.',
-    'auth/wrong-password': '비밀번호가 틀렸습니다.',
-    'auth/invalid-credential': '이메일 또는 비밀번호가 올바르지 않습니다.',
-    'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
-    'auth/weak-password': '비밀번호는 6자 이상이어야 합니다.',
-    'auth/invalid-email': '올바르지 않은 이메일 형식입니다.',
-    'auth/too-many-requests': '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
-    'auth/popup-closed-by-user': '로그인 창이 닫혔습니다.',
-    'auth/cancelled-popup-request': '로그인 창이 취소되었습니다.',
-    'auth/network-request-failed': '네트워크 오류가 발생했습니다.'
-  };
-  return map[code] || '오류가 발생했습니다. 다시 시도해주세요.';
+  return (T[currentLang].fb && T[currentLang].fb[code]) || t('errGeneral');
 }
 
 async function doEmailLogin() {
   var email = document.getElementById('loginEmail').value.trim();
   var pw = document.getElementById('loginPassword').value;
-  if (!email || !pw) { showErr('loginError', '이메일과 비밀번호를 입력해주세요.'); return; }
+  if (!email || !pw) { showErr('loginError', t('errLoginEmpty')); return; }
   var btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = '로그인 중...';
+  btn.disabled = true; btn.textContent = t('loginBtnLoading');
   try {
     await auth.signInWithEmailAndPassword(email, pw);
   } catch(e) {
     showErr('loginError', getFirebaseMsg(e.code));
-    btn.disabled = false; btn.textContent = '로그인';
+    btn.disabled = false; btn.textContent = t('loginBtn');
   }
 }
 
@@ -577,25 +830,22 @@ async function doRegister() {
   var nickname = document.getElementById('regNickname').value.trim();
   var region   = document.getElementById('regRegion').value.trim();
 
-  // 기본 유효성 검사
-  if (!name)               { showErr('registerError', '이름을 입력해주세요.'); return; }
-  if (!nickname)           { showErr('registerError', '닉네임을 입력해주세요.'); return; }
-  if (!email || !pw)       { showErr('registerError', '이메일과 비밀번호를 입력해주세요.'); return; }
-  if (pw.length < 6)       { showErr('registerError', '비밀번호는 6자 이상이어야 합니다.'); return; }
-  if (pw !== confirm)      { showErr('registerError', '비밀번호가 일치하지 않습니다.'); return; }
+  if (!name)               { showErr('registerError', t('errName')); return; }
+  if (!nickname)           { showErr('registerError', t('errNickname')); return; }
+  if (!email || !pw)       { showErr('registerError', t('errEmailPw')); return; }
+  if (pw.length < 6)       { showErr('registerError', t('errPwShort')); return; }
+  if (pw !== confirm)      { showErr('registerError', t('errPwMismatch')); return; }
 
-  // 라디오 버튼 수집
   var roleEl    = document.querySelector('input[name="role"]:checked');
   var purposeEl = document.querySelector('input[name="purpose"]:checked');
   var levelEl   = document.querySelector('input[name="level"]:checked');
   var gymEl     = document.querySelector('input[name="gym"]:checked');
 
-  if (!roleEl)    { showErr('registerError', '구분을 선택해주세요.'); return; }
-  if (!purposeEl) { showErr('registerError', '수련 목적을 선택해주세요.'); return; }
-  if (!levelEl)   { showErr('registerError', '현재 수준을 선택해주세요.'); return; }
-  if (!gymEl)     { showErr('registerError', '소속 도장을 선택해주세요.'); return; }
+  if (!roleEl)    { showErr('registerError', t('errRole')); return; }
+  if (!purposeEl) { showErr('registerError', t('errPurpose')); return; }
+  if (!levelEl)   { showErr('registerError', t('errLevel')); return; }
+  if (!gymEl)     { showErr('registerError', t('errGym')); return; }
 
-  // 선수 출신 종목 체크박스
   var athleteTypes = [];
   if (levelEl.value === '선수 출신') {
     document.querySelectorAll('input[name="athleteType"]:checked').forEach(function(cb) {
@@ -604,7 +854,7 @@ async function doRegister() {
   }
 
   var btn = document.getElementById('registerBtn');
-  btn.disabled = true; btn.textContent = '가입 중...';
+  btn.disabled = true; btn.textContent = t('registerBtnLoading');
 
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pw);
@@ -621,30 +871,26 @@ async function doRegister() {
       email:        email,
       createdAt:    firebase.firestore.FieldValue.serverTimestamp()
     });
-    // onAuthStateChanged → onLoggedIn() 자동 호출
   } catch(e) {
     showErr('registerError', getFirebaseMsg(e.code));
-    btn.disabled = false; btn.textContent = '가입하기';
+    btn.disabled = false; btn.textContent = t('registerBtn');
   }
 }
 
 async function doLogout() {
   resetChat();
   await auth.signOut();
-  // onAuthStateChanged → onLoggedOut() → showLogin() 자동 호출
 }
 
 function resetChat() {
+  var chips = t('welcomeChips');
   document.getElementById('chatMessages').innerHTML =
     '<div class="chat-welcome" id="chatWelcome">' +
       '<div class="welcome-icon">🥋</div>' +
-      '<div class="welcome-title">THE STEPPER AI 겨루기 코치입니다</div>' +
-      '<div class="welcome-desc">더스텝퍼 15단계 커리큘럼을 기반으로<br>태권도 겨루기 전술·기술 질문에 답변드립니다.<br><span style="color:#333">커리큘럼 범위 외 질문에는 답변하지 않습니다.</span></div>' +
-      '<div class="welcome-chips">' +
-        '<div class="chip" onclick="sendChip(this)">1단계 원스텝이 뭔가요?</div>' +
-        '<div class="chip" onclick="sendChip(this)">돌려차기 전술 알려주세요</div>' +
-        '<div class="chip" onclick="sendChip(this)">페인트 기술은 몇 단계인가요?</div>' +
-        '<div class="chip" onclick="sendChip(this)">카운터 공격 방법이 궁금해요</div>' +
+      '<div class="welcome-title" id="welcomeTitle">' + t('welcomeTitle') + '</div>' +
+      '<div class="welcome-desc" id="welcomeDesc">' + t('welcomeDesc') + '</div>' +
+      '<div class="welcome-chips" id="welcomeChips">' +
+        chips.map(function(c) { return '<div class="chip" onclick="sendChip(this)">' + c + '</div>'; }).join('') +
       '</div>' +
     '</div>';
   remaining = DAILY_LIMIT;
@@ -686,7 +932,8 @@ function sendChip(el) {
 }
 
 function nowStr() {
-  return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  var opts = { hour: '2-digit', minute: '2-digit' };
+  return new Date().toLocaleTimeString(currentLang === 'ko' ? 'ko-KR' : 'en-US', opts);
 }
 
 function hideWelcome() {
@@ -738,7 +985,7 @@ async function sendMessage() {
   if (!text) return;
 
   if (remaining <= 0) {
-    appendMsg('ai', '오늘의 무료 사용 횟수(5회)를 모두 사용했습니다. 내일 다시 이용해주세요.', true);
+    appendMsg('ai', t('errDailyLimit'), true);
     return;
   }
 
@@ -749,7 +996,7 @@ async function sendMessage() {
   try {
     idToken = await user.getIdToken();
   } catch(e) {
-    appendMsg('ai', '세션이 만료되었습니다. 다시 로그인해주세요.', true);
+    appendMsg('ai', t('errSession'), true);
     await auth.signOut();
     return;
   }
@@ -777,12 +1024,12 @@ async function sendMessage() {
     if (res.status === 403) {
       remaining = 0;
       document.getElementById('remainCount').textContent = 0;
-      appendMsg('ai', data.error || '오늘의 사용 횟수를 모두 사용했습니다. 내일 다시 이용해주세요.', true);
+      appendMsg('ai', data.error || t('errDailyLimit'), true);
     } else if (res.status === 401) {
-      appendMsg('ai', '인증이 만료되었습니다. 다시 로그인해주세요.', true);
+      appendMsg('ai', t('errSession'), true);
       await auth.signOut();
     } else if (!res.ok) {
-      appendMsg('ai', data.error || '오류가 발생했습니다. 잠시 후 다시 시도해주세요.', true);
+      appendMsg('ai', data.error || t('errGeneral'), true);
     } else {
       appendMsg('ai', data.reply);
       remaining = Math.max(0, remaining - 1);
@@ -790,12 +1037,15 @@ async function sendMessage() {
     }
   } catch(e) {
     loadingEl.remove();
-    appendMsg('ai', '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', true);
+    appendMsg('ai', t('errNetwork'), true);
   } finally {
     setUI(false);
     document.getElementById('chatInput').focus();
   }
 }
+
+// ===== 초기화 =====
+initLang();
 </script>
 </body>
 </html>

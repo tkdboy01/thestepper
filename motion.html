@@ -75,17 +75,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
   transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
 }
 .guide-body img{width:100%;max-width:100%;display:block;cursor:zoom-in;border-radius:0}
-.guide-caption{font-size:12px;color:var(--text2);text-align:center;padding:10px 16px 10px;line-height:1.6}
-.example-grid{display:flex;gap:10px;padding:4px 14px 18px}
-.example-card{flex:1;border-radius:10px;border:1.5px solid #e5e5ea;display:flex;flex-direction:column;min-width:0;overflow:visible}
-.example-badge{font-size:11px;font-weight:700;padding:6px 8px;border-radius:8px 8px 0 0;text-align:center;flex-shrink:0}
-.example-badge.good{background:#e8f5e9;color:#2e7d32}
-.example-badge.bad{background:#fdecea;color:#c0392b}
-.example-illus{height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
-.example-illus.good{background:#f1f8f2}
-.example-illus.bad{background:#fef5f5}
-.example-card-caption{font-size:11px;color:var(--text2);text-align:center;padding:8px 8px 10px;line-height:1.55;border-radius:0 0 8px 8px;background:#fff;flex-shrink:0;word-break:keep-all}
-@media(max-width:380px){.example-grid{gap:8px;padding:4px 10px 16px}.example-badge{font-size:10px}.example-card-caption{font-size:10px;padding:6px 6px 8px}}
+.guide-caption{font-size:12px;color:var(--text2);text-align:center;padding:10px 16px 14px;line-height:1.6}
 
 /* LIGHTBOX */
 .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out}
@@ -233,51 +223,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
            src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media"
            alt="동작 분석 촬영 가이드" loading="eager" onclick="openLightbox(this.src)">
       <div class="guide-caption">정확한 분석을 위해 촬영 가이드를 꼭 확인해주세요</div>
-
-      <!-- 올바른 / 피해야 할 촬영 예시 카드 -->
-      <div class="example-grid">
-        <div class="example-card">
-          <div class="example-badge good">✅ 올바른 촬영</div>
-          <div class="example-illus good">
-            <svg width="44" height="72" viewBox="0 0 44 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- 옆모습: 머리 -->
-              <circle cx="22" cy="8" r="7" fill="#2e7d32" opacity="0.85"/>
-              <!-- 몸통 -->
-              <line x1="22" y1="15" x2="22" y2="40" stroke="#2e7d32" stroke-width="4" stroke-linecap="round"/>
-              <!-- 팔 (옆모습: 한 방향으로 펼침) -->
-              <line x1="22" y1="22" x2="8"  y2="32" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"/>
-              <line x1="22" y1="22" x2="36" y2="28" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"/>
-              <!-- 지지발 -->
-              <line x1="22" y1="40" x2="16" y2="62" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"/>
-              <!-- 차는 발 (옆으로 쭉 뻗음) -->
-              <line x1="22" y1="40" x2="40" y2="52" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"/>
-              <line x1="40" y1="52" x2="44" y2="60" stroke="#2e7d32" stroke-width="3" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="example-card-caption">완전한 옆모습<br>머리~발끝 전신</div>
-        </div>
-        <div class="example-card">
-          <div class="example-badge bad">❌ 피해야 할 촬영</div>
-          <div class="example-illus bad">
-            <svg width="44" height="72" viewBox="0 0 44 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- 정면: 머리 -->
-              <circle cx="22" cy="8" r="7" fill="#c0392b" opacity="0.85"/>
-              <!-- 몸통 -->
-              <line x1="22" y1="15" x2="22" y2="40" stroke="#c0392b" stroke-width="4" stroke-linecap="round"/>
-              <!-- 팔 (정면: 양쪽 대칭) -->
-              <line x1="22" y1="22" x2="6"  y2="28" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"/>
-              <line x1="22" y1="22" x2="38" y2="28" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"/>
-              <!-- 양 다리 (정면: 대칭) -->
-              <line x1="22" y1="40" x2="15" y2="62" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"/>
-              <line x1="22" y1="40" x2="29" y2="62" stroke="#c0392b" stroke-width="3.5" stroke-linecap="round"/>
-              <!-- X 표시 -->
-              <line x1="6" y1="56" x2="16" y2="68" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-              <line x1="16" y1="56" x2="6"  y2="68" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
-            </svg>
-          </div>
-          <div class="example-card-caption">정면으로 카메라를<br>바라보는 자세</div>
-        </div>
-      </div>
     </div>
   </div>
 

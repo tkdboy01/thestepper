@@ -4,251 +4,588 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>일정 관리 - THE STEPPER</title>
+<title>관리자 — THE STEPPER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap');
-:root{--red:#C8102E;--yellow:#FFE000;--black:#0a0a0a;--gray:#1a1a1a;--white:#fff}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Bebas+Neue&display=swap');
+:root{--red:#C8102E;--gold:#C9A84C;--bg:#ffffff;--surface:#f5f5f7;--border:#e5e5e7;--text:#1d1d1f;--sub:#6e6e73}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh}
 
-/* 로그인 */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.login-box{background:#111;border:1px solid #222;border-radius:16px;padding:48px 40px;width:100%;max-width:400px;text-align:center}
-.login-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--yellow);margin-bottom:8px}
-.login-sub{font-size:12px;color:#444;letter-spacing:2px;margin-bottom:40px}
-.login-input{width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px 16px;color:var(--white);font-size:15px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color 0.2s}
-.login-input:focus{border-color:var(--red)}
-.login-btn{width:100%;margin-top:16px;background:var(--red);color:#fff;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 0.2s}
-.login-btn:hover{background:#a50d24}
-.login-error{color:var(--red);font-size:13px;margin-top:12px;display:none}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#f5f5f7 0%,#e8eff8 100%)}
+.login-box{background:#fff;border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--red);margin-bottom:6px}
+.login-sub{font-size:11px;color:var(--sub);letter-spacing:3px;margin-bottom:40px}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%;font-family:'Noto Sans KR',sans-serif;color:var(--text);transition:all 0.2s}
+.google-btn:hover{border-color:var(--red);box-shadow:0 2px 12px rgba(200,16,46,0.12)}
+.google-btn svg{width:18px;height:18px;flex-shrink:0}
+.login-error{color:var(--red);font-size:12px;margin-top:14px;display:none;line-height:1.5}
 
-/* 관리 패널 */
-.admin-wrap{display:none;padding:24px;max-width:900px;margin:0 auto}
-.admin-header{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:2px solid var(--red);margin-bottom:32px}
-.admin-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--yellow)}
-.logout-btn{background:transparent;border:1px solid #333;color:#666;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
+/* HEADER */
+.admin-header{position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid var(--red);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--red)}
+.header-right{display:flex;align-items:center;gap:12px}
+.header-email{font-size:12px;color:var(--sub)}
+.logout-btn{background:transparent;border:1px solid var(--border);color:var(--sub);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
 .logout-btn:hover{border-color:var(--red);color:var(--red)}
 
-/* 폼 */
-.form-section{background:#111;border:1px solid #222;border-radius:12px;padding:28px;margin-bottom:32px}
-.form-title{font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.form-group{display:flex;flex-direction:column;gap:6px}
+/* TABS */
+.admin-tabs{background:#fff;border-bottom:1px solid var(--border);display:flex;padding:0 24px}
+.tab-btn{background:none;border:none;padding:14px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s}
+.tab-btn.active{color:var(--red);border-bottom-color:var(--red)}
+
+/* LAYOUT */
+.tab-content{max-width:980px;margin:0 auto;padding:28px 24px}
+
+/* FORM CARD */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px}
+.form-card-title{font-size:14px;font-weight:700;margin-bottom:18px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
 .form-group.full{grid-column:1/-1}
-.form-label{font-size:12px;color:#666;font-weight:600;letter-spacing:0.5px}
-.form-control{background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:12px 14px;color:var(--white);font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color 0.2s;width:100%}
+.form-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:0.5px}
+.form-control{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:'Noto Sans KR',sans-serif;color:var(--text);outline:none;transition:border-color 0.2s;width:100%}
 .form-control:focus{border-color:var(--red)}
 select.form-control{cursor:pointer}
-.form-submit{background:var(--red);color:#fff;border:none;border-radius:8px;padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 0.2s;margin-top:8px}
-.form-submit:hover{background:#a50d24}
+.form-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.btn-primary{background:var(--red);color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 0.2s}
+.btn-primary:hover{background:#a50d24}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
+.btn-secondary:hover{border-color:var(--text);color:var(--text)}
+.btn-danger{background:transparent;border:1px solid rgba(200,16,46,0.3);color:var(--red);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s;white-space:nowrap}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-edit{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s;white-space:nowrap}
+.btn-edit:hover{border-color:var(--red);color:var(--red)}
 
-/* 일정 목록 */
-.schedule-list{display:flex;flex-direction:column;gap:12px}
-.schedule-card{background:#111;border:1px solid #222;border-radius:10px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;transition:border-color 0.2s}
-.schedule-card:hover{border-color:#333}
-.schedule-card.upcoming{border-left:3px solid var(--red)}
-.schedule-card.past{border-left:3px solid #333;opacity:0.6}
-.card-info{flex:1}
-.card-date{font-size:11px;color:var(--red);font-weight:700;letter-spacing:1px;margin-bottom:4px}
-.card-title{font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px}
-.card-detail{font-size:12px;color:#666}
-.card-actions{display:flex;gap:8px;flex-shrink:0}
-.btn-delete{background:rgba(200,16,46,0.1);border:1px solid rgba(200,16,46,0.3);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.2s;font-family:'Noto Sans KR',sans-serif}
-.btn-delete:hover{background:var(--red);color:#fff}
-.empty-msg{text-align:center;padding:40px;color:#333;font-size:14px}
+/* SCHEDULE LIST */
+.list-wrap{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.list-head{display:grid;grid-template-columns:90px 1fr 60px 60px 60px;gap:6px;padding:10px 16px;background:var(--surface);font-size:11px;font-weight:700;color:var(--sub);letter-spacing:0.5px;border-bottom:1px solid var(--border)}
+.list-row{display:grid;grid-template-columns:90px 1fr 60px 60px 60px;gap:6px;padding:13px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background 0.15s;cursor:default}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:#fafafa}
+.list-row.editing{background:rgba(200,16,46,0.04);border-left:3px solid var(--red)}
+.row-date{font-size:12px;font-weight:700;color:var(--gold);font-family:'Bebas Neue',sans-serif;letter-spacing:1px}
+.row-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.row-detail{font-size:11px;color:var(--sub)}
+.row-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.badge-upcoming{background:rgba(200,16,46,0.1);color:var(--red)}
+.badge-past{background:var(--surface);color:var(--sub)}
+.row-actions{display:flex;gap:4px;justify-content:flex-end}
+.empty-msg{text-align:center;padding:48px 24px;color:var(--sub);font-size:14px}
+.loading-msg{text-align:center;padding:32px;color:var(--sub)}
 
-/* 알림 */
-.toast{position:fixed;bottom:30px;right:24px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 20px;font-size:13px;color:var(--white);z-index:9999;opacity:0;transform:translateY(10px);transition:all 0.3s;pointer-events:none}
+/* LOCATION */
+.loc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.loc-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.2s}
+.loc-card:hover{border-color:rgba(200,16,46,0.3)}
+.loc-logo{width:52px;height:52px;border-radius:8px;border:1px solid var(--border);object-fit:contain;background:var(--surface);padding:4px;flex-shrink:0}
+.loc-logo-empty{width:52px;height:52px;border-radius:8px;border:1px dashed var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.loc-info{flex:1;min-width:0}
+.loc-region{font-size:10px;background:var(--surface);color:var(--sub);padding:1px 7px;border-radius:8px;display:inline-block;margin-bottom:3px}
+.loc-name{font-size:13px;font-weight:700;margin-bottom:1px}
+.loc-owner{font-size:11px;color:var(--sub);margin-bottom:1px}
+.loc-addr{font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loc-del{flex-shrink:0}
+
+/* MIGRATION */
+.migrate-box{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.migrate-text{font-size:13px;color:#7d5c00;flex:1;line-height:1.5}
+.btn-migrate{background:var(--gold);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;transition:background 0.2s}
+.btn-migrate:hover{background:#a58030}
+.btn-migrate:disabled{opacity:0.5;cursor:not-allowed}
+
+/* FILE PREVIEW */
+.logo-preview{width:56px;height:56px;border-radius:8px;border:1px solid var(--border);object-fit:contain;background:var(--surface);padding:3px;display:none;margin-top:6px}
+
+/* SECTION TITLE */
+.section-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-top:4px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;border-radius:10px;padding:12px 20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(8px);transition:all 0.3s;pointer-events:none;max-width:320px}
 .toast.show{opacity:1;transform:translateY(0)}
-.toast.success{border-color:var(--yellow);color:var(--yellow)}
-.toast.error{border-color:var(--red);color:var(--red)}
+.toast.success{background:#2e7d32}
+.toast.error{background:var(--red)}
 
-@media(max-width:600px){
+/* RESPONSIVE */
+@media(max-width:640px){
+  .login-box{padding:36px 24px}
+  .tab-content{padding:20px 16px}
   .form-grid{grid-template-columns:1fr}
-  .schedule-card{flex-direction:column;align-items:flex-start}
+  .list-head{grid-template-columns:70px 1fr 56px 56px}
+  .list-row{grid-template-columns:70px 1fr 56px 56px}
+  .list-head>div:nth-child(3),.list-row>div:nth-child(3){display:none}
+  .loc-grid{grid-template-columns:1fr}
+  .admin-header{padding:0 16px}
+  .header-email{display:none}
+  .tab-btn{padding:12px 14px;font-size:13px}
 }
 </style>
 </head>
 <body>
 
 <!-- 로그인 -->
-<div class="login-wrap" id="loginWrap">
+<div id="loginSection" class="login-wrap">
   <div class="login-box">
     <div class="login-logo">THE STEPPER</div>
-    <div class="login-sub">ADMIN · 세미나 일정 관리</div>
-    <input type="password" class="login-input" id="pwInput" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">로그인</button>
-    <div class="login-error" id="loginError">비밀번호가 올바르지 않습니다.</div>
+    <div class="login-sub">ADMIN PANEL</div>
+    <button class="google-btn" id="googleBtn" onclick="doGoogleLogin()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Google 계정으로 로그인
+    </button>
+    <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
 <!-- 관리 패널 -->
-<div class="admin-wrap" id="adminWrap">
-  <div class="admin-header">
-    <div class="admin-title">📋 세미나 일정 관리</div>
-    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+<div id="adminSection" style="display:none">
+  <header class="admin-header">
+    <div class="header-logo">THE STEPPER · ADMIN</div>
+    <div class="header-right">
+      <span class="header-email" id="headerEmail"></span>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="admin-tabs">
+    <button class="tab-btn active" id="tab-schedule-btn" onclick="switchTab('schedule')">📅 세미나 일정</button>
+    <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
   </div>
 
-  <!-- 일정 추가 폼 -->
-  <div class="form-section">
-    <div class="form-title">➕ 새 일정 추가</div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">날짜</label>
-        <input type="date" class="form-control" id="fDate">
+  <!-- ===== 세미나 일정 탭 ===== -->
+  <div id="tab-schedule" class="tab-content">
+    <div class="form-card">
+      <div class="form-card-title" id="schedFormTitle">➕ 새 일정 추가</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">날짜</label>
+          <input type="date" class="form-control" id="sDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">구분</label>
+          <select class="form-control" id="sType">
+            <option value="upcoming">예정 일정</option>
+            <option value="past">지난 일정</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">세미나 제목</label>
+          <input type="text" class="form-control" id="sTitle" placeholder="예: THE STEPPER 부산·경남 정기 세미나">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">상세 정보 (시간 · 장소)</label>
+          <input type="text" class="form-control" id="sDetail" placeholder="예: 오전 10:00~12:00 · 📍 범태권도장 · 대구 북구">
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">구분</label>
-        <select class="form-control" id="fType">
-          <option value="upcoming">예정 일정</option>
-          <option value="past">지난 일정</option>
-        </select>
-      </div>
-      <div class="form-group full">
-        <label class="form-label">세미나 제목</label>
-        <input type="text" class="form-control" id="fTitle" placeholder="예: THE STEPPER 부산·경남 정기 세미나">
-      </div>
-      <div class="form-group full">
-        <label class="form-label">상세 정보 (시간 · 장소)</label>
-        <input type="text" class="form-control" id="fDetail" placeholder="예: 오전 10:00~12:00 · 📍 범태권도장 · 대구 북구">
+      <div class="form-actions">
+        <button class="btn-primary" id="schedSubmitBtn" onclick="submitSchedule()">일정 추가</button>
+        <button class="btn-secondary" id="schedCancelBtn" style="display:none" onclick="cancelSchedEdit()">취소</button>
       </div>
     </div>
-    <button class="form-submit" onclick="addSchedule()">일정 추가</button>
+
+    <div class="section-title">📋 등록된 일정 (<span id="schedCount">0</span>개)</div>
+    <div class="list-wrap">
+      <div class="list-head">
+        <div>날짜</div>
+        <div>제목 / 상세</div>
+        <div>구분</div>
+        <div style="text-align:right">수정</div>
+        <div style="text-align:right">삭제</div>
+      </div>
+      <div id="scheduleList"><div class="loading-msg">로딩 중...</div></div>
+    </div>
   </div>
 
-  <!-- 일정 목록 -->
-  <div class="form-section">
-    <div class="form-title">📅 등록된 일정</div>
-    <div class="schedule-list" id="scheduleList">
-      <div class="empty-msg">로딩 중...</div>
+  <!-- ===== 회원 도장 탭 ===== -->
+  <div id="tab-locations" class="tab-content" style="display:none">
+    <div class="migrate-box" id="migrationBox" style="display:none">
+      <div class="migrate-text">⚠️ Firestore에 도장 데이터가 없습니다. 아래 버튼으로 기존 28개 도장 데이터를 한 번만 마이그레이션하세요.<br><small style="opacity:0.7">마이그레이션 후 locations.html이 Firestore 데이터를 읽어옵니다.</small></div>
+      <button class="btn-migrate" id="migrateBtn" onclick="runMigration()">데이터 마이그레이션 실행</button>
     </div>
+
+    <div class="form-card">
+      <div class="form-card-title">➕ 새 도장 추가</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">도장명</label>
+          <input type="text" class="form-control" id="lName" placeholder="예: 범태권도장">
+        </div>
+        <div class="form-group">
+          <label class="form-label">관장명</label>
+          <input type="text" class="form-control" id="lOwner" placeholder="예: 관장 이정안">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">주소</label>
+          <input type="text" class="form-control" id="lAddress" placeholder="예: 대구광역시 북구 중앙대로105길 25 3층">
+        </div>
+        <div class="form-group">
+          <label class="form-label">지역</label>
+          <select class="form-control" id="lRegion">
+            <option value="대구">대구</option>
+            <option value="부산">부산</option>
+            <option value="울산">울산</option>
+            <option value="경남 창원">경남 창원</option>
+            <option value="경남 김해">경남 김해</option>
+            <option value="경남 기타">경남 기타</option>
+            <option value="충북 청주">충북 청주</option>
+            <option value="경기도">경기도</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">로고 이미지 (선택)</label>
+          <input type="file" class="form-control" id="lLogoFile" accept="image/*" onchange="previewLogo(this)">
+          <img id="logoPreview" class="logo-preview" alt="미리보기">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" id="addLocBtn" onclick="addLocation()">도장 추가</button>
+      </div>
+    </div>
+
+    <div class="section-title">📋 등록된 도장 (<span id="locCount">0</span>개)</div>
+    <div id="locationGrid" class="loc-grid"><div class="loading-msg">로딩 중...</div></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
+/* ---- FIREBASE SETUP ---- */
 const firebaseConfig = {
-    apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
-    authDomain: "thestepper-c9bfb.firebaseapp.com",
-    projectId: "thestepper-c9bfb",
-    storageBucket: "thestepper-c9bfb.firebasestorage.app",
-    messagingSenderId: "787224576231",
-    appId: "1:787224576231:web:04d4003f42ecace9016242"
-  };
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+};
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-const PASSWORD = "kms0427***";
+const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
 
-// 로그인
-window.doLogin = function() {
-  var pw = document.getElementById('pwInput').value;
-  if(pw === PASSWORD) {
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('adminWrap').style.display = 'block';
+/* ---- AUTH ---- */
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email === ADMIN_EMAIL) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'block';
+    document.getElementById('headerEmail').textContent = user.email;
     loadSchedules();
+  } else if (user) {
+    signOut(auth);
+    showLoginError('접근 권한이 없습니다. 관리자 계정만 접근 가능합니다.');
   } else {
-    document.getElementById('loginError').style.display = 'block';
-    document.getElementById('pwInput').value = '';
+    document.getElementById('loginSection').style.display = 'flex';
+    document.getElementById('adminSection').style.display = 'none';
+  }
+});
+
+window.doGoogleLogin = async () => {
+  const btn = document.getElementById('googleBtn');
+  btn.disabled = true;
+  btn.textContent = '로그인 중...';
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    showLoginError('로그인 오류: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Google 계정으로 로그인';
   }
 };
 
-window.doLogout = function() {
-  document.getElementById('loginWrap').style.display = 'flex';
-  document.getElementById('adminWrap').style.display = 'none';
-  document.getElementById('pwInput').value = '';
+window.doLogout = async () => { await signOut(auth); };
+
+/* ---- TABS ---- */
+let locLoaded = false;
+window.switchTab = (tab) => {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-' + tab + '-btn').classList.add('active');
+  document.getElementById('tab-' + tab).style.display = 'block';
+  if (tab === 'locations' && !locLoaded) { locLoaded = true; loadLocations(); }
 };
 
-// 토스트
-function showToast(msg, type='success') {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
-  setTimeout(function(){ t.className = 'toast'; }, 2500);
-}
+/* ---- SCHEDULE CRUD ---- */
+let editingSchedId = null;
 
-// 일정 불러오기
 async function loadSchedules() {
-  var list = document.getElementById('scheduleList');
-  list.innerHTML = '<div class="empty-msg">로딩 중...</div>';
+  const list = document.getElementById('scheduleList');
+  list.innerHTML = '<div class="loading-msg">로딩 중...</div>';
   try {
-    var q = query(collection(db, 'schedules'), orderBy('date', 'desc'));
-    var snap = await getDocs(q);
-    if(snap.empty) {
-      list.innerHTML = '<div class="empty-msg">등록된 일정이 없습니다.</div>';
-      return;
-    }
+    const snap = await getDocs(query(collection(db, 'schedules'), orderBy('date', 'desc')));
+    document.getElementById('schedCount').textContent = snap.size;
+    if (snap.empty) { list.innerHTML = '<div class="empty-msg">등록된 일정이 없습니다.</div>'; return; }
     list.innerHTML = '';
-    snap.forEach(function(docSnap) {
-      var d = docSnap.data();
-      var card = document.createElement('div');
-      card.className = 'schedule-card ' + (d.type || 'upcoming');
-      card.innerHTML = '<div class="card-info">' +
-        '<div class="card-date">' + formatDate(d.date) + ' · ' + (d.type === 'past' ? '지난 일정' : '예정 일정') + '</div>' +
-        '<div class="card-title">' + d.title + '</div>' +
-        '<div class="card-detail">' + (d.detail || '') + '</div>' +
-        '</div>' +
-        '<div class="card-actions">' +
-        '<button class="btn-delete" onclick="deleteSchedule(\'' + docSnap.id + '\')">삭제</button>' +
-        '</div>';
-      list.appendChild(card);
+    snap.forEach((ds) => {
+      const d = ds.data();
+      const row = document.createElement('div');
+      row.className = 'list-row' + (editingSchedId === ds.id ? ' editing' : '');
+      row.id = 'sr-' + ds.id;
+      row.innerHTML =
+        `<div class="row-date">${fmtDate(d.date)}</div>` +
+        `<div><div class="row-title">${esc(d.title)}</div>${d.detail ? '<div class="row-detail">' + esc(d.detail) + '</div>' : ''}</div>` +
+        `<div><span class="row-badge ${d.type === 'past' ? 'badge-past' : 'badge-upcoming'}">${d.type === 'past' ? '지난' : '예정'}</span></div>` +
+        `<div class="row-actions"><button class="btn-edit" onclick="editSched('${ds.id}')">수정</button></div>` +
+        `<div class="row-actions"><button class="btn-danger" onclick="delSched('${ds.id}')">삭제</button></div>`;
+      list.appendChild(row);
     });
-  } catch(e) {
-    list.innerHTML = '<div class="empty-msg">오류가 발생했습니다.</div>';
-  }
+  } catch(e) { list.innerHTML = `<div class="empty-msg">오류: ${e.message}</div>`; }
 }
 
-// 날짜 포맷
-function formatDate(dateStr) {
-  var d = new Date(dateStr);
-  return (d.getMonth()+1) + '월 ' + d.getDate() + '일, ' + d.getFullYear();
-}
-
-// 일정 추가
-window.addSchedule = async function() {
-  var date = document.getElementById('fDate').value;
-  var title = document.getElementById('fTitle').value.trim();
-  var detail = document.getElementById('fDetail').value.trim();
-  var type = document.getElementById('fType').value;
-
-  if(!date || !title) {
-    showToast('날짜와 제목을 입력해주세요.', 'error');
-    return;
-  }
-
+window.editSched = async (id) => {
   try {
-    await addDoc(collection(db, 'schedules'), {
-      date: date,
-      title: title,
-      detail: detail,
-      type: type,
-      createdAt: new Date().toISOString()
-    });
-    showToast('일정이 추가되었습니다! ✅');
-    document.getElementById('fDate').value = '';
-    document.getElementById('fTitle').value = '';
-    document.getElementById('fDetail').value = '';
-    loadSchedules();
-  } catch(e) {
-    showToast('추가 실패: ' + e.message, 'error');
-  }
+    const ds = await getDoc(doc(db, 'schedules', id));
+    if (!ds.exists()) return;
+    const d = ds.data();
+    document.getElementById('sDate').value = d.date || '';
+    document.getElementById('sTitle').value = d.title || '';
+    document.getElementById('sDetail').value = d.detail || '';
+    document.getElementById('sType').value = d.type || 'upcoming';
+    editingSchedId = id;
+    document.getElementById('schedFormTitle').textContent = '✏️ 일정 수정';
+    document.getElementById('schedSubmitBtn').textContent = '수정 저장';
+    document.getElementById('schedCancelBtn').style.display = 'inline-flex';
+    document.querySelectorAll('.list-row').forEach(r => r.classList.remove('editing'));
+    const row = document.getElementById('sr-' + id);
+    if (row) { row.classList.add('editing'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    document.getElementById('sDate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch(e) { showToast('불러오기 실패', 'error'); }
 };
 
-// 일정 삭제
-window.deleteSchedule = async function(id) {
-  if(!confirm('이 일정을 삭제하시겠습니까?')) return;
+window.cancelSchedEdit = () => {
+  editingSchedId = null;
+  document.getElementById('sDate').value = '';
+  document.getElementById('sTitle').value = '';
+  document.getElementById('sDetail').value = '';
+  document.getElementById('sType').value = 'upcoming';
+  document.getElementById('schedFormTitle').textContent = '➕ 새 일정 추가';
+  document.getElementById('schedSubmitBtn').textContent = '일정 추가';
+  document.getElementById('schedCancelBtn').style.display = 'none';
+  document.querySelectorAll('.list-row').forEach(r => r.classList.remove('editing'));
+};
+
+window.submitSchedule = async () => {
+  const date = document.getElementById('sDate').value;
+  const title = document.getElementById('sTitle').value.trim();
+  const detail = document.getElementById('sDetail').value.trim();
+  const type = document.getElementById('sType').value;
+  if (!date || !title) { showToast('날짜와 제목을 입력해주세요.', 'error'); return; }
+  const btn = document.getElementById('schedSubmitBtn');
+  btn.disabled = true;
+  try {
+    if (editingSchedId) {
+      await updateDoc(doc(db, 'schedules', editingSchedId), { date, title, detail, type, updatedAt: new Date().toISOString() });
+      showToast('일정이 수정되었습니다! ✅');
+      cancelSchedEdit();
+    } else {
+      await addDoc(collection(db, 'schedules'), { date, title, detail, type, createdAt: new Date().toISOString() });
+      showToast('일정이 추가되었습니다! ✅');
+      document.getElementById('sDate').value = '';
+      document.getElementById('sTitle').value = '';
+      document.getElementById('sDetail').value = '';
+    }
+    loadSchedules();
+  } catch(e) { showToast('저장 실패: ' + e.message, 'error'); }
+  finally { btn.disabled = false; }
+};
+
+window.delSched = async (id) => {
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
   try {
     await deleteDoc(doc(db, 'schedules', id));
     showToast('삭제되었습니다.');
+    if (editingSchedId === id) cancelSchedEdit();
     loadSchedules();
+  } catch(e) { showToast('삭제 실패', 'error'); }
+};
+
+/* ---- LOCATION CRUD ---- */
+async function loadLocations() {
+  const grid = document.getElementById('locationGrid');
+  grid.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'locations'), orderBy('order', 'asc')));
+    document.getElementById('locCount').textContent = snap.size;
+    if (snap.empty) {
+      document.getElementById('migrationBox').style.display = 'flex';
+      grid.innerHTML = '<div class="empty-msg">등록된 도장이 없습니다.<br>위에서 마이그레이션을 실행하세요.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    snap.forEach((ds) => {
+      const d = ds.data();
+      const card = document.createElement('div');
+      card.className = 'loc-card';
+      card.innerHTML =
+        (d.logoUrl ? `<img class="loc-logo" src="${d.logoUrl}" alt="${esc(d.name)}">` : `<div class="loc-logo-empty">🥋</div>`) +
+        `<div class="loc-info">` +
+        `<div class="loc-region">${esc(d.region)}</div>` +
+        `<div class="loc-name">${esc(d.name)}</div>` +
+        `<div class="loc-owner">${esc(d.owner || '')}</div>` +
+        `<div class="loc-addr" title="${esc(d.address)}">${esc(d.address)}</div>` +
+        `</div>` +
+        `<div class="loc-del"><button class="btn-danger" onclick="delLocation('${ds.id}','${(d.storagePath||'').replace(/'/g,"\\'")}')">삭제</button></div>`;
+      grid.appendChild(card);
+    });
+  } catch(e) { grid.innerHTML = `<div class="empty-msg">오류: ${e.message}</div>`; }
+}
+
+window.previewLogo = (input) => {
+  const prev = document.getElementById('logoPreview');
+  if (input.files && input.files[0]) {
+    prev.style.display = 'block';
+    prev.src = URL.createObjectURL(input.files[0]);
+  } else { prev.style.display = 'none'; }
+};
+
+window.addLocation = async () => {
+  const name = document.getElementById('lName').value.trim();
+  const owner = document.getElementById('lOwner').value.trim();
+  const address = document.getElementById('lAddress').value.trim();
+  const region = document.getElementById('lRegion').value;
+  const file = document.getElementById('lLogoFile').files[0];
+  if (!name || !address) { showToast('도장명과 주소를 입력해주세요.', 'error'); return; }
+  const btn = document.getElementById('addLocBtn');
+  btn.disabled = true; btn.textContent = '추가 중...';
+  try {
+    let logoUrl = '', storagePath = '';
+    if (file) {
+      const ext = file.name.split('.').pop();
+      storagePath = `logos/${name}.${ext}`;
+      const sRef = ref(storage, storagePath);
+      await uploadBytes(sRef, file);
+      logoUrl = await getDownloadURL(sRef);
+    }
+    const snap = await getDocs(query(collection(db, 'locations'), orderBy('order', 'desc')));
+    const maxOrder = snap.empty ? 0 : (snap.docs[0].data().order || 0);
+    await addDoc(collection(db, 'locations'), { name, owner, address, region, logoUrl, storagePath, order: maxOrder + 1, createdAt: new Date().toISOString() });
+    showToast('도장이 추가되었습니다! ✅');
+    ['lName','lOwner','lAddress'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('lLogoFile').value = '';
+    document.getElementById('logoPreview').style.display = 'none';
+    loadLocations();
+  } catch(e) { showToast('추가 실패: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = '도장 추가'; }
+};
+
+window.delLocation = async (id, storagePath) => {
+  if (!confirm('이 도장을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'locations', id));
+    if (storagePath) { try { await deleteObject(ref(storage, storagePath)); } catch(_){} }
+    showToast('삭제되었습니다.');
+    loadLocations();
+  } catch(e) { showToast('삭제 실패', 'error'); }
+};
+
+/* ---- MIGRATION SEED DATA ---- */
+const SEED = [
+  {order:1,name:'범태권도장',owner:'관장 이정안',address:'대구광역시 북구 중앙대로105길 25 오페라명작 3층',region:'대구',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EB%B2%94%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.png?alt=media',storagePath:''},
+  {order:2,name:'아이비태권도장',owner:'관장 서정민',address:'대구광역시 달성군 구지면 국가산단북로34길 74 4층',region:'대구',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EC%95%84%EC%9D%B4%EB%B9%84%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.png?alt=media',storagePath:''},
+  {order:3,name:'경원태권도',owner:'관장 최성화',address:'부산광역시 연제구 중앙천로 38 3층',region:'부산',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EA%B2%BD%EC%9B%90%ED%83%9C%EA%B6%8C%EB%8F%84.jpg?alt=media',storagePath:''},
+  {order:4,name:'현대유성태권도',owner:'관장 김경태',address:'부산광역시 부산진구 엄광로 16 개금아이파크 주상가 2층',region:'부산',logoUrl:'',storagePath:''},
+  {order:5,name:'에이스승무태권도장',owner:'관장 박영민',address:'울산광역시 남구 문수로344번길 5-1 2층',region:'울산',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EC%97%90%EC%9D%B4%EC%8A%A4%EC%8A%B9%EB%AC%B4%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:6,name:'해솔태권도장',owner:'관장 선창우',address:'울산광역시 북구 중산서로 18 3층',region:'울산',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%ED%95%B4%EC%86%94%ED%83%9C%EA%B6%8C%EB%8F%84.jpg?alt=media',storagePath:''},
+  {order:7,name:'극동본관체육관',owner:'관장 한재형',address:'경상남도 창원시 성산구 연덕로184번길 32 동우상가 502호',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EA%B7%B9%EB%8F%99%EB%B3%B8%EA%B4%80%EC%B2%B4%EC%9C%A1%EA%B4%80.png?alt=media',storagePath:''},
+  {order:8,name:'다원태권도',owner:'관장 박우정',address:'경상남도 창원시 성산구 가음로13번길 15 우성상가 3층',region:'경남 창원',logoUrl:'',storagePath:''},
+  {order:9,name:'라온태권도장',owner:'관장 김법성',address:'경상남도 창원시 성산구 사파동 141 삼익종합상가 3층 7호',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EB%9D%BC%EC%98%A8%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:10,name:'석사북성태권도',owner:'관장 김영진',address:'경상남도 창원시 마산회원구 석전동 273-52',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EC%84%9D%EC%82%AC%EB%B6%81%EC%84%B1%ED%83%9C%EA%B6%8C%EB%8F%84.jpg?alt=media',storagePath:''},
+  {order:11,name:'진해감사랑리더십태권도장',owner:'관장 조금호',address:'경상남도 창원시 진해구 남영로 63 주영빌딩 4층 401호',region:'경남 창원',logoUrl:'',storagePath:''},
+  {order:12,name:'진해청룡태권도장',owner:'관장 최형우',address:'경상남도 창원시 진해구 진해대로 999 하이존상가 4층',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EC%A7%84%ED%95%B4%EC%B2%AD%EB%A3%A1%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:13,name:'한국체대청림태권도장',owner:'관장 한상훈',address:'경상남도 창원시 진해구 신항동로 134 부영아파트 8단지 상가 2층 201호',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%ED%95%9C%EA%B5%AD%EC%B2%B4%EB%8C%80%EC%B2%AD%EB%A6%BC%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.gif?alt=media',storagePath:''},
+  {order:14,name:'국가대표태권도장',owner:'관장 송지훈',address:'경상남도 창원시 마산합포구 월영동서로 5 F층',region:'경남 창원',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EA%B5%AD%EA%B0%80%EB%8C%80%ED%91%9C%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:15,name:'동아대효태권도장',owner:'관장 김동구',address:'경상남도 김해시 능동로149번길 12 탑프라자 301호',region:'경남 김해',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EB%8F%99%EC%95%84%EB%8C%80%ED%9A%A8%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.png?alt=media',storagePath:''},
+  {order:16,name:'라온태권도장 (김해)',owner:'관장 감우진',address:'경상남도 김해시 주촌면 천곡로7번길 15 3층',region:'경남 김해',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EB%9D%BC%EC%98%A8%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5%EA%B9%80%ED%95%B4.jpg?alt=media',storagePath:''},
+  {order:17,name:'율하태권도장',owner:'관장 임경민',address:'경상남도 김해시 율하1로 114 3층',region:'경남 김해',logoUrl:'',storagePath:''},
+  {order:18,name:'용인대청룡태권도장',owner:'관장 김찬영',address:'경상남도 김해시 대청로 121 대청프라자B동 407호',region:'경남 김해',logoUrl:'',storagePath:''},
+  {order:19,name:'장유경희대태권도장',owner:'관장 정한나',address:'경상남도 김해시 능동로21번길 4-4 3층',region:'경남 김해',logoUrl:'',storagePath:''},
+  {order:20,name:'태백태권도장',owner:'관장 홍찬의',address:'경상남도 김해시 계동로23번길 17 201호',region:'경남 김해',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%ED%83%9C%EB%B0%B1%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:21,name:'현인태권도장 (어방)',owner:'관장 김태형',address:'경상남도 김해시 어방동 동원아파트 B117호',region:'경남 김해',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%ED%98%84%EC%9D%B8%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:22,name:'품태권도장',owner:'관장 배준성',address:'경상남도 김해시 진영읍 본산로 23-16 혜종빌딩 4층',region:'경남 김해',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%ED%92%88%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:23,name:'동아대태권스쿨',owner:'관장 유홍섭',address:'경상남도 함안군 칠원읍 호암길 14 DH타워 404호',region:'경남 기타',logoUrl:'',storagePath:''},
+  {order:24,name:'원탑태권도장',owner:'관장 박재완',address:'경상남도 양산시 물금읍 신주로 47 2층 201호',region:'경남 기타',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EC%9B%90%ED%83%91%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:25,name:'한국체대건강한태권도',owner:'관장 양창일',address:'경상남도 거제시 거제중앙로 11길 4 2층',region:'경남 기타',logoUrl:'',storagePath:''},
+  {order:26,name:'경희대명품꿈나무태권도',owner:'관장 최형규',address:'충청북도 청주시 상당구 중고개로142번길 20 단지내 상가 2층',region:'충북 청주',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EA%B2%BD%ED%9D%AC%EB%8C%80%EB%AA%85%ED%92%88%EA%BF%88%EB%82%98%EB%AC%B4%ED%83%9C%EA%B6%8C%EB%8F%84.png?alt=media',storagePath:''},
+  {order:27,name:'경희대글로벌태권도장',owner:'관장 이승환',address:'경기도 화성시 향남읍 행정중앙1로 4 서울빌딩 2층',region:'경기도',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EA%B2%BD%ED%9D%AC%EB%8C%80%EA%B8%80%EB%A1%9C%EB%B2%8C%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.jpg?alt=media',storagePath:''},
+  {order:28,name:'마루한청무태권도장',owner:'관장 이상근',address:'경상남도 사천시 주공로 51 삼보신우상가 3층',region:'경남 기타',logoUrl:'https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/logos%2F%EB%A7%88%EB%A3%A8%ED%95%9C%EC%B2%AD%EB%AC%B4%ED%83%9C%EA%B6%8C%EB%8F%84%EC%9E%A5.png?alt=media',storagePath:''}
+];
+
+window.runMigration = async () => {
+  if (!confirm(`28개 도장 데이터를 Firestore에 추가합니다.\n\n⚠️ 이미 데이터가 있으면 중복됩니다. 비어있을 때만 실행하세요.\n\n계속하시겠습니까?`)) return;
+  const btn = document.getElementById('migrateBtn');
+  btn.disabled = true; btn.textContent = '진행 중...';
+  try {
+    for (let i = 0; i < SEED.length; i++) {
+      await addDoc(collection(db, 'locations'), { ...SEED[i], createdAt: new Date().toISOString() });
+      btn.textContent = `진행 중... (${i+1}/${SEED.length})`;
+    }
+    showToast('28개 도장 마이그레이션 완료! ✅', 'success');
+    document.getElementById('migrationBox').style.display = 'none';
+    loadLocations();
   } catch(e) {
-    showToast('삭제 실패', 'error');
+    showToast('마이그레이션 실패: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '데이터 마이그레이션 실행';
   }
 };
+
+/* ---- UTILS ---- */
+function fmtDate(s) {
+  if (!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  const days = ['일','월','화','수','목','금','토'];
+  return `${d.getMonth()+1}/${d.getDate()} (${days[d.getDay()]})`;
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+/*
+ * =========================================================
+ * Firestore 보안 규칙 (Firebase Console에서 설정 필요)
+ * =========================================================
+ * rules_version = '2';
+ * service cloud.firestore {
+ *   match /databases/{database}/documents {
+ *     match /visitors/{doc=**} {
+ *       allow read, write: if true;
+ *     }
+ *     match /schedules/{doc=**} {
+ *       allow read: if true;
+ *       allow write: if request.auth != null
+ *         && request.auth.token.email == 'tkdboykms0007@gmail.com';
+ *     }
+ *     match /locations/{doc=**} {
+ *       allow read: if true;
+ *       allow write: if request.auth != null
+ *         && request.auth.token.email == 'tkdboykms0007@gmail.com';
+ *     }
+ *   }
+ * }
+ * =========================================================
+ */
 </script>
 </body>
 </html>

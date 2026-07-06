@@ -440,7 +440,11 @@ async function loadLocations() {
         `<div class="loc-del"><button class="btn-danger" onclick="delLocation('${ds.id}','${(d.storagePath||'').replace(/'/g,"\\'")}')">삭제</button></div>`;
       grid.appendChild(card);
     });
-  } catch(e) { grid.innerHTML = `<div class="empty-msg">오류: ${e.message}</div>`; }
+  } catch(e) {
+    const isPermError = e.code === 'permission-denied' || e.message.includes('permissions');
+    grid.innerHTML = `<div class="empty-msg">오류: ${e.message}${isPermError ? '<br><small>Firestore 보안 규칙을 확인하세요.</small>' : ''}</div>`;
+    document.getElementById('migrationBox').style.display = 'flex';
+  }
 }
 
 window.previewLogo = (input) => {

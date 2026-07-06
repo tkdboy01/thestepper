@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /visitors/{doc=**} {
+      allow read, write: if true;
+    }
+    match /schedules/{doc=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /locations/{doc=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+  }
+}

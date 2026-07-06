@@ -614,7 +614,6 @@ async function startAnalysis() {
   offCanvas.width = W; offCanvas.height = H;
   var offCtx = offCanvas.getContext('2d');
 
-  var STEP      = 0.2;  // 5 fps
   var duration  = video.duration;
   var total     = Math.ceil(duration / STEP) + 1;
   var processed = 0;
@@ -735,7 +734,7 @@ function drawPlaybackOverlay() {
     drawSkeleton(nearest.landmarks);
   }
 }
-var STEP = 0.2;
+var STEP = 0.067;  // ~15 fps pre-processing
 
 // ── AI Feedback ────────────────────────────────────────────
 async function requestFeedback() {
@@ -753,20 +752,47 @@ async function requestFeedback() {
   var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
   var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
   var avgRight = Math.round(frameData.reduce(function(s, f) { return s + f.angles.rightKnee; }, 0) / frameData.length);
-  var avgLeft  = Math.round(frameData.reduce(function(s, f) { return s + f.angles.leftKnee; }, 0)  / frameData.length);
+  var avgLeft  = Math.round(frameData.reduce(function(s, f) { return s + f.angles.leftKnee;  }, 0) / frameData.length);
+  var avgHip   = Math.round(frameData.reduce(function(s, f) { return s + f.angles.hipRot;    }, 0) / frameData.length);
   var dur      = document.getElementById('videoPlayer').duration;
 
-  var msg = '[THE STEPPER 동작 분석] ' + chapter.name + ' ' + chapter.tech + '\n\n' +
-    '분석 영상: 총 ' + frameData.length + '프레임 (영상 ' + dur.toFixed(1) + '초)\n\n' +
-    '[최대 각도 — 가장 크게 벌어진 프레임]\n' +
-    '· 오른쪽 무릎 최대: ' + maxRight.angles.rightKnee + '° (' + maxRight.time.toFixed(1) + '초 시점)\n' +
-    '· 왼쪽 무릎 최대: '   + maxLeft.angles.leftKnee   + '° (' + maxLeft.time.toFixed(1) + '초 시점)\n' +
-    '· 골반 회전 최대: '   + maxHip.angles.hipRot       + '° (' + maxHip.time.toFixed(1) + '초 시점)\n\n' +
+  // Compact timeline — one point every ~0.2 s (timelineStep frames)
+  var timelineStep = Math.max(1, Math.round(0.2 / STEP));
+  var timelineRows = [];
+  for (var ti = 0; ti < frameData.length; ti += timelineStep) {
+    var tf = frameData[ti];
+    timelineRows.push(
+      tf.time.toFixed(2) + 's:R' + tf.angles.rightKnee +
+      '/L' + tf.angles.leftKnee + '/H' + tf.angles.hipRot
+    );
+  }
+
+  // Key motion milestones
+  var firstR90 = null;
+  for (var mi = 0; mi < frameData.length; mi++) {
+    if (frameData[mi].angles.rightKnee >= 90) { firstR90 = frameData[mi]; break; }
+  }
+
+  var msg =
+    '[THE STEPPER 동작 분석] ' + chapter.name + ' ' + chapter.tech + '\n\n' +
+    '분석 영상: 총 ' + frameData.length + '프레임 (영상 ' + dur.toFixed(1) + '초 · 약 ' +
+      Math.round(frameData.length / dur) + 'fps)\n\n' +
+    '[핵심 각도 — 최대값]\n' +
+    '· 오른쪽 무릎: ' + maxRight.angles.rightKnee + '° (' + maxRight.time.toFixed(2) + '초)\n' +
+    '· 왼쪽 무릎: '   + maxLeft.angles.leftKnee   + '° (' + maxLeft.time.toFixed(2) + '초)\n' +
+    '· 골반 회전: '   + maxHip.angles.hipRot       + '° (' + maxHip.time.toFixed(2) + '초)\n\n' +
     '[전체 평균]\n' +
-    '· 오른쪽 무릎 평균: ' + avgRight + '°\n' +
-    '· 왼쪽 무릎 평균: '   + avgLeft  + '°\n\n' +
-    '위 동작 분석 수치를 바탕으로 더스텝퍼 ' + chapter.name + ' ' + chapter.tech +
-    ' 기술 관점에서 교정 포인트와 구체적인 개선 방법을 알려주세요.';
+    '· 오른쪽 무릎: ' + avgRight + '° / 왼쪽 무릎: ' + avgLeft + '° / 골반: ' + avgHip + '°\n\n' +
+    '[동작 이정표]\n' +
+    (firstR90 ? '· 오른쪽 무릎 90° 최초 도달: ' + firstR90.time.toFixed(2) + '초\n' : '· 오른쪽 무릎 90° 미도달\n') +
+    '· 최대 무릎각 도달 시점: ' + maxRight.time.toFixed(2) + '초\n' +
+    '· 최대각 시점 골반 회전: ' + maxRight.angles.hipRot + '°\n' +
+    '· 최대각 시점 반대(왼쪽) 무릎: ' + maxRight.angles.leftKnee + '°\n\n' +
+    '[프레임별 각도 타임라인 — R=오른쪽무릎 / L=왼쪽무릎 / H=골반회전]\n' +
+    timelineRows.join(', ') + '\n\n' +
+    '위 시계열 데이터를 분석하여 더스텝퍼 ' + chapter.name + ' ' + chapter.tech +
+    ' 기술 관점에서 이 학생 동작의 특이점과 개선 포인트를 구체적으로 알려주세요.' +
+    ' 수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
 
   try {
     var idToken = await currentUser.getIdToken();
@@ -892,6 +918,12 @@ async function downloadPDF() {
       'THE STEPPER 동작 분석 베타 · 본 결과는 참고용 자가진단 결과입니다' +
     '</div>';
 
+  // html2canvas는 DOM에 없는 요소를 렌더링하지 못해 백지가 됨 — 임시 삽입
+  el.style.position = 'absolute';
+  el.style.left     = '-9999px';
+  el.style.top      = '0';
+  document.body.appendChild(el);
+
   var fileName = 'THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf';
   try {
     await html2pdf().set({
@@ -905,6 +937,7 @@ async function downloadPDF() {
   } catch(e) {
     alert('PDF 생성 중 오류가 발생했습니다.\n' + e.message);
   } finally {
+    if (el.parentNode) el.parentNode.removeChild(el);
     btn.disabled = false;
     btn.textContent = '📄 결과 PDF로 다운로드';
   }

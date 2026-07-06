@@ -163,6 +163,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .feedback-text{background:var(--gray);border-radius:10px;padding:20px;font-size:14px;line-height:1.95;color:var(--text);white-space:pre-wrap;display:none;word-break:keep-all}
 .feedback-error{color:var(--red);font-size:13px;padding:10px 0;display:none}
 
+/* PDF BUTTON */
+.pdf-btn{display:none;width:100%;margin-top:14px;padding:13px;background:#fff;color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.3px;cursor:pointer;transition:all 0.2s;text-align:center}
+.pdf-btn:hover:not(:disabled){border-color:var(--red);color:var(--red);background:rgba(192,57,43,0.03)}
+.pdf-btn:disabled{opacity:0.45;cursor:not-allowed}
+
 @media(max-width:600px){
   .angle-grid{grid-template-columns:repeat(2,1fr)}
   .main-section{padding:82px 16px 40px}
@@ -270,12 +275,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
       <option value="15">제15장 — 뒤차기</option>
     </select>
 
-    <label class="field-label">영상 선택 (파일 업로드 또는 카메라 촬영)</label>
+    <label class="field-label">영상 선택</label>
     <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📹</div>
-      <div class="upload-text" id="uploadText">영상 파일을 선택하거나 촬영하세요</div>
-      <div class="upload-sub">MP4 · MOV · AVI 지원 · 최대 200MB<br>모바일: 카메라로 바로 촬영 가능</div>
-      <input type="file" accept="video/*" capture="environment" class="upload-input" id="videoInput" onchange="onVideoSelected(event)">
+      <div class="upload-text" id="uploadText">영상 파일을 선택하세요</div>
+      <div class="upload-sub">MP4 · MOV · AVI 지원 · 최대 200MB<br>갤러리/파일 앱에서 미리 촬영한 영상을 선택하세요</div>
+      <input type="file" accept="video/*" class="upload-input" id="videoInput" onchange="onVideoSelected(event)">
     </div>
   </div>
 
@@ -347,6 +352,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
     </div>
     <div class="feedback-error" id="feedbackError"></div>
     <div class="feedback-text" id="feedbackText"></div>
+    <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">📄 결과 PDF로 다운로드</button>
   </div>
 
 </div>
@@ -356,6 +362,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <!-- MediaPipe Pose -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<!-- html2pdf (html2canvas + jsPDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
 // ── Constants ──────────────────────────────────────────────
@@ -778,6 +786,7 @@ async function requestFeedback() {
     } else {
       document.getElementById('feedbackText').textContent    = data.reply;
       document.getElementById('feedbackText').style.display  = 'block';
+      document.getElementById('pdfBtn').style.display        = 'block';
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
@@ -785,6 +794,119 @@ async function requestFeedback() {
     document.getElementById('feedbackError').style.display  = 'block';
   } finally {
     document.getElementById('feedbackBtn').disabled = false;
+  }
+}
+
+// ── PDF Download ───────────────────────────────────────────
+async function downloadPDF() {
+  if (!currentUser) {
+    alert('로그인한 회원만 다운로드 가능합니다.');
+    return;
+  }
+  if (!frameData.length) {
+    alert('분석 결과가 없습니다. 먼저 동작 분석을 완료해주세요.');
+    return;
+  }
+
+  var btn = document.getElementById('pdfBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ PDF 생성 중...';
+
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter   = CHAPTERS[chapterId] || { name: '동작', tech: '분석' };
+  var now       = new Date();
+  var dateStr   = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + ' ' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0');
+
+  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
+  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
+  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
+  var feedbackContent = document.getElementById('feedbackText').textContent || '';
+
+  // Capture composite screenshot at max-angle frame
+  var screenshotHtml = '';
+  var video         = document.getElementById('videoPlayer');
+  var overlayCanvas = document.getElementById('canvasOverlay');
+  try {
+    await new Promise(function(resolve, reject) {
+      var t = setTimeout(function() { reject(new Error('seek timeout')); }, 3000);
+      video.addEventListener('seeked', function() { clearTimeout(t); resolve(); }, { once: true });
+      video.currentTime = maxRight.time;
+    });
+    drawSkeleton(maxRight.landmarks);
+    var cap    = document.createElement('canvas');
+    cap.width  = Math.min(video.videoWidth, 800);
+    cap.height = Math.round(cap.width * video.videoHeight / video.videoWidth);
+    var capCtx = cap.getContext('2d');
+    capCtx.drawImage(video, 0, 0, cap.width, cap.height);
+    capCtx.drawImage(overlayCanvas, 0, 0, cap.width, cap.height);
+    screenshotHtml = '<img src="' + cap.toDataURL('image/jpeg', 0.85) +
+      '" style="width:100%;border-radius:8px;margin-bottom:18px;display:block" alt="분석 스크린샷">';
+  } catch(e) { /* screenshot optional — continue without */ }
+
+  // Build PDF content element
+  var feedbackEsc = feedbackContent
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  var el = document.createElement('div');
+  el.style.cssText = 'font-family:Arial,sans-serif;padding:32px;color:#1d1d1f;background:#fff;width:700px';
+  el.innerHTML =
+    '<div style="text-align:center;border-bottom:3px solid #C0392B;padding-bottom:18px;margin-bottom:22px">' +
+      '<div style="font-size:28px;font-weight:900;letter-spacing:6px;color:#C0392B">THE STEPPER</div>' +
+      '<div style="font-size:12px;color:#6e6e73;letter-spacing:3px;margin-top:4px">동작 분석 리포트</div>' +
+    '</div>' +
+    '<table style="width:100%;font-size:13px;margin-bottom:22px;border-collapse:collapse">' +
+      '<tr><td style="color:#6e6e73;padding:5px 0;width:90px">분석 일시</td><td style="font-weight:700">' + dateStr + '</td></tr>' +
+      '<tr><td style="color:#6e6e73;padding:5px 0">분석 장</td><td style="font-weight:700">' + chapter.name + ' — ' + chapter.tech + '</td></tr>' +
+      '<tr><td style="color:#6e6e73;padding:5px 0">분석 회원</td><td style="font-weight:700">' + (currentUser.email || '') + '</td></tr>' +
+    '</table>' +
+    screenshotHtml +
+    '<div style="background:#f5f5f7;border-radius:10px;padding:20px;margin-bottom:20px">' +
+      '<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:#C0392B">관절 각도 분석 결과 (최대값)</div>' +
+      '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
+        '<tr style="background:#e8e8ea">' +
+          '<td style="padding:8px 12px;font-weight:700">항목</td>' +
+          '<td style="padding:8px 12px;font-weight:700">최대값</td>' +
+          '<td style="padding:8px 12px;font-weight:700">측정 시점</td>' +
+        '</tr>' +
+        '<tr><td style="padding:8px 12px;color:#6e6e73">오른쪽 무릎</td>' +
+          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxRight.angles.rightKnee + '°</td>' +
+          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxRight.time.toFixed(1) + '초</td></tr>' +
+        '<tr style="background:#fafafa"><td style="padding:8px 12px;color:#6e6e73">왼쪽 무릎</td>' +
+          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxLeft.angles.leftKnee + '°</td>' +
+          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxLeft.time.toFixed(1) + '초</td></tr>' +
+        '<tr><td style="padding:8px 12px;color:#6e6e73">골반 회전</td>' +
+          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxHip.angles.hipRot + '°</td>' +
+          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxHip.time.toFixed(1) + '초</td></tr>' +
+      '</table>' +
+    '</div>' +
+    (feedbackContent ?
+      '<div style="background:#f5f5f7;border-radius:10px;padding:20px;margin-bottom:20px">' +
+        '<div style="font-size:14px;font-weight:700;margin-bottom:12px">AI 코치 피드백</div>' +
+        '<div style="font-size:12px;line-height:2;white-space:pre-wrap;word-break:break-word">' + feedbackEsc + '</div>' +
+      '</div>' : '') +
+    '<div style="text-align:center;font-size:10px;color:#aaa;margin-top:20px;padding-top:14px;border-top:1px solid #e5e5e7">' +
+      'THE STEPPER 동작 분석 베타 · 본 결과는 참고용 자가진단 결과입니다' +
+    '</div>';
+
+  var fileName = 'THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf';
+  try {
+    await html2pdf().set({
+      margin:      [10, 10, 10, 10],
+      filename:    fileName,
+      image:       { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(el).save();
+  } catch(e) {
+    alert('PDF 생성 중 오류가 발생했습니다.\n' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📄 결과 PDF로 다운로드';
   }
 }
 </script>

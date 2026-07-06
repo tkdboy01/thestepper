@@ -924,26 +924,30 @@ async function downloadPDF() {
       'THE STEPPER 동작 분석 베타 · 본 결과는 참고용 자가진단 결과입니다' +
     '</div>';
 
-  // html2canvas는 DOM에 없는 요소를 렌더링하지 못해 백지가 됨 — 임시 삽입
-  el.style.position = 'absolute';
-  el.style.left     = '-9999px';
-  el.style.top      = '0';
-  document.body.appendChild(el);
+  // html2canvas는 left:-9999px 위치를 캡처하지 못함 (스크롤 범위 바깥).
+  // 문서 맨 아래에 배치해 스크롤 범위 내 유지 — 사용자에게는 보이지 않는 위치.
+  var pdfHost = document.createElement('div');
+  pdfHost.style.cssText = 'position:absolute;left:0;top:' +
+    (document.documentElement.scrollHeight + 200) + 'px;width:794px;background:#fff;overflow:visible';
+  pdfHost.appendChild(el);
+  document.body.appendChild(pdfHost);
+
+  // 브라우저 레이아웃 계산 및 이미지 로딩 완료 대기
+  await new Promise(function(r) { setTimeout(r, 200); });
 
   var fileName = 'THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf';
   try {
     await html2pdf().set({
       margin:      [10, 10, 10, 10],
       filename:    fileName,
-      image:       { type: 'jpeg', quality: 0.92 },
-      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak:   { mode: ['avoid-all', 'css', 'legacy'] }
+      image:       { type: 'jpeg', quality: 0.88 },
+      html2canvas: { scale: 1, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(el).save();
   } catch(e) {
     alert('PDF 생성 중 오류가 발생했습니다.\n' + e.message);
   } finally {
-    if (el.parentNode) el.parentNode.removeChild(el);
+    if (pdfHost.parentNode) pdfHost.parentNode.removeChild(pdfHost);
     btn.disabled = false;
     btn.textContent = '📄 결과 PDF로 다운로드';
   }

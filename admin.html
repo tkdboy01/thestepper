@@ -77,6 +77,13 @@ select.form-control{cursor:pointer}
 .empty-msg{text-align:center;padding:48px 24px;color:var(--sub);font-size:14px}
 .loading-msg{text-align:center;padding:32px;color:var(--sub)}
 
+/* PAGINATION */
+.pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0 4px;flex-wrap:wrap}
+.pg-btn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:7px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;min-width:36px;transition:all 0.15s}
+.pg-btn:hover:not(:disabled){border-color:var(--red);color:var(--red)}
+.pg-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+.pg-btn.disabled,.pg-btn:disabled{opacity:0.35;cursor:not-allowed}
+
 /* LOCATION */
 .loc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
 .loc-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.2s}
@@ -239,6 +246,7 @@ select.form-control{cursor:pointer}
       </div>
       <div id="scheduleList"><div class="loading-msg">로딩 중...</div></div>
     </div>
+    <div id="schedPagination"></div>
   </div>
 
   <!-- ===== 회원 도장 탭 ===== -->
@@ -359,30 +367,69 @@ window.switchTab = (tab) => {
 
 /* ---- SCHEDULE CRUD ---- */
 let editingSchedId = null;
+let schedData = [];
+let schedPage = 1;
+const PAGE_SIZE = 10;
 
 async function loadSchedules() {
   const list = document.getElementById('scheduleList');
   list.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  document.getElementById('schedPagination').innerHTML = '';
   try {
     const snap = await getDocs(query(collection(db, 'schedules'), orderBy('date', 'desc')));
     document.getElementById('schedCount').textContent = snap.size;
-    if (snap.empty) { list.innerHTML = '<div class="empty-msg">등록된 일정이 없습니다.</div>'; return; }
-    list.innerHTML = '';
-    snap.forEach((ds) => {
-      const d = ds.data();
-      const row = document.createElement('div');
-      row.className = 'list-row' + (editingSchedId === ds.id ? ' editing' : '');
-      row.id = 'sr-' + ds.id;
-      row.innerHTML =
-        `<div class="row-date">${fmtDate(d.date)}</div>` +
-        `<div><div class="row-title">${esc(d.title)}</div>${d.detail ? '<div class="row-detail">' + esc(d.detail) + '</div>' : ''}</div>` +
-        `<div><span class="row-badge ${d.type === 'past' ? 'badge-past' : 'badge-upcoming'}">${d.type === 'past' ? '지난' : '예정'}</span></div>` +
-        `<div class="row-actions"><button class="btn-edit" onclick="editSched('${ds.id}')">수정</button></div>` +
-        `<div class="row-actions"><button class="btn-danger" onclick="delSched('${ds.id}')">삭제</button></div>`;
-      list.appendChild(row);
-    });
+    schedData = [];
+    snap.forEach((ds) => schedData.push({ id: ds.id, data: ds.data() }));
+    renderSchedPage(schedPage);
   } catch(e) { list.innerHTML = `<div class="empty-msg">오류: ${e.message}</div>`; }
 }
+
+function renderSchedPage(page) {
+  const total = schedData.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  page = Math.max(1, Math.min(page, totalPages));
+  schedPage = page;
+
+  const list = document.getElementById('scheduleList');
+  if (total === 0) {
+    list.innerHTML = '<div class="empty-msg">등록된 일정이 없습니다.</div>';
+    document.getElementById('schedPagination').innerHTML = '';
+    return;
+  }
+
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = schedData.slice(start, start + PAGE_SIZE);
+  list.innerHTML = '';
+  slice.forEach(({ id, data: d }) => {
+    const row = document.createElement('div');
+    row.className = 'list-row' + (editingSchedId === id ? ' editing' : '');
+    row.id = 'sr-' + id;
+    row.innerHTML =
+      `<div class="row-date">${fmtDate(d.date)}</div>` +
+      `<div><div class="row-title">${esc(d.title)}</div>${d.detail ? '<div class="row-detail">' + esc(d.detail) + '</div>' : ''}</div>` +
+      `<div><span class="row-badge ${d.type === 'past' ? 'badge-past' : 'badge-upcoming'}">${d.type === 'past' ? '지난' : '예정'}</span></div>` +
+      `<div class="row-actions"><button class="btn-edit" onclick="editSched('${id}')">수정</button></div>` +
+      `<div class="row-actions"><button class="btn-danger" onclick="delSched('${id}')">삭제</button></div>`;
+    list.appendChild(row);
+  });
+
+  renderPagination(page, totalPages);
+}
+
+function renderPagination(page, totalPages) {
+  const pg = document.getElementById('schedPagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  let html = '<div class="pagination">';
+  html += `<button class="pg-btn${page === 1 ? ' disabled' : ''}" onclick="goSchedPage(${page - 1})" ${page === 1 ? 'disabled' : ''}>‹ 이전</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="pg-btn${i === page ? ' active' : ''}" onclick="goSchedPage(${i})">${i}</button>`;
+  }
+  html += `<button class="pg-btn${page === totalPages ? ' disabled' : ''}" onclick="goSchedPage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>다음 ›</button>`;
+  html += '</div>';
+  pg.innerHTML = html;
+}
+
+window.goSchedPage = (page) => { renderSchedPage(page); };
 
 window.editSched = async (id) => {
   try {
@@ -429,12 +476,14 @@ window.submitSchedule = async () => {
       await updateDoc(doc(db, 'schedules', editingSchedId), { date, title, detail, type, updatedAt: new Date().toISOString() });
       showToast('일정이 수정되었습니다! ✅');
       cancelSchedEdit();
+      // stay on current page after update
     } else {
       await addDoc(collection(db, 'schedules'), { date, title, detail, type, createdAt: new Date().toISOString() });
       showToast('일정이 추가되었습니다! ✅');
       document.getElementById('sDate').value = '';
       document.getElementById('sTitle').value = '';
       document.getElementById('sDetail').value = '';
+      schedPage = 1; // new item appears at top → go to page 1
     }
     loadSchedules();
   } catch(e) { showToast('저장 실패: ' + e.message, 'error'); }
@@ -447,7 +496,12 @@ window.delSched = async (id) => {
     await deleteDoc(doc(db, 'schedules', id));
     showToast('삭제되었습니다.');
     if (editingSchedId === id) cancelSchedEdit();
-    loadSchedules();
+    // update local cache and correct page if it became empty
+    schedData = schedData.filter(s => s.id !== id);
+    document.getElementById('schedCount').textContent = schedData.length;
+    const totalPages = Math.max(1, Math.ceil(schedData.length / PAGE_SIZE));
+    if (schedPage > totalPages) schedPage = totalPages;
+    renderSchedPage(schedPage);
   } catch(e) { showToast('삭제 실패', 'error'); }
 };
 

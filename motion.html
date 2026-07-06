@@ -756,7 +756,7 @@ async function requestFeedback() {
   var avgHip   = Math.round(frameData.reduce(function(s, f) { return s + f.angles.hipRot;    }, 0) / frameData.length);
   var dur      = document.getElementById('videoPlayer').duration;
 
-  // Compact timeline — one point every ~0.2 s (timelineStep frames)
+  // Compact timeline — one point every ~0.2 s, capped at 40 entries
   var timelineStep = Math.max(1, Math.round(0.2 / STEP));
   var timelineRows = [];
   for (var ti = 0; ti < frameData.length; ti += timelineStep) {
@@ -765,6 +765,12 @@ async function requestFeedback() {
       tf.time.toFixed(2) + 's:R' + tf.angles.rightKnee +
       '/L' + tf.angles.leftKnee + '/H' + tf.angles.hipRot
     );
+  }
+  if (timelineRows.length > 40) {
+    var capStep = Math.ceil(timelineRows.length / 40);
+    var capped = [];
+    for (var ci2 = 0; ci2 < timelineRows.length; ci2 += capStep) capped.push(timelineRows[ci2]);
+    timelineRows = capped;
   }
 
   // Key motion milestones

@@ -173,6 +173,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
   .main-section{padding:82px 16px 40px}
   .nav-user-email{display:none}
 }
+
+/* PDF 인쇄 영역 — 화면에서는 숨김, 인쇄 시에만 표시 */
+#pdfPrintArea{display:none;font-family:Arial,sans-serif;padding:32px;color:#1d1d1f;background:#fff}
+@media print{
+  @page{margin:10mm;size:A4 portrait}
+  body>*{display:none!important}
+  #pdfPrintArea{display:block!important}
+}
 </style>
 </head>
 <body>
@@ -358,13 +366,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 
 </div>
 
+<!-- PDF 인쇄 영역 (window.print() 방식) -->
+<div id="pdfPrintArea"></div>
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <!-- MediaPipe Pose -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-<!-- html2pdf (html2canvas + jsPDF) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
 // ── Constants ──────────────────────────────────────────────
@@ -863,7 +872,7 @@ function openExpertCoaching() {
   window.location.href = 'ai.html#expert';
 }
 
-// ── PDF Download ───────────────────────────────────────────
+// ── PDF Download (window.print 방식 — html2canvas 백지 문제 완전 해결) ──
 async function downloadPDF() {
   if (!currentUser) {
     alert('로그인한 회원만 다운로드 가능합니다.');
@@ -876,7 +885,7 @@ async function downloadPDF() {
 
   var btn = document.getElementById('pdfBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ PDF 생성 중...';
+  btn.textContent = '⏳ PDF 준비 중...';
 
   var chapterId = parseInt(document.getElementById('chapterSelect').value);
   var chapter   = CHAPTERS[chapterId] || { name: '동작', tech: '분석' };
@@ -892,7 +901,7 @@ async function downloadPDF() {
   var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
   var feedbackContent = document.getElementById('feedbackText').textContent || '';
 
-  // Capture composite screenshot at max-angle frame
+  // 최대 각도 프레임 스크린샷 캡처
   var screenshotHtml = '';
   var video         = document.getElementById('videoPlayer');
   var overlayCanvas = document.getElementById('canvasOverlay');
@@ -903,23 +912,24 @@ async function downloadPDF() {
       video.currentTime = maxRight.time;
     });
     drawSkeleton(maxRight.landmarks);
+    var vw = video.videoWidth  || 640;
+    var vh = video.videoHeight || 480;
     var cap    = document.createElement('canvas');
-    cap.width  = Math.min(video.videoWidth, 800);
-    cap.height = Math.round(cap.width * video.videoHeight / video.videoWidth);
+    cap.width  = Math.min(vw, 800);
+    cap.height = Math.round(cap.width * vh / vw);
     var capCtx = cap.getContext('2d');
     capCtx.drawImage(video, 0, 0, cap.width, cap.height);
     capCtx.drawImage(overlayCanvas, 0, 0, cap.width, cap.height);
     screenshotHtml = '<img src="' + cap.toDataURL('image/jpeg', 0.85) +
       '" style="width:100%;border-radius:8px;margin-bottom:18px;display:block" alt="분석 스크린샷">';
-  } catch(e) { /* screenshot optional — continue without */ }
+  } catch(e) { /* 스크린샷 없이 계속 진행 */ }
 
-  // Build PDF content element
   var feedbackEsc = feedbackContent
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  var el = document.createElement('div');
-  el.style.cssText = 'font-family:Arial,sans-serif;padding:32px;color:#1d1d1f;background:#fff;width:700px';
-  el.innerHTML =
+  // #pdfPrintArea에 리포트 콘텐츠 주입
+  var printArea = document.getElementById('pdfPrintArea');
+  printArea.innerHTML =
     '<div style="text-align:center;border-bottom:3px solid #C0392B;padding-bottom:18px;margin-bottom:22px">' +
       '<div style="font-size:28px;font-weight:900;letter-spacing:6px;color:#C0392B">THE STEPPER</div>' +
       '<div style="font-size:12px;color:#6e6e73;letter-spacing:3px;margin-top:4px">동작 분석 리포트</div>' +
@@ -958,33 +968,17 @@ async function downloadPDF() {
       'THE STEPPER 동작 분석 베타 · 본 결과는 참고용 자가진단 결과입니다' +
     '</div>';
 
-  // html2canvas는 left:-9999px 위치를 캡처하지 못함 (스크롤 범위 바깥).
-  // 문서 맨 아래에 배치해 스크롤 범위 내 유지 — 사용자에게는 보이지 않는 위치.
-  var pdfHost = document.createElement('div');
-  pdfHost.style.cssText = 'position:absolute;left:0;top:' +
-    (document.documentElement.scrollHeight + 200) + 'px;width:794px;background:#fff;overflow:visible';
-  pdfHost.appendChild(el);
-  document.body.appendChild(pdfHost);
+  // 이미지(data URL) 렌더링 완료 대기
+  await new Promise(function(r) { setTimeout(r, 150); });
 
-  // 브라우저 레이아웃 계산 및 이미지 로딩 완료 대기
-  await new Promise(function(r) { setTimeout(r, 200); });
+  // 브라우저 인쇄 다이얼로그 — 대상: "PDF로 저장" 선택
+  window.print();
 
-  var fileName = 'THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf';
-  try {
-    await html2pdf().set({
-      margin:      [10, 10, 10, 10],
-      filename:    fileName,
-      image:       { type: 'jpeg', quality: 0.88 },
-      html2canvas: { scale: 1, useCORS: true, logging: false, backgroundColor: '#ffffff' },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(el).save();
-  } catch(e) {
-    alert('PDF 생성 중 오류가 발생했습니다.\n' + e.message);
-  } finally {
-    if (pdfHost.parentNode) pdfHost.parentNode.removeChild(pdfHost);
-    btn.disabled = false;
-    btn.textContent = '📄 결과 PDF로 다운로드';
-  }
+  // 인쇄 다이얼로그 닫힌 후 정리
+  setTimeout(function() { printArea.innerHTML = ''; }, 800);
+
+  btn.disabled = false;
+  btn.textContent = '📄 결과 PDF로 다운로드';
 }
 </script>
 </body>

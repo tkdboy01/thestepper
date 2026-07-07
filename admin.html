@@ -328,10 +328,10 @@ select.form-control{cursor:pointer}
       <div class="form-card-title" style="color:#b87a00">⚠️ 가입 미완료 계정 <span id="incompleteMembersCount" style="font-size:13px;font-weight:400"></span></div>
       <div style="font-size:12px;color:#888;margin-bottom:10px">Firebase Auth에는 등록됐지만 Firestore users 문서가 없는 계정입니다. (이메일 인증 전 이탈, 가입 도중 오류 등)</div>
       <div class="list-wrap">
-        <div class="list-head" style="grid-template-columns:1fr 120px 80px">
-          <div>이메일</div>
+        <div class="list-head" style="grid-template-columns:1fr 100px 240px">
+          <div>이메일 / 인증상태</div>
           <div>Auth 가입일</div>
-          <div style="text-align:center">관리</div>
+          <div>관리</div>
         </div>
         <div id="incompleteMembersList"></div>
       </div>
@@ -813,7 +813,8 @@ async function loadMembers() {
         email: d.email || '',
         createdAt: d.createdAt,
         aiToday: usageMap[ds.id] || 0,
-        disabled: statusMap[ds.id] ? statusMap[ds.id].disabled : false
+        disabled:      statusMap[ds.id] ? statusMap[ds.id].disabled      : false,
+        emailVerified: statusMap[ds.id] ? statusMap[ds.id].emailVerified : null
       });
     });
 
@@ -860,14 +861,27 @@ function renderMembersPage(page) {
       ? m.createdAt.toDate().toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })
       : (m.createdAt ? String(m.createdAt).slice(0, 10) : '-');
 
-    const safeUid  = esc(m.uid);
-    const safeName = esc(m.name);
+    const safeUid   = esc(m.uid);
+    const safeName  = esc(m.name);
+    const safeEmail = esc(m.email);
+    // 이메일 인증 배지
+    const verBadge = m.emailVerified === true
+      ? '<span title="이메일 인증 완료" style="color:#34c759;font-size:11px;margin-left:3px">✔</span>'
+      : m.emailVerified === false
+        ? '<span title="이메일 인증 미완료" style="color:#ff9500;font-size:11px;margin-left:3px">⚠</span>'
+        : '';
+
     let actionHtml;
     if (m.disabled) {
       actionHtml =
         '<span style="font-size:10px;background:#e5e5e7;color:#666;border-radius:4px;padding:2px 5px;margin-right:4px">정지됨</span>' +
         '<button onclick="restoreMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #34c759;border-radius:5px;background:#f0fff4;color:#1a7f37;cursor:pointer;margin-right:3px">복구</button>' +
         '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer">삭제</button>';
+    } else if (m.emailVerified === false) {
+      // 미인증 활성 계정: 정지 + 인증재발송
+      actionHtml =
+        '<button onclick="resendVerification(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px">인증재발송</button>' +
+        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
     } else {
       actionHtml =
         '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
@@ -877,7 +891,7 @@ function renderMembersPage(page) {
       '<div style="color:#888;font-size:12px">' + num + '</div>' +
       '<div>' + safeName + '</div>' +
       '<div style="color:#888;font-size:13px">' + esc(m.nickname) + '</div>' +
-      '<div style="font-size:12px;word-break:break-all">' + esc(m.email) + '</div>' +
+      '<div style="font-size:12px;word-break:break-all">' + safeEmail + verBadge + '</div>' +
       '<div style="font-size:12px;color:#888">' + dateStr + '</div>' +
       '<div style="text-align:right;font-size:13px">' + m.aiToday + '회</div>' +
       '<div style="text-align:center">' + actionHtml + '</div>';
@@ -898,25 +912,91 @@ function renderIncompleteMembers() {
   authOnlyMembers.forEach(m => {
     const row = document.createElement('div');
     row.className = 'list-row';
-    row.style.gridTemplateColumns = '1fr 120px 80px';
+    row.style.gridTemplateColumns = '1fr 100px 240px';
     if (m.disabled) row.style.opacity = '0.5';
     const dateStr = m.createdAt ? new Date(m.createdAt).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '-';
     const safeUid   = esc(m.uid);
     const safeEmail = esc(m.email || '(이메일없음)');
+
+    const verBadge = m.emailVerified
+      ? '<span style="font-size:10px;background:#e8f9ee;color:#1a7f37;border-radius:4px;padding:2px 5px;margin-left:5px">인증완료</span>'
+      : '<span style="font-size:10px;background:#fff3e0;color:#c05800;border-radius:4px;padding:2px 5px;margin-left:5px">인증미완료</span>';
+
     let actionHtml;
     if (m.disabled) {
-      actionHtml = '<span style="font-size:10px;background:#e5e5e7;color:#666;border-radius:4px;padding:2px 5px;margin-right:4px">정지됨</span>' +
+      actionHtml =
+        '<span style="font-size:10px;background:#e5e5e7;color:#666;border-radius:4px;padding:2px 5px;margin-right:3px">정지됨</span>' +
         '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer">삭제</button>';
+    } else if (!m.emailVerified) {
+      // 미인증: 인증재발송 + 강제인증 + 프로필생성
+      actionHtml =
+        '<button onclick="resendVerification(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 6px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px">인증재발송</button>' +
+        '<button onclick="forceVerifyMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 6px;border:1px solid #34c759;border-radius:5px;background:#f0fff4;color:#1a7f37;cursor:pointer;margin-right:3px">강제인증</button>' +
+        '<button onclick="createMemberProfile(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 6px;border:1px solid #888;border-radius:5px;background:#f7f7f9;color:#333;cursor:pointer">프로필생성</button>';
     } else {
-      actionHtml = '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
+      // 이메일 인증은 됐지만 Firestore 문서 없음: 프로필생성 + 삭제
+      actionHtml =
+        '<button onclick="createMemberProfile(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 6px;border:1px solid #888;border-radius:5px;background:#f7f7f9;color:#333;cursor:pointer;margin-right:3px">프로필생성</button>' +
+        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 6px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
     }
+
     row.innerHTML =
-      '<div style="font-size:12px;word-break:break-all">' + safeEmail + '</div>' +
+      '<div style="font-size:12px;word-break:break-all">' + safeEmail + verBadge + '</div>' +
       '<div style="font-size:12px;color:#888">' + dateStr + '</div>' +
-      '<div style="text-align:center">' + actionHtml + '</div>';
+      '<div style="text-align:left">' + actionHtml + '</div>';
     listEl.appendChild(row);
   });
 }
+
+window.resendVerification = async (uid, email) => {
+  if (!confirm('[' + email + '] 에게 인증 이메일을 재발송하시겠습니까?')) return;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'resend-verification', uid })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '발송 실패');
+    showToast(data.message || '인증 이메일을 재발송했습니다.', 'success');
+  } catch(e) { showToast('오류: ' + e.message, 'error'); }
+};
+
+window.forceVerifyMember = async (uid, email) => {
+  if (!confirm('[' + email + '] 계정의 이메일 인증을 강제 완료 처리하시겠습니까?\n본인이 직접 인증 링크를 클릭하지 않아도 바로 활성화됩니다.')) return;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'force-verify', uid })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '처리 실패');
+    showToast(data.message || '인증 완료 처리되었습니다.', 'success');
+    membersLoaded = false;
+    await loadMembers();
+  } catch(e) { showToast('오류: ' + e.message, 'error'); }
+};
+
+window.createMemberProfile = async (uid, email) => {
+  const inputName = prompt('[' + email + '] 계정의 Firestore 프로필을 생성합니다.\n표시할 이름을 입력하세요 (공백으로 두면 "(미등록)"으로 저장):');
+  if (inputName === null) return;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'create-profile', uid, name: inputName.trim() || '(미등록)' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '생성 실패');
+    showToast(data.message || '프로필이 생성되었습니다.', 'success');
+    membersLoaded = false;
+    await loadMembers();
+  } catch(e) { showToast('오류: ' + e.message, 'error'); }
+};
 
 window.suspendMember = async (uid, name) => {
   if (!confirm('정말 [' + name + '] 계정을 정지하시겠습니까?\n정지하면 해당 계정으로 로그인이 차단됩니다.')) return;

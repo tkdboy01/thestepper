@@ -778,10 +778,16 @@ auth.onAuthStateChanged(function(user) {
 });
 
 function onLoggedIn(user) {
-  if (!user.emailVerified) {
+  if (!user.emailVerified && user.email !== ADMIN_EMAIL) {
     showVerifyCard(user);
     return;
   }
+  // 이메일 인증 완료 상태를 Firestore에 동기화 (문서 없으면 최소 생성)
+  db.collection('users').doc(user.uid).set(
+    { emailVerified: true },
+    { merge: true }
+  ).catch(function(){});
+
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'flex';
   document.getElementById('chatInputArea').style.display = 'block';
@@ -974,19 +980,30 @@ async function doRegister() {
 
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pw);
+    // Firestore 프로필을 먼저 저장 (인증 전이므로 emailVerified: false)
+    try {
+      await db.collection('users').doc(cred.user.uid).set({
+        name:          name,
+        nickname:      nickname,
+        region:        region,
+        role:          roleEl.value,
+        purpose:       purposeEl.value,
+        level:         levelEl.value,
+        athleteTypes:  athleteTypes,
+        gym:           gymEl.value,
+        email:         email,
+        emailVerified: false,
+        createdAt:     firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(fsErr) {
+      // Firestore 저장 실패 시 Auth 계정도 삭제하고 재시도 안내
+      await cred.user.delete().catch(function(){});
+      await auth.signOut().catch(function(){});
+      showErr('registerError', '회원 정보 저장에 실패했습니다. 잠시 후 다시 시도해주세요. (' + fsErr.message + ')');
+      btn.disabled = false; btn.textContent = t('registerBtn');
+      return;
+    }
     await cred.user.sendEmailVerification();
-    await db.collection('users').doc(cred.user.uid).set({
-      name:         name,
-      nickname:     nickname,
-      region:       region,
-      role:         roleEl.value,
-      purpose:      purposeEl.value,
-      level:        levelEl.value,
-      athleteTypes: athleteTypes,
-      gym:          gymEl.value,
-      email:        email,
-      createdAt:    firebase.firestore.FieldValue.serverTimestamp()
-    });
   } catch(e) {
     showErr('registerError', getFirebaseMsg(e.code));
     btn.disabled = false; btn.textContent = t('registerBtn');

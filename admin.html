@@ -959,7 +959,7 @@ window.resendVerification = async (uid, email) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '발송 실패');
-    showToast(data.message || '인증 이메일을 재발송했습니다.', 'success');
+    showToast((data.message || '재발송 완료.') + ' 해당 회원에게 스팸함 확인도 함께 안내해주세요.', 'success');
   } catch(e) { showToast('오류: ' + e.message, 'error'); }
 };
 

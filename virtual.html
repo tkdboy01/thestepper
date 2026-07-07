@@ -380,6 +380,92 @@ section { padding: 100px 24px; }
 }
 .effect-intro strong { color: #ffffff; }
 
+/* ── EVENT CTA (현장 체험 회원가입 유도) ── */
+.event-cta {
+  background: linear-gradient(160deg, #eef3ff 0%, #f5f5f7 55%, #eef3ff 100%);
+  padding: 100px 20px;
+  position: relative;
+}
+.event-cta-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 52px 48px;
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: center;
+  box-shadow: 0 8px 48px rgba(0,71,163,0.08), 0 0 0 1.5px rgba(0,71,163,0.07);
+}
+.event-cta-tag {
+  display: inline-block;
+  background: rgba(0,71,163,0.08);
+  color: #0047a3;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+.event-cta-title {
+  font-size: clamp(26px, 5.5vw, 44px);
+  font-weight: 900;
+  color: #1d1d1f;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  word-break: keep-all;
+  letter-spacing: -0.5px;
+}
+.event-cta-sub {
+  font-size: 15px;
+  color: #6e6e73;
+  line-height: 1.8;
+  margin-bottom: 32px;
+  word-break: keep-all;
+}
+.event-cta-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 36px;
+  text-align: left;
+}
+.perk-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #f7f9ff;
+  border-radius: 12px;
+  border: 1px solid rgba(0,71,163,0.07);
+}
+.perk-icon { font-size: 22px; flex-shrink: 0; }
+.perk-text-wrap {}
+.perk-label { font-size: 13.5px; font-weight: 700; color: #1d1d1f; margin-bottom: 2px; }
+.perk-desc  { font-size: 12px; color: #6e6e73; line-height: 1.5; }
+.event-cta-btn {
+  display: block;
+  background: var(--red);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 20px 0;
+  border-radius: 14px;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+  box-shadow: 0 6px 24px rgba(192,57,43,0.32);
+  margin-bottom: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.event-cta-btn:active { transform: scale(0.98); }
+.event-cta-btn:hover  { background: #a0301f; transform: translateY(-2px); box-shadow: 0 10px 32px rgba(192,57,43,0.45); }
+.event-cta-note { font-size: 12px; color: #ababab; }
+@media (max-width: 768px) {
+  .event-cta { padding: 72px 16px; }
+  .event-cta-card { padding: 36px 22px; border-radius: 20px; }
+  .event-cta-btn  { font-size: 17px; padding: 22px 0; border-radius: 12px; }
+}
+
 /* ── CTA ── */
 .cta-section {
   background: #f5f5f7;
@@ -649,6 +735,45 @@ footer {
       </div>
 
     </div>
+  </div>
+</section>
+
+<!-- ── 3.5섹션: 현장 체험 회원가입 유도 CTA ── -->
+<section class="event-cta" id="join">
+  <div class="event-cta-card">
+    <div class="event-cta-tag">🎯 행사장에서 체험하신 분들을 위한 특별 안내</div>
+    <h2 class="event-cta-title">오늘 VR 체험,<br>어떠셨나요?</h2>
+    <p class="event-cta-sub">
+      THE STEPPER 회원가입하고<br>
+      <strong style="color:#1d1d1f">AI 겨루기 코치까지 무료로</strong> 체험해보세요
+    </p>
+
+    <div class="event-cta-perks">
+      <div class="perk-item">
+        <span class="perk-icon">🤖</span>
+        <div class="perk-text-wrap">
+          <div class="perk-label">AI 코치 하루 5회 무료</div>
+          <div class="perk-desc">질문하면 THE STEPPER 15단계 커리큘럼 기반으로 즉시 답변</div>
+        </div>
+      </div>
+      <div class="perk-item">
+        <span class="perk-icon">📹</span>
+        <div class="perk-text-wrap">
+          <div class="perk-label">겨루기 동작 AI 분석</div>
+          <div class="perk-desc">영상 업로드 시 AI가 발차기 자세·타이밍을 분석해 피드백</div>
+        </div>
+      </div>
+      <div class="perk-item">
+        <span class="perk-icon">🥋</span>
+        <div class="perk-text-wrap">
+          <div class="perk-label">전문 코치 1:1 직접 질문</div>
+          <div class="perk-desc">AI로 해결 안 되면 전문 코치가 직접 답변하는 Human-in-the-loop 시스템</div>
+        </div>
+      </div>
+    </div>
+
+    <a href="ai.html?signup=1" class="event-cta-btn">지금 무료로 가입하기 →</a>
+    <p class="event-cta-note">가입비 없음 · AI 코치 하루 5회 영구 무료</p>
   </div>
 </section>
 

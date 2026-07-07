@@ -826,7 +826,12 @@ function onLoggedOut() {
   document.getElementById('chatInputArea').style.display = 'none';
   document.getElementById('inboxSection').style.display = 'none';
   document.getElementById('navUserArea').style.display = 'none';
-  showLogin();
+  // ?signup=1 딥링크: 회원가입 폼 자동 활성화
+  if (new URLSearchParams(window.location.search).get('signup') === '1') {
+    showRegister();
+  } else {
+    showLogin();
+  }
 }
 
 // ===== 남은 횟수 로드 =====

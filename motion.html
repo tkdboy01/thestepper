@@ -174,13 +174,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
   .nav-user-email{display:none}
 }
 
-/* PDF 인쇄 영역 — 화면에서는 숨김, 인쇄 시에만 표시 */
-#pdfPrintArea{display:none;font-family:Arial,sans-serif;padding:32px;color:#1d1d1f;background:#fff}
-@media print{
-  @page{margin:10mm;size:A4 portrait}
-  body>*{display:none!important}
-  #pdfPrintArea{display:block!important}
-}
 </style>
 </head>
 <body>
@@ -366,12 +359,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 
 </div>
 
-<!-- PDF 인쇄 영역 (window.print() 방식) -->
-<div id="pdfPrintArea"></div>
-
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<!-- jsPDF — 화면 캡처 없이 좌표 직접 그리기 (한국어는 canvas 이미지로 삽입) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- MediaPipe Pose -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
@@ -872,110 +864,246 @@ function openExpertCoaching() {
   window.location.href = 'ai.html#expert';
 }
 
-// ── PDF Download (window.print 방식 — html2canvas 백지 문제 완전 해결) ──
+// ── PDF Download (jsPDF 직접 그리기 — html2canvas/window.print 완전 제거) ──
+// 한국어 텍스트: 브라우저 내 canvas.fillText()로 렌더링 후 이미지로 삽입
+// → 화면 캡처 없이 모바일 포함 모든 환경에서 정상 동작
 async function downloadPDF() {
-  if (!currentUser) {
-    alert('로그인한 회원만 다운로드 가능합니다.');
-    return;
-  }
-  if (!frameData.length) {
-    alert('분석 결과가 없습니다. 먼저 동작 분석을 완료해주세요.');
-    return;
-  }
+  if (!currentUser) { alert('로그인한 회원만 다운로드 가능합니다.'); return; }
+  if (!frameData.length) { alert('분석 결과가 없습니다. 먼저 동작 분석을 완료해주세요.'); return; }
 
   var btn = document.getElementById('pdfBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ PDF 준비 중...';
+  btn.disabled = true; btn.textContent = '⏳ PDF 생성 중...';
 
+  // ── 데이터 수집 ──
   var chapterId = parseInt(document.getElementById('chapterSelect').value);
   var chapter   = CHAPTERS[chapterId] || { name: '동작', tech: '분석' };
-  var now       = new Date();
-  var dateStr   = now.getFullYear() + '-' +
-    String(now.getMonth() + 1).padStart(2, '0') + '-' +
-    String(now.getDate()).padStart(2, '0') + ' ' +
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0');
+  var now = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+                ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
-  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
-  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
-  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
+  var maxRight = frameData.reduce(function(a,b){ return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
+  var maxLeft  = frameData.reduce(function(a,b){ return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
+  var maxHip   = frameData.reduce(function(a,b){ return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
   var feedbackContent = document.getElementById('feedbackText').textContent || '';
 
-  // 최대 각도 프레임 스크린샷 캡처
-  var screenshotHtml = '';
-  var video         = document.getElementById('videoPlayer');
-  var overlayCanvas = document.getElementById('canvasOverlay');
+  // ── 스크린샷: MediaPipe canvas + video 합성 (canvas.toDataURL만 사용) ──
+  var shotUrl = null, shotAR = 0.75;
+  var video = document.getElementById('videoPlayer');
+  var ovCanvas = document.getElementById('canvasOverlay');
   try {
     await new Promise(function(resolve, reject) {
-      var t = setTimeout(function() { reject(new Error('seek timeout')); }, 3000);
-      video.addEventListener('seeked', function() { clearTimeout(t); resolve(); }, { once: true });
+      var t = setTimeout(function(){ reject(); }, 3000);
+      video.addEventListener('seeked', function(){ clearTimeout(t); resolve(); }, { once: true });
       video.currentTime = maxRight.time;
     });
     drawSkeleton(maxRight.landmarks);
-    var vw = video.videoWidth  || 640;
-    var vh = video.videoHeight || 480;
-    var cap    = document.createElement('canvas');
-    cap.width  = Math.min(vw, 800);
-    cap.height = Math.round(cap.width * vh / vw);
+    var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+    shotAR = vh / vw;
+    var cap = document.createElement('canvas');
+    cap.width = Math.min(vw, 800); cap.height = Math.round(cap.width * shotAR);
     var capCtx = cap.getContext('2d');
     capCtx.drawImage(video, 0, 0, cap.width, cap.height);
-    capCtx.drawImage(overlayCanvas, 0, 0, cap.width, cap.height);
-    screenshotHtml = '<img src="' + cap.toDataURL('image/jpeg', 0.85) +
-      '" style="width:100%;border-radius:8px;margin-bottom:18px;display:block" alt="분석 스크린샷">';
-  } catch(e) { /* 스크린샷 없이 계속 진행 */ }
+    capCtx.drawImage(ovCanvas, 0, 0, cap.width, cap.height);
+    shotUrl = cap.toDataURL('image/jpeg', 0.85);
+  } catch(e) { /* 스크린샷 없이 계속 */ }
 
-  var feedbackEsc = feedbackContent
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // ── jsPDF A4 문서 초기화 ──
+  var jsPDFCtor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  var doc = new jsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
+  var PW = 210, PH = 297, ML = 14, MR = 14, MT = 14, MB = 14;
+  var CW = PW - ML - MR; // 182mm 유효 너비
 
-  // #pdfPrintArea에 리포트 콘텐츠 주입
-  var printArea = document.getElementById('pdfPrintArea');
-  printArea.innerHTML =
-    '<div style="text-align:center;border-bottom:3px solid #C0392B;padding-bottom:18px;margin-bottom:22px">' +
-      '<div style="font-size:28px;font-weight:900;letter-spacing:6px;color:#C0392B">THE STEPPER</div>' +
-      '<div style="font-size:12px;color:#6e6e73;letter-spacing:3px;margin-top:4px">동작 분석 리포트</div>' +
-    '</div>' +
-    '<table style="width:100%;font-size:13px;margin-bottom:22px;border-collapse:collapse">' +
-      '<tr><td style="color:#6e6e73;padding:5px 0;width:90px">분석 일시</td><td style="font-weight:700">' + dateStr + '</td></tr>' +
-      '<tr><td style="color:#6e6e73;padding:5px 0">분석 장</td><td style="font-weight:700">' + chapter.name + ' — ' + chapter.tech + '</td></tr>' +
-      '<tr><td style="color:#6e6e73;padding:5px 0">분석 회원</td><td style="font-weight:700">' + (currentUser.email || '') + '</td></tr>' +
-    '</table>' +
-    screenshotHtml +
-    '<div style="background:#f5f5f7;border-radius:10px;padding:20px;margin-bottom:20px">' +
-      '<div style="font-size:14px;font-weight:700;margin-bottom:14px;color:#C0392B">관절 각도 분석 결과 (최대값)</div>' +
-      '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
-        '<tr style="background:#e8e8ea">' +
-          '<td style="padding:8px 12px;font-weight:700">항목</td>' +
-          '<td style="padding:8px 12px;font-weight:700">최대값</td>' +
-          '<td style="padding:8px 12px;font-weight:700">측정 시점</td>' +
-        '</tr>' +
-        '<tr><td style="padding:8px 12px;color:#6e6e73">오른쪽 무릎</td>' +
-          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxRight.angles.rightKnee + '°</td>' +
-          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxRight.time.toFixed(1) + '초</td></tr>' +
-        '<tr style="background:#fafafa"><td style="padding:8px 12px;color:#6e6e73">왼쪽 무릎</td>' +
-          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxLeft.angles.leftKnee + '°</td>' +
-          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxLeft.time.toFixed(1) + '초</td></tr>' +
-        '<tr><td style="padding:8px 12px;color:#6e6e73">골반 회전</td>' +
-          '<td style="padding:8px 12px;font-size:20px;font-weight:700;color:#C0392B">' + maxHip.angles.hipRot + '°</td>' +
-          '<td style="padding:8px 12px;color:#C9A84C;font-weight:600">' + maxHip.time.toFixed(1) + '초</td></tr>' +
-      '</table>' +
-    '</div>' +
-    (feedbackContent ?
-      '<div style="background:#f5f5f7;border-radius:10px;padding:20px;margin-bottom:20px">' +
-        '<div style="font-size:14px;font-weight:700;margin-bottom:12px">AI 코치 피드백</div>' +
-        '<div style="font-size:12px;line-height:2;white-space:pre-wrap;word-break:break-word">' + feedbackEsc + '</div>' +
-      '</div>' : '') +
-    '<div style="text-align:center;font-size:10px;color:#aaa;margin-top:20px;padding-top:14px;border-top:1px solid #e5e5e7">' +
-      'THE STEPPER 동작 분석 베타 · 본 결과는 참고용 자가진단 결과입니다' +
-    '</div>';
+  // 캔버스 오버샘플 설정 (SC=2: 선명도↑, 파일 크기 적정)
+  var SC  = 2;
+  var MPP = 25.4 / 96 / SC; // mm per pixel (0.1323mm/px)
 
-  // 이미지(data URL) 렌더링 완료 대기
-  await new Promise(function(r) { setTimeout(r, 150); });
+  // ─ 단일 줄 텍스트를 canvas 이미지로 PDF에 삽입, 이미지 높이(mm) 반환 ─
+  function ti(text, x, y, opts) {
+    if (!text) return 0;
+    var pt  = (opts && opts.pt)  || 10;
+    var bld = (opts && opts.bld) || false;
+    var clr = (opts && opts.clr) || '#1d1d1f';
+    var fPx = Math.round(pt * (96 / 72) * SC);
+    var fs  = (bld ? '700 ' : '400 ') + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var c = document.createElement('canvas'), cx = c.getContext('2d');
+    cx.font = fs;
+    c.width  = Math.ceil(cx.measureText(text).width) + 6;
+    c.height = Math.ceil(fPx * 1.4) + 4;
+    cx.font = fs; cx.fillStyle = clr; cx.textBaseline = 'top';
+    cx.fillText(text, 3, 2);
+    var wm = c.width * MPP, hm = c.height * MPP;
+    doc.addImage(c.toDataURL('image/png'), 'PNG', x, y, wm, hm);
+    return hm;
+  }
 
-  // 브라우저 인쇄 다이얼로그 — 대상: "PDF로 저장" 선택
-  window.print();
+  // ─ 다줄 텍스트 블록: 자동 줄바꿈 + 페이지 넘김, 최종 y 반환 ─
+  function tb(text, x, startY, maxWmm, opts) {
+    if (!text) return startY;
+    var pt  = (opts && opts.pt)  || 10;
+    var bld = (opts && opts.bld) || false;
+    var clr = (opts && opts.clr) || '#1d1d1f';
+    var lhm = (opts && opts.lh)  || 1.65;
+    var fPx = Math.round(pt * (96 / 72) * SC);
+    var fs  = (bld ? '700 ' : '400 ') + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var mxPx = (maxWmm / 25.4) * 96 * SC;
+    var lhPx = Math.round(fPx * lhm);
+    var lhMM = lhPx * MPP;
 
-  // 인쇄 다이얼로그 닫힌 후 정리
-  setTimeout(function() { printArea.innerHTML = ''; }, 800);
+    // ① 전체 줄 목록 계산 (문단 단위 + 글자 단위 줄바꿈)
+    var lines = [];
+    var c0 = document.createElement('canvas'), cx0 = c0.getContext('2d');
+    cx0.font = fs;
+    text.split('\n').forEach(function(para) {
+      if (!para.trim()) { lines.push(''); return; }
+      var cur = '';
+      for (var ci = 0; ci < para.length; ci++) {
+        var test = cur + para[ci];
+        if (cx0.measureText(test).width > mxPx - 4 && cur !== '') {
+          lines.push(cur); cur = para[ci];
+        } else cur = test;
+      }
+      if (cur !== '') lines.push(cur);
+    });
+
+    // ② 페이지 단위로 묶어 한 장씩 렌더링 (addImage 횟수 최소화)
+    var pages = [], pgLines = [], curY = startY, pgStartY = startY;
+    lines.forEach(function(line) {
+      if (curY + lhMM > PH - MB) {
+        pages.push({ startY: pgStartY, lines: pgLines.slice() });
+        pgLines = []; pgStartY = MT; curY = MT;
+      }
+      pgLines.push(line); curY += lhMM;
+    });
+    if (pgLines.length) pages.push({ startY: pgStartY, lines: pgLines });
+
+    pages.forEach(function(pg, pi) {
+      if (pi > 0) doc.addPage();
+      var maxW = 0;
+      cx0.font = fs;
+      pg.lines.forEach(function(l) { if (l) maxW = Math.max(maxW, cx0.measureText(l).width); });
+      if (!maxW) return;
+      var bc = document.createElement('canvas'), bcx = bc.getContext('2d');
+      bc.width  = Math.ceil(maxW) + 6;
+      bc.height = pg.lines.length * lhPx + 4;
+      bcx.font = fs; bcx.fillStyle = clr; bcx.textBaseline = 'top';
+      pg.lines.forEach(function(l, i) { if (l) bcx.fillText(l, 3, i * lhPx + 2); });
+      doc.addImage(bc.toDataURL('image/png'), 'PNG', x, pg.startY, bc.width * MPP, bc.height * MPP);
+    });
+    return curY;
+  }
+
+  // ════════════════════ PDF 레이아웃 ════════════════════
+  var y = 0;
+
+  // ① 상단 빨간 바
+  doc.setFillColor(192, 57, 43);
+  doc.rect(0, 0, PW, 7, 'F');
+  y = 17;
+
+  // ② "THE STEPPER" — 영문, jsPDF 내장 Helvetica
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(192, 57, 43);
+  doc.text('THE STEPPER', PW / 2, y, { align: 'center' });
+  y += 7;
+
+  // ③ 부제 (한국어, 중앙 정렬)
+  (function() {
+    var fPx = Math.round(9 * (96 / 72) * SC);
+    var c0 = document.createElement('canvas'), cx0 = c0.getContext('2d');
+    cx0.font = '400 ' + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var wm = cx0.measureText('동작 분석 리포트').width * MPP;
+    ti('동작 분석 리포트', PW / 2 - wm / 2, y, { pt: 9, clr: '#6e6e73' });
+  })();
+  y += 7;
+
+  // ④ 빨간 구분선
+  doc.setDrawColor(192, 57, 43); doc.setLineWidth(0.4);
+  doc.line(ML, y, PW - MR, y);
+  y += 7;
+
+  // ⑤ 메타 정보 3행
+  var C1 = ML, C2 = ML + 28, rowH = 6.5;
+
+  ti('분석 일시', C1, y, { pt: 10, clr: '#6e6e73' });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
+  doc.text(dateStr, C2, y + 4.5);
+  y += rowH;
+
+  ti('분석 장', C1, y, { pt: 10, clr: '#6e6e73' });
+  ti(chapter.name + ' — ' + chapter.tech, C2, y, { pt: 10, bld: true });
+  y += rowH;
+
+  ti('분석 회원', C1, y, { pt: 10, clr: '#6e6e73' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
+  doc.text(currentUser.email || '', C2, y + 4.5);
+  y += rowH + 4;
+
+  // ⑥ 스크린샷 (선택)
+  if (shotUrl) {
+    var shotW = CW, shotH = CW * shotAR;
+    if (shotH > 90) { shotW = 90 / shotAR; shotH = 90; }
+    if (y + shotH > PH - MB - 55) { doc.addPage(); y = MT; }
+    doc.addImage(shotUrl, 'JPEG', ML + (CW - shotW) / 2, y, shotW, shotH);
+    y += shotH + 6;
+  }
+
+  // ⑦ 각도 분석 표
+  if (y + 55 > PH - MB) { doc.addPage(); y = MT; }
+  doc.setFillColor(245, 245, 247);
+  doc.rect(ML, y, CW, 55, 'F');
+  y += 4;
+  ti('관절 각도 분석 결과 (최대값)', ML + 3, y, { pt: 11, bld: true, clr: '#C0392B' });
+  y += 9;
+
+  var TC = [ML + 3, ML + 58, ML + 110];
+  doc.setFillColor(226, 226, 228);
+  doc.rect(ML, y, CW, 7, 'F');
+  ti('항목', TC[0], y + 1, { pt: 9, bld: true });
+  ti('최대값', TC[1], y + 1, { pt: 9, bld: true });
+  ti('측정 시점', TC[2], y + 1, { pt: 9, bld: true });
+  y += 7;
+
+  [
+    { lbl: '오른쪽 무릎', val: String(maxRight.angles.rightKnee) + '°', ts: maxRight.time.toFixed(1) + '초', bg: false },
+    { lbl: '왼쪽 무릎',   val: String(maxLeft.angles.leftKnee)   + '°', ts: maxLeft.time.toFixed(1)  + '초', bg: true  },
+    { lbl: '골반 회전',   val: String(maxHip.angles.hipRot)       + '°', ts: maxHip.time.toFixed(1)   + '초', bg: false }
+  ].forEach(function(r) {
+    if (r.bg) { doc.setFillColor(250, 250, 250); doc.rect(ML, y, CW, 10, 'F'); }
+    ti(r.lbl, TC[0], y + 1.5, { pt: 9, clr: '#6e6e73' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(192, 57, 43);
+    doc.text(r.val, TC[1], y + 7.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(201, 168, 76);
+    doc.text(r.ts, TC[2], y + 7.5);
+    y += 10;
+  });
+  y += 6;
+
+  // ⑧ AI 코치 피드백
+  if (feedbackContent) {
+    if (y + 20 > PH - MB) { doc.addPage(); y = MT; }
+    doc.setFillColor(245, 245, 247);
+    doc.rect(ML, y, CW, 9, 'F');
+    y += 1.5;
+    ti('AI 코치 피드백', ML + 3, y, { pt: 11, bld: true });
+    y += 10.5;
+    y = tb(feedbackContent, ML + 3, y, CW - 6, { pt: 10, lh: 1.7 });
+    y += 4;
+  }
+
+  // ⑨ 모든 페이지 하단 처리
+  var totalPages = doc.internal.getNumberOfPages();
+  for (var pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(192, 57, 43);
+    doc.rect(0, PH - 6, PW, 6, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(170, 170, 170);
+    doc.text('THE STEPPER Motion Analysis Beta | For reference only', PW / 2, PH - 9, { align: 'center' });
+  }
+
+  // ⑩ 저장
+  doc.save('THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf');
 
   btn.disabled = false;
   btn.textContent = '📄 결과 PDF로 다운로드';

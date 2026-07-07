@@ -412,6 +412,7 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 <script>
 const API_URL = 'https://thestepper-api.vercel.app/api/coach';
 const DAILY_LIMIT = 5;
+const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
 let remaining = DAILY_LIMIT;
 let isLoading = false;
 
@@ -695,7 +696,7 @@ function onLoggedIn(user) {
   area.style.display = 'flex';
   var email = user.email || user.displayName || '';
   document.getElementById('navUserEmail').textContent = email.length > 16 ? email.slice(0, 16) + '…' : email;
-  loadRemainingCount(user.uid);
+  loadRemainingCount(user.uid, user.email);
 }
 
 function onLoggedOut() {
@@ -712,7 +713,14 @@ function getTodayKST() {
   return kst.toISOString().slice(0, 10);
 }
 
-async function loadRemainingCount(uid) {
+async function loadRemainingCount(uid, email) {
+  if (email === ADMIN_EMAIL) {
+    remaining = Infinity;
+    document.getElementById('remainingPrefix').textContent = '오늘 남은 질문: ';
+    document.getElementById('remainCount').textContent = '무제한';
+    document.getElementById('remainingSuffix').textContent = '';
+    return;
+  }
   try {
     var today = getTodayKST();
     var snap = await db.collection('aiUsage').doc(uid).get();
@@ -1043,8 +1051,10 @@ async function sendMessage() {
       appendMsg('ai', data.error || t('errGeneral'), true);
     } else {
       appendMsg('ai', data.reply);
-      remaining = Math.max(0, remaining - 1);
-      document.getElementById('remainCount').textContent = remaining;
+      if (remaining !== Infinity) {
+        remaining = Math.max(0, remaining - 1);
+        document.getElementById('remainCount').textContent = remaining;
+      }
     }
   } catch(e) {
     loadingEl.remove();

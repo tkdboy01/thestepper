@@ -202,6 +202,7 @@ select.form-control{cursor:pointer}
   <div class="admin-tabs">
     <button class="tab-btn active" id="tab-schedule-btn" onclick="switchTab('schedule')">📅 세미나 일정</button>
     <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
+    <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
   </div>
 
   <!-- ===== 세미나 일정 탭 ===== -->
@@ -298,6 +299,28 @@ select.form-control{cursor:pointer}
     <div class="section-title">📋 등록된 도장 (<span id="locCount">0</span>개)</div>
     <div id="locationGrid" class="loc-grid"><div class="loading-msg">로딩 중...</div></div>
   </div>
+
+  <!-- ===== 회원 목록 탭 ===== -->
+  <div id="tab-members" class="tab-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-title">👥 회원 목록 <span id="membersCountBadge" style="font-size:13px;font-weight:400;color:#888"></span></div>
+      <div style="margin-bottom:12px">
+        <input type="text" class="form-control" id="memberSearch" placeholder="이름 또는 이메일 검색..." oninput="applyMembersFilter()" style="max-width:320px">
+      </div>
+      <div class="list-wrap">
+        <div class="list-head" style="grid-template-columns:40px 1fr 1fr 1.6fr 100px 80px">
+          <div>#</div>
+          <div>본명</div>
+          <div>닉네임</div>
+          <div>이메일</div>
+          <div>가입일</div>
+          <div style="text-align:right">AI사용</div>
+        </div>
+        <div id="membersList"><div class="loading-msg">로딩 중...</div></div>
+      </div>
+      <div id="membersPagination"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -357,12 +380,14 @@ window.doLogout = async () => { await signOut(auth); };
 
 /* ---- TABS ---- */
 let locLoaded = false;
+let membersLoaded = false;
 window.switchTab = (tab) => {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
   document.getElementById('tab-' + tab + '-btn').classList.add('active');
   document.getElementById('tab-' + tab).style.display = 'block';
   if (tab === 'locations' && !locLoaded) { locLoaded = true; loadLocations(); }
+  if (tab === 'members' && !membersLoaded) { membersLoaded = true; loadMembers(); }
 };
 
 /* ---- SCHEDULE CRUD ---- */
@@ -683,6 +708,114 @@ function showLoginError(msg) {
  * }
  * =========================================================
  */
+
+/* ---- MEMBERS ---- */
+let membersData = [];
+let membersFiltered = [];
+let membersPage = 1;
+const MEMBERS_PAGE_SIZE = 10;
+
+function getTodayKST() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+async function loadMembers() {
+  const list = document.getElementById('membersList');
+  list.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  document.getElementById('membersPagination').innerHTML = '';
+  try {
+    const today = getTodayKST();
+    const [usersSnap, usageSnap] = await Promise.all([
+      getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'))),
+      getDocs(collection(db, 'aiUsage'))
+    ]);
+
+    const usageMap = {};
+    usageSnap.forEach(ds => {
+      const d = ds.data();
+      usageMap[ds.id] = (d.date === today) ? (d.count || 0) : 0;
+    });
+
+    membersData = [];
+    usersSnap.forEach(ds => {
+      const d = ds.data();
+      membersData.push({
+        uid: ds.id,
+        name: d.name || '',
+        nickname: d.nickname || '',
+        email: d.email || '',
+        createdAt: d.createdAt,
+        aiToday: usageMap[ds.id] || 0
+      });
+    });
+
+    document.getElementById('membersCountBadge').textContent = '(총 ' + membersData.length + '명)';
+    applyMembersFilter();
+  } catch(e) {
+    list.innerHTML = '<div class="empty-msg">오류: ' + e.message + '</div>';
+  }
+}
+
+window.applyMembersFilter = () => {
+  const q = (document.getElementById('memberSearch').value || '').trim().toLowerCase();
+  membersFiltered = q
+    ? membersData.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.nickname.toLowerCase().includes(q))
+    : membersData.slice();
+  membersPage = 1;
+  renderMembersPage(1);
+};
+
+function renderMembersPage(page) {
+  const total = membersFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / MEMBERS_PAGE_SIZE));
+  page = Math.max(1, Math.min(page, totalPages));
+  membersPage = page;
+
+  const list = document.getElementById('membersList');
+  if (total === 0) {
+    list.innerHTML = '<div class="empty-msg">검색 결과가 없습니다.</div>';
+    document.getElementById('membersPagination').innerHTML = '';
+    return;
+  }
+
+  const start = (page - 1) * MEMBERS_PAGE_SIZE;
+  const slice = membersFiltered.slice(start, start + MEMBERS_PAGE_SIZE);
+  list.innerHTML = '';
+  slice.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'list-row';
+    row.style.gridTemplateColumns = '40px 1fr 1fr 1.6fr 100px 80px';
+    const num = start + i + 1;
+    const dateStr = m.createdAt && m.createdAt.toDate
+      ? m.createdAt.toDate().toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })
+      : (m.createdAt ? String(m.createdAt).slice(0, 10) : '-');
+    row.innerHTML =
+      '<div style="color:#888;font-size:12px">' + num + '</div>' +
+      '<div>' + esc(m.name) + '</div>' +
+      '<div style="color:#888;font-size:13px">' + esc(m.nickname) + '</div>' +
+      '<div style="font-size:12px;word-break:break-all">' + esc(m.email) + '</div>' +
+      '<div style="font-size:12px;color:#888">' + dateStr + '</div>' +
+      '<div style="text-align:right;font-size:13px">' + m.aiToday + '회</div>';
+    list.appendChild(row);
+  });
+
+  renderMembersPagination(page, totalPages);
+}
+
+function renderMembersPagination(page, totalPages) {
+  const pg = document.getElementById('membersPagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  let html = '<div class="pagination">';
+  html += '<button class="pg-btn' + (page === 1 ? ' disabled' : '') + '" onclick="goMembersPage(' + (page - 1) + ')" ' + (page === 1 ? 'disabled' : '') + '>‹ 이전</button>';
+  for (let i = 1; i <= totalPages; i++) {
+    html += '<button class="pg-btn' + (i === page ? ' active' : '') + '" onclick="goMembersPage(' + i + ')">' + i + '</button>';
+  }
+  html += '<button class="pg-btn' + (page === totalPages ? ' disabled' : '') + '" onclick="goMembersPage(' + (page + 1) + ')" ' + (page === totalPages ? 'disabled' : '') + '>다음 ›</button>';
+  html += '</div>';
+  pg.innerHTML = html;
+}
+
+window.goMembersPage = (page) => { renderMembersPage(page); };
 
 /* ---- NAV TOGGLE ---- */
 window.toggleMenu = () => {

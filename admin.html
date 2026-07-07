@@ -203,6 +203,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn active" id="tab-schedule-btn" onclick="switchTab('schedule')">📅 세미나 일정</button>
     <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
+    <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
   </div>
 
   <!-- ===== 세미나 일정 탭 ===== -->
@@ -321,6 +322,44 @@ select.form-control{cursor:pointer}
       <div id="membersPagination"></div>
     </div>
   </div>
+
+  <!-- ===== 코칭 관리 탭 ===== -->
+  <div id="tab-coaching" class="tab-content" style="display:none">
+    <div class="form-card">
+      <div class="form-card-title">📋 AI 코칭 피드백 관리
+        <span id="coachingPendingCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
+      </div>
+
+      <!-- 대기중 목록 -->
+      <div id="coachingPendingList"><div class="loading-msg">로딩 중...</div></div>
+
+      <!-- 상세 패널 -->
+      <div id="coachingDetailPanel" style="display:none;margin-top:20px;border:2px solid var(--red);border-radius:12px;overflow:hidden">
+        <div style="background:var(--red);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:14px">📝 코칭 답변 작성</span>
+          <button onclick="closeCoachingDetail()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
+        </div>
+        <div style="padding:16px;background:#fff">
+          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">수련생 질문</div>
+          <div id="detailQuestion" style="font-size:14px;line-height:1.7;color:#1d1d1f;background:#f7f7f9;border-radius:8px;padding:12px;margin-bottom:12px;white-space:pre-wrap;word-break:break-word"></div>
+          <div id="detailVideoData" style="display:none;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">영상 분석 데이터</div>
+            <div id="detailVideoDataContent" style="font-size:12px;line-height:1.7;color:#555;background:#f0f4ff;border-radius:8px;padding:12px;font-family:monospace;white-space:pre-wrap;overflow-x:auto;max-height:200px;overflow-y:auto"></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">핵심 피드백 입력 <span style="color:#C8102E">*</span></div>
+          <textarea id="masterFeedbackInput" placeholder="이 수련생에게 전달할 핵심 포인트를 간략히 입력하세요. AI가 커리큘럼 원리로 살을 붙여 최종 답변을 생성합니다." style="width:100%;min-height:100px;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;outline:none;line-height:1.6;color:#1d1d1f"></textarea>
+          <div id="coachingSubmitErr" style="font-size:12px;color:#C8102E;margin-top:6px;min-height:18px"></div>
+          <button id="coachingSubmitBtn" onclick="submitCoachingFeedback()" style="background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">🤖 AI 피드백 생성 및 전송</button>
+        </div>
+      </div>
+
+      <!-- 답변완료 최근 목록 -->
+      <div style="margin-top:28px">
+        <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:10px;letter-spacing:0.5px">최근 답변완료 (최신 10건)</div>
+        <div id="coachingDoneList"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -328,7 +367,7 @@ select.form-control{cursor:pointer}
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, orderBy, query, onSnapshot, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /* ---- FIREBASE SETUP ---- */
@@ -381,6 +420,7 @@ window.doLogout = async () => { await signOut(auth); };
 /* ---- TABS ---- */
 let locLoaded = false;
 let membersLoaded = false;
+let coachingLoaded = false;
 window.switchTab = (tab) => {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
@@ -388,6 +428,7 @@ window.switchTab = (tab) => {
   document.getElementById('tab-' + tab).style.display = 'block';
   if (tab === 'locations' && !locLoaded) { locLoaded = true; loadLocations(); }
   if (tab === 'members' && !membersLoaded) { membersLoaded = true; loadMembers(); }
+  if (tab === 'coaching' && !coachingLoaded) { coachingLoaded = true; initCoachingTab(); }
 };
 
 /* ---- SCHEDULE CRUD ---- */
@@ -816,6 +857,141 @@ function renderMembersPagination(page, totalPages) {
 }
 
 window.goMembersPage = (page) => { renderMembersPage(page); };
+
+/* ---- COACHING TAB ---- */
+let coachingUnsubscribe = null;
+let activeCoachingDocId = null;
+
+function initCoachingTab() {
+  const pendingList = document.getElementById('coachingPendingList');
+  const doneList    = document.getElementById('coachingDoneList');
+  pendingList.innerHTML = '<div class="loading-msg">실시간 연결 중...</div>';
+
+  coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const pending = all.filter(d => d.status === '대기중')
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    const done = all.filter(d => d.status === '답변완료')
+      .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0))
+      .slice(0, 10);
+
+    // 탭 배지
+    const badge = document.getElementById('coachingBadge');
+    document.getElementById('coachingPendingCount').textContent =
+      '(대기중 ' + pending.length + '건 / 전체 ' + all.length + '건)';
+    if (pending.length > 0) {
+      badge.textContent = pending.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    // 대기중 목록 렌더
+    if (pending.length === 0) {
+      pendingList.innerHTML = '<div class="empty-msg">대기중인 질문이 없습니다. ✅</div>';
+    } else {
+      pendingList.innerHTML = '';
+      pending.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.style.cssText = 'grid-template-columns:1fr 110px 90px;cursor:pointer';
+        row.id = 'crow-' + d.id;
+        const dateStr = d.createdAt?.toDate
+          ? d.createdAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+          : '';
+        const hasVideo = d.videoData ? '📊 ' : '';
+        row.innerHTML =
+          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + d.question.slice(0, 60) + (d.question.length > 60 ? '…' : ''))}</div>` +
+          `<div style="font-size:11px;color:#888">${dateStr}</div>` +
+          `<div style="text-align:right"><button class="btn-edit" onclick="openCoachingDetail('${d.id}')">답변 작성</button></div>`;
+        pendingList.appendChild(row);
+      });
+    }
+
+    // 답변완료 목록 렌더
+    if (done.length === 0) {
+      doneList.innerHTML = '<div class="empty-msg" style="font-size:12px">아직 답변완료 항목이 없습니다.</div>';
+    } else {
+      doneList.innerHTML = '';
+      done.forEach(d => {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:10px 12px;border:1px solid #e5e5e7;border-radius:8px;margin-bottom:8px;font-size:12px;color:#555';
+        const dateStr = d.updatedAt?.toDate
+          ? d.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+          : '';
+        row.innerHTML =
+          `<div style="display:flex;justify-content:space-between;margin-bottom:4px">` +
+          `<span style="font-weight:700;color:#2e7d32">✅ 답변완료</span><span style="color:#888">${dateStr}</span></div>` +
+          `<div style="color:#333">${esc(d.question.slice(0, 80) + (d.question.length > 80 ? '…' : ''))}</div>`;
+        doneList.appendChild(row);
+      });
+    }
+  }, (err) => {
+    pendingList.innerHTML = `<div class="empty-msg">오류: ${err.message}</div>`;
+  });
+}
+
+window.openCoachingDetail = (docId) => {
+  activeCoachingDocId = docId;
+  const panel = document.getElementById('coachingDetailPanel');
+
+  // 현재 onSnapshot 데이터에서 해당 문서 찾기
+  getDoc(doc(db, 'ai_coaching', docId)).then(snap => {
+    if (!snap.exists()) return;
+    const d = snap.data();
+    document.getElementById('detailQuestion').textContent = d.question || '';
+    document.getElementById('masterFeedbackInput').value = d.masterFeedback || '';
+    document.getElementById('coachingSubmitErr').textContent = '';
+
+    const videoSection = document.getElementById('detailVideoData');
+    if (d.videoData) {
+      videoSection.style.display = 'block';
+      document.getElementById('detailVideoDataContent').textContent = JSON.stringify(d.videoData, null, 2);
+    } else {
+      videoSection.style.display = 'none';
+    }
+
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+};
+
+window.closeCoachingDetail = () => {
+  activeCoachingDocId = null;
+  document.getElementById('coachingDetailPanel').style.display = 'none';
+};
+
+window.submitCoachingFeedback = async () => {
+  if (!activeCoachingDocId) return;
+  const masterFeedback = document.getElementById('masterFeedbackInput').value.trim();
+  const errEl = document.getElementById('coachingSubmitErr');
+  if (!masterFeedback) { errEl.textContent = '핵심 피드백을 입력해주세요.'; return; }
+
+  const btn = document.getElementById('coachingSubmitBtn');
+  btn.disabled = true; btn.textContent = '🤖 AI 답변 생성 중...';
+  errEl.textContent = '';
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('로그인이 필요합니다.');
+    const token = await user.getIdToken();
+
+    const res = await fetch('https://thestepper-api.vercel.app/api/generate-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ docId: activeCoachingDocId, masterFeedback })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '서버 오류');
+
+    showToast('답변이 생성되어 수련생에게 전달되었습니다! ✅');
+    closeCoachingDetail();
+  } catch(e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '🤖 AI 피드백 생성 및 전송';
+  }
+};
 
 /* ---- NAV TOGGLE ---- */
 window.toggleMenu = () => {

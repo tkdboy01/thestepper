@@ -353,6 +353,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
     <div class="feedback-error" id="feedbackError"></div>
     <div class="feedback-text" id="feedbackText"></div>
     <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">📄 결과 PDF로 다운로드</button>
+    <button id="expertCoachBtn" onclick="openExpertCoaching()" style="display:none;margin-top:10px;width:100%;padding:11px;background:transparent;border:1.5px solid #C9A84C;color:#C9A84C;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px">👨‍🏫 전문가 코치에게 직접 질문하기</button>
   </div>
 
 </div>
@@ -689,6 +690,7 @@ function finishAnalysis() {
 
   document.getElementById('resultSection').style.display  = 'block';
   document.getElementById('feedbackSection').style.display = 'block';
+  document.getElementById('expertCoachBtn').style.display = 'block';
 }
 
 // ── Skeleton Drawing ───────────────────────────────────────
@@ -827,6 +829,38 @@ async function requestFeedback() {
   } finally {
     document.getElementById('feedbackBtn').disabled = false;
   }
+}
+
+// ── 전문가 코치에게 질문하기 ────────────────────────────────
+function openExpertCoaching() {
+  if (!frameData.length) return;
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter = CHAPTERS[chapterId] || null;
+
+  var step = Math.max(1, Math.round(frameData.length / 40));
+  var timeline = [];
+  for (var i = 0; i < frameData.length; i += step) {
+    timeline.push({ time: parseFloat(frameData[i].time.toFixed(2)), angles: frameData[i].angles });
+  }
+
+  var maxRight = frameData.reduce(function(m, f) { return f.angles.rightKnee > m.angles.rightKnee ? f : m; }, frameData[0]);
+  var maxLeft  = frameData.reduce(function(m, f) { return f.angles.leftKnee  > m.angles.leftKnee  ? f : m; }, frameData[0]);
+  var maxHip   = frameData.reduce(function(m, f) { return f.angles.hipRot    > m.angles.hipRot    ? f : m; }, frameData[0]);
+
+  var videoData = {
+    chapter: chapter,
+    frameCount: frameData.length,
+    duration: parseFloat((frameData[frameData.length - 1].time).toFixed(1)),
+    maxAngles: {
+      rightKnee: maxRight.angles.rightKnee, rightKneeAt: parseFloat(maxRight.time.toFixed(2)),
+      leftKnee:  maxLeft.angles.leftKnee,  leftKneeAt:  parseFloat(maxLeft.time.toFixed(2)),
+      hipRot:    maxHip.angles.hipRot,     hipRotAt:    parseFloat(maxHip.time.toFixed(2))
+    },
+    timeline: timeline
+  };
+
+  sessionStorage.setItem('expertVideoData', JSON.stringify(videoData));
+  window.location.href = 'ai.html#expert';
 }
 
 // ── PDF Download ───────────────────────────────────────────

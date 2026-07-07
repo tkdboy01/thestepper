@@ -172,6 +172,57 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
   .auth-card{padding:28px 20px}
   .nav-user-email{display:none}
 }
+
+/* ── 받은편지함 배지 버튼 ── */
+.inbox-nav-btn{position:relative;background:transparent;border:1.5px solid #d2d2d7;color:#6e6e73;border-radius:6px;cursor:pointer;padding:5px 10px;font-size:14px;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s;display:none;align-items:center;gap:3px;flex-shrink:0}
+.inbox-nav-btn.has-new{border-color:var(--red);color:var(--red)}
+.inbox-nav-dot{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border-radius:50%;width:17px;height:17px;font-size:9px;font-weight:800;display:none;align-items:center;justify-content:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+
+/* ── 코칭 보관함 섹션 ── */
+#inboxSection{flex:1;overflow-y:auto;padding:88px 16px 40px;display:none;background:#fff}
+.inbox-container{max-width:800px;margin:0 auto}
+.inbox-heading{font-size:18px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.inbox-back-btn{background:transparent;border:1px solid #e5e5e7;color:#6e6e73;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;flex-shrink:0}
+.inbox-desc{font-size:13px;color:#6e6e73;margin-bottom:20px;line-height:1.7}
+.inbox-card{border:1.5px solid #e5e5e7;border-radius:12px;margin-bottom:12px;overflow:hidden;transition:border-color 0.2s}
+.inbox-card.is-new{border-color:var(--red)}
+.inbox-card-top{padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
+.inbox-card.answered .inbox-card-top{cursor:pointer}
+.inbox-card-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.status-waiting{background:#f5f5f7;color:#6e6e73}
+.status-done{background:#e8f5e9;color:#2e7d32}
+.inbox-card-body{flex:1;min-width:0}
+.inbox-card-q{font-size:14px;color:#1d1d1f;line-height:1.55;word-break:break-word}
+.inbox-card-meta{font-size:11px;color:#8e8e93;margin-top:4px}
+.inbox-answer-wrap{padding:16px;background:#f7f7f9;border-top:1.5px solid #e5e5e7}
+.inbox-answer-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:8px}
+.inbox-answer-text{font-size:14px;line-height:1.85;color:#1d1d1f;white-space:pre-wrap;word-break:break-word}
+
+/* ── 전문가 질문 버튼 ── */
+.expert-btn-row{margin-top:8px}
+.expert-coaching-btn{display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:1.5px solid var(--gold);color:var(--gold);border-radius:10px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s;letter-spacing:0.3px}
+.expert-coaching-btn:hover{background:rgba(201,168,76,0.08)}
+
+/* ── 전문가 질문 모달 ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;animation:slideUp 0.25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:#e5e5e7;border-radius:2px;margin:0 auto 18px}
+.modal-title{font-size:16px;font-weight:700;color:#1d1d1f;margin-bottom:4px}
+.modal-subtitle{font-size:12px;color:#6e6e73;margin-bottom:18px;line-height:1.6}
+.modal-label{font-size:12px;font-weight:700;color:#1d1d1f;margin-bottom:6px;display:block}
+.modal-textarea{width:100%;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;min-height:120px;outline:none;transition:border-color 0.2s;line-height:1.6;color:#1d1d1f;background:#fff}
+.modal-textarea:focus{border-color:rgba(201,168,76,0.6)}
+.modal-videodata{background:#f7f7f9;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;margin-top:14px;display:none}
+.modal-video-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1d1d1f;margin-bottom:4px}
+.modal-video-label input{width:16px;height:16px;cursor:pointer;accent-color:var(--gold)}
+.modal-video-preview{font-size:11px;color:#8e8e93;line-height:1.6;margin-top:2px}
+.modal-err{font-size:12px;color:var(--red);margin-top:10px;min-height:18px}
+.modal-limit-txt{font-size:11px;color:#6e6e73;margin-top:10px;text-align:center}
+.modal-submit-btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:16px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s;letter-spacing:0.5px}
+.modal-submit-btn:disabled{opacity:0.5;cursor:not-allowed}
+.modal-cancel-btn{background:transparent;border:none;color:#6e6e73;font-size:13px;cursor:pointer;width:100%;margin-top:8px;padding:8px;font-family:'Noto Sans KR',sans-serif}
 </style>
 </head>
 <body>
@@ -197,6 +248,9 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     </div>
     <div class="nav-user-area" id="navUserArea">
       <span class="nav-user-email" id="navUserEmail"></span>
+      <button class="inbox-nav-btn" id="inboxNavBtn" onclick="showInbox()" title="코칭 보관함">
+        📬<span class="inbox-nav-dot" id="inboxDot"></span>
+      </button>
       <button class="nav-logout-btn" id="navLogoutBtn" onclick="doLogout()">로그아웃</button>
     </div>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()">
@@ -381,6 +435,18 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
   </div>
 </div>
 
+<!-- 코칭 보관함 섹션 -->
+<div id="inboxSection">
+  <div class="inbox-container">
+    <div class="inbox-heading">
+      <button class="inbox-back-btn" onclick="hideInbox()">← 돌아가기</button>
+      📬 내 코칭 보관함
+    </div>
+    <div class="inbox-desc">전문가 코치에게 질문한 내역입니다. 답변완료 항목을 클릭하면 코칭 내용을 확인할 수 있습니다.</div>
+    <div id="inboxList"></div>
+  </div>
+</div>
+
 <!-- 입력창 (fixed) -->
 <div class="chat-input-area" id="chatInputArea">
   <div class="chat-input-inner">
@@ -396,6 +462,31 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
       </button>
     </div>
+    <div class="expert-btn-row">
+      <button class="expert-coaching-btn" onclick="showExpertForm()">👨‍🏫 전문가 코치에게 직접 질문하기 (하루 2회)</button>
+    </div>
+  </div>
+</div>
+
+<!-- 전문가 코칭 모달 -->
+<div class="modal-overlay" id="expertModal" onclick="handleModalOverlayClick(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👨‍🏫 전문가 코치에게 직접 질문하기</div>
+    <div class="modal-subtitle">관리자가 직접 검토 후 커리큘럼 기반 심화 코칭 답변을 드립니다.<br>답변은 보관함(📬)에서 확인하세요. · 하루 2회 제한</div>
+    <label class="modal-label" for="expertQuestionInput">질문 내용</label>
+    <textarea class="modal-textarea" id="expertQuestionInput" placeholder="궁금한 기술, 전술, 훈련 방법에 대해 구체적으로 써주세요..." maxlength="500"></textarea>
+    <div class="modal-videodata" id="videoDataAttach">
+      <label class="modal-video-label">
+        <input type="checkbox" id="videoDataCheck" checked>
+        motion.html에서 분석한 영상 데이터 첨부하기
+      </label>
+      <div class="modal-video-preview" id="videoDataPreview"></div>
+    </div>
+    <div class="modal-err" id="expertModalErr"></div>
+    <div class="modal-limit-txt" id="expertLimitTxt"></div>
+    <button class="modal-submit-btn" id="expertSubmitBtn" onclick="submitExpertQuestion()">질문 접수하기</button>
+    <button class="modal-cancel-btn" onclick="closeExpertForm()">취소</button>
   </div>
 </div>
 
@@ -411,7 +502,9 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 
 <script>
 const API_URL = 'https://thestepper-api.vercel.app/api/coach';
+const GENERATE_FEEDBACK_URL = 'https://thestepper-api.vercel.app/api/generate-feedback';
 const DAILY_LIMIT = 5;
+const EXPERT_DAILY_LIMIT = 2;
 const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
 let remaining = DAILY_LIMIT;
 let isLoading = false;
@@ -697,12 +790,16 @@ function onLoggedIn(user) {
   var email = user.email || user.displayName || '';
   document.getElementById('navUserEmail').textContent = email.length > 16 ? email.slice(0, 16) + '…' : email;
   loadRemainingCount(user.uid, user.email);
+  startInboxListener(user.uid);
+  checkExpertHashOnLoad();
 }
 
 function onLoggedOut() {
+  stopInboxListener();
   document.getElementById('authSection').style.display = 'flex';
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chatInputArea').style.display = 'none';
+  document.getElementById('inboxSection').style.display = 'none';
   document.getElementById('navUserArea').style.display = 'none';
   showLogin();
 }
@@ -1062,6 +1159,238 @@ async function sendMessage() {
   } finally {
     setUI(false);
     document.getElementById('chatInput').focus();
+  }
+}
+
+// ===== 전문가 코칭 — 알림 배지 =====
+var inboxUnsubscribe = null;
+
+function startInboxListener(uid) {
+  if (inboxUnsubscribe) inboxUnsubscribe();
+  var btn = document.getElementById('inboxNavBtn');
+  inboxUnsubscribe = db.collection('ai_coaching')
+    .where('userId', '==', uid)
+    .onSnapshot(function(snap) {
+      var unread = snap.docs.filter(function(d) {
+        var data = d.data();
+        return data.status === '답변완료' && !data.viewed;
+      }).length;
+      if (btn) {
+        btn.style.display = 'flex';
+        var dot = document.getElementById('inboxDot');
+        if (unread > 0) {
+          btn.classList.add('has-new');
+          dot.textContent = unread;
+          dot.style.display = 'flex';
+        } else {
+          btn.classList.remove('has-new');
+          dot.style.display = 'none';
+        }
+      }
+    }, function() {});
+}
+
+function stopInboxListener() {
+  if (inboxUnsubscribe) { inboxUnsubscribe(); inboxUnsubscribe = null; }
+  var btn = document.getElementById('inboxNavBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+// ===== 전문가 코칭 — 보관함 =====
+function showInbox() {
+  document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('chatInputArea').style.display = 'none';
+  document.getElementById('inboxSection').style.display = 'block';
+  loadInbox();
+}
+
+function hideInbox() {
+  document.getElementById('inboxSection').style.display = 'none';
+  document.getElementById('chatSection').style.display = 'flex';
+  document.getElementById('chatInputArea').style.display = 'block';
+}
+
+async function loadInbox() {
+  var uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) return;
+  var list = document.getElementById('inboxList');
+  list.innerHTML = '<div style="text-align:center;color:#8e8e93;padding:40px 0">불러오는 중...</div>';
+  try {
+    var snap = await db.collection('ai_coaching').where('userId', '==', uid).get();
+    if (snap.empty) {
+      list.innerHTML = '<div style="text-align:center;color:#8e8e93;padding:48px 0;line-height:2.2">아직 질문이 없습니다.<br><small style="font-size:12px">아래 전문가 코치에게 직접 질문하기 버튼을 눌러 시작해보세요.</small></div>';
+      return;
+    }
+    var docs = snap.docs.slice().sort(function(a, b) {
+      var ta = a.data().createdAt && a.data().createdAt.toMillis ? a.data().createdAt.toMillis() : 0;
+      var tb = b.data().createdAt && b.data().createdAt.toMillis ? b.data().createdAt.toMillis() : 0;
+      return tb - ta;
+    });
+    list.innerHTML = '';
+    docs.forEach(function(docSnap) {
+      var d = docSnap.data();
+      var isNew = d.status === '답변완료' && !d.viewed;
+      var card = document.createElement('div');
+      card.className = 'inbox-card' + (d.status === '답변완료' ? ' answered' : '') + (isNew ? ' is-new' : '');
+      card.id = 'icard-' + docSnap.id;
+
+      var top = document.createElement('div');
+      top.className = 'inbox-card-top';
+
+      var statusEl = document.createElement('span');
+      statusEl.className = 'inbox-card-status ' + (d.status === '답변완료' ? 'status-done' : 'status-waiting');
+      statusEl.textContent = d.status === '답변완료' ? '✅ 답변완료' : '⏳ 대기중';
+
+      var body = document.createElement('div');
+      body.className = 'inbox-card-body';
+
+      var qEl = document.createElement('div');
+      qEl.className = 'inbox-card-q';
+      qEl.textContent = d.question;
+
+      var meta = document.createElement('div');
+      meta.className = 'inbox-card-meta';
+      var dateStr = d.createdAt && d.createdAt.toDate
+        ? d.createdAt.toDate().toLocaleString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+        : '';
+      meta.textContent = dateStr + (d.videoData ? ' · 영상 데이터 첨부됨' : '');
+
+      body.appendChild(qEl);
+      body.appendChild(meta);
+      top.appendChild(statusEl);
+      top.appendChild(body);
+      card.appendChild(top);
+
+      if (d.status === '답변완료') {
+        (function(id, ans, viewed, cardEl) {
+          top.onclick = function() { toggleInboxAnswer(id, ans, viewed, cardEl); };
+        })(docSnap.id, d.finalAiResponse, d.viewed, card);
+      }
+      list.appendChild(card);
+    });
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;color:var(--red);padding:24px">오류: ' + e.message + '</div>';
+  }
+}
+
+async function toggleInboxAnswer(docId, answerText, alreadyViewed, card) {
+  var existing = card.querySelector('.inbox-answer-wrap');
+  if (existing) { existing.remove(); return; }
+
+  var wrap = document.createElement('div');
+  wrap.className = 'inbox-answer-wrap';
+  var label = document.createElement('div');
+  label.className = 'inbox-answer-label';
+  label.textContent = '✦ 전문가 코치 답변';
+  var text = document.createElement('div');
+  text.className = 'inbox-answer-text';
+  text.textContent = answerText || '(답변 내용 없음)';
+  wrap.appendChild(label);
+  wrap.appendChild(text);
+  card.appendChild(wrap);
+
+  if (!alreadyViewed) {
+    card.classList.remove('is-new');
+    try { await db.collection('ai_coaching').doc(docId).update({ viewed: true }); } catch(e) {}
+  }
+}
+
+// ===== 전문가 코칭 — 질문 폼 =====
+async function showExpertForm() {
+  var uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) return;
+  document.getElementById('expertQuestionInput').value = '';
+  document.getElementById('expertModalErr').textContent = '';
+  document.getElementById('videoDataAttach').style.display = 'none';
+
+  var today = getTodayKST();
+  try {
+    var snap = await db.collection('expertUsage').doc(uid).get();
+    var used = (snap.exists && snap.data().date === today) ? (snap.data().count || 0) : 0;
+    var left = Math.max(0, EXPERT_DAILY_LIMIT - used);
+    document.getElementById('expertLimitTxt').textContent = '오늘 남은 전문가 질문: ' + left + ' / ' + EXPERT_DAILY_LIMIT + '회';
+  } catch(e) {
+    document.getElementById('expertLimitTxt').textContent = '';
+  }
+
+  var videoStr = sessionStorage.getItem('expertVideoData');
+  if (videoStr) {
+    try {
+      var vd = JSON.parse(videoStr);
+      document.getElementById('videoDataAttach').style.display = 'block';
+      var preview = document.getElementById('videoDataPreview');
+      preview.textContent = (vd.chapter ? vd.chapter.name + ' ' + vd.chapter.tech + ' · ' : '') +
+        (vd.frameCount ? vd.frameCount + '프레임 분석 데이터' : '분석 데이터 포함');
+    } catch(e) {}
+  }
+
+  document.getElementById('expertModal').classList.add('open');
+}
+
+function closeExpertForm() {
+  document.getElementById('expertModal').classList.remove('open');
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('expertModal')) closeExpertForm();
+}
+
+async function submitExpertQuestion() {
+  var uid = auth.currentUser && auth.currentUser.uid;
+  if (!uid) return;
+  var question = document.getElementById('expertQuestionInput').value.trim();
+  var errEl = document.getElementById('expertModalErr');
+  if (!question) { errEl.textContent = '질문을 입력해주세요.'; return; }
+  if (question.length > 500) { errEl.textContent = '질문은 500자 이내로 입력해주세요.'; return; }
+
+  var today = getTodayKST();
+  var usageRef = db.collection('expertUsage').doc(uid);
+  var btn = document.getElementById('expertSubmitBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+  errEl.textContent = '';
+
+  try {
+    var usageSnap = await usageRef.get();
+    var used = (usageSnap.exists && usageSnap.data().date === today) ? (usageSnap.data().count || 0) : 0;
+    if (used >= EXPERT_DAILY_LIMIT) {
+      errEl.textContent = '오늘 전문가 코칭 질문 횟수(' + EXPERT_DAILY_LIMIT + '회)를 모두 사용했습니다. 내일 다시 이용해주세요.';
+      return;
+    }
+
+    var videoData = null;
+    var chk = document.getElementById('videoDataCheck');
+    if (chk && chk.checked) {
+      var vStr = sessionStorage.getItem('expertVideoData');
+      if (vStr) { try { videoData = JSON.parse(vStr); } catch(e) {} }
+    }
+
+    await db.collection('ai_coaching').add({
+      userId: uid,
+      question: question,
+      videoData: videoData,
+      status: '대기중',
+      masterFeedback: '',
+      finalAiResponse: '',
+      viewed: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await usageRef.set({ date: today, count: used + 1 });
+    sessionStorage.removeItem('expertVideoData');
+    closeExpertForm();
+    alert('질문이 접수되었습니다!\n전문가 코치 검토 후 답변이 전달됩니다.\nnav의 📬 버튼에서 답변을 확인하세요.');
+  } catch(e) {
+    errEl.textContent = '제출 실패: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '질문 접수하기';
+  }
+}
+
+function checkExpertHashOnLoad() {
+  if (window.location.hash === '#expert') {
+    history.replaceState(null, '', window.location.pathname);
+    setTimeout(showExpertForm, 300);
   }
 }
 

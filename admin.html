@@ -345,10 +345,19 @@ select.form-control{cursor:pointer}
         <span id="coachingPendingCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
       </div>
 
-      <!-- 대기중 목록 -->
-      <div id="coachingPendingList"><div class="loading-msg">로딩 중...</div></div>
+      <!-- 대기중 (미작성) -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;margin-bottom:8px">⏳ 대기중 (미작성)</div>
+        <div id="coachingPendingList"><div class="loading-msg">로딩 중...</div></div>
+      </div>
 
-      <!-- 상세 패널 -->
+      <!-- 검토대기 (AI 생성 완료, 확정 전) -->
+      <div style="margin-top:20px">
+        <div style="font-size:11px;font-weight:700;color:#b07600;letter-spacing:0.5px;margin-bottom:8px">🔍 검토대기 (AI 답변 생성 완료 · 확정 전)</div>
+        <div id="coachingReviewWaitList"></div>
+      </div>
+
+      <!-- 답변 작성 패널 -->
       <div id="coachingDetailPanel" style="display:none;margin-top:20px;border:2px solid var(--red);border-radius:12px;overflow:hidden">
         <div style="background:var(--red);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
           <span style="font-weight:700;font-size:14px">📝 코칭 답변 작성</span>
@@ -364,7 +373,40 @@ select.form-control{cursor:pointer}
           <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">핵심 피드백 입력 <span style="color:#C8102E">*</span></div>
           <textarea id="masterFeedbackInput" placeholder="이 수련생에게 전달할 핵심 포인트를 간략히 입력하세요. AI가 커리큘럼 원리로 살을 붙여 최종 답변을 생성합니다." style="width:100%;min-height:100px;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;outline:none;line-height:1.6;color:#1d1d1f"></textarea>
           <div id="coachingSubmitErr" style="font-size:12px;color:#C8102E;margin-top:6px;min-height:18px"></div>
-          <button id="coachingSubmitBtn" onclick="submitCoachingFeedback()" style="background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">🤖 AI 피드백 생성 및 전송</button>
+          <button id="coachingSubmitBtn" onclick="submitCoachingFeedback()" style="background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">🤖 AI 검토 요청</button>
+        </div>
+      </div>
+
+      <!-- 검토 패널 (AI 교정 비교 + 확정) -->
+      <div id="coachingReviewPanel" style="display:none;margin-top:20px;border:2px solid #b07600;border-radius:12px;overflow:hidden">
+        <div style="background:#b07600;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:14px">🔍 AI 검토 결과 확인</span>
+          <button onclick="closeReviewPanel()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
+        </div>
+        <div style="padding:16px;background:#fff">
+          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">수련생 질문</div>
+          <div id="reviewQuestion" style="font-size:13px;line-height:1.6;color:#555;background:#f7f7f9;border-radius:8px;padding:10px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word"></div>
+
+          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:8px">핵심 피드백 비교 (원본 vs AI 교정)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#999;margin-bottom:4px">원본 (관리자 입력)</div>
+              <div id="reviewOriginalFeedback" style="font-size:13px;line-height:1.6;background:#fff8f8;border:1px solid rgba(200,16,46,0.2);border-radius:8px;padding:10px;min-height:60px;white-space:pre-wrap;word-break:break-word;color:#333"></div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#1a7f37;margin-bottom:4px">AI 교정본</div>
+              <div id="reviewCorrectedFeedback" style="font-size:13px;line-height:1.6;background:#f0fff4;border:1px solid rgba(52,199,89,0.3);border-radius:8px;padding:10px;min-height:60px;white-space:pre-wrap;word-break:break-word;color:#333"></div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:8px">최종 AI 답변 미리보기 (수련생에게 전달될 내용)</div>
+          <div id="reviewFinalResponse" style="font-size:13px;line-height:1.7;background:#f0f4ff;border:1px solid rgba(0,113,227,0.2);border-radius:8px;padding:12px;margin-bottom:16px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto"></div>
+
+          <div id="reviewPanelErr" style="font-size:12px;color:#C8102E;margin-bottom:8px;min-height:18px"></div>
+          <div style="display:flex;gap:10px">
+            <button id="confirmCoachingBtn" onclick="confirmCoaching()" style="flex:2;background:#2e7d32;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✅ 확정 및 전송</button>
+            <button onclick="reEditCoaching()" style="flex:1;background:transparent;border:1.5px solid #888;color:#555;border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✏️ 수정 후 다시 검토</button>
+          </div>
         </div>
       </div>
 
@@ -372,6 +414,15 @@ select.form-control{cursor:pointer}
       <div style="margin-top:28px">
         <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:10px;letter-spacing:0.5px">최근 답변완료 (최신 10건)</div>
         <div id="coachingDoneList"></div>
+      </div>
+
+      <!-- 코칭 지식 라이브러리 -->
+      <div style="margin-top:28px;border-top:2px solid #e5e5e7;padding-top:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">📚 코칭 지식 라이브러리 <span id="knowledgeCount" style="font-size:13px;font-weight:400;color:#888"></span></div>
+          <button onclick="loadKnowledgeLibrary()" style="background:transparent;border:1px solid var(--border);color:#888;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">새로고침</button>
+        </div>
+        <div id="knowledgeLibraryList"><div class="loading-msg">로딩 중...</div></div>
       </div>
     </div>
   </div>
@@ -1069,26 +1120,33 @@ window.goMembersPage = (page) => { renderMembersPage(page); };
 /* ---- COACHING TAB ---- */
 let coachingUnsubscribe = null;
 let activeCoachingDocId = null;
+let reviewPanelData = { docId: null, question: '', original: '', corrected: '', finalResponse: '' };
+
+const CONFIRM_COACHING_URL = 'https://thestepper-api.vercel.app/api/confirm-coaching';
 
 function initCoachingTab() {
   const pendingList = document.getElementById('coachingPendingList');
-  const doneList    = document.getElementById('coachingDoneList');
   pendingList.innerHTML = '<div class="loading-msg">실시간 연결 중...</div>';
+  loadKnowledgeLibrary();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const pending = all.filter(d => d.status === '대기중')
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    const reviewWait = all.filter(d => d.status === '검토대기')
+      .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
     const done = all.filter(d => d.status === '답변완료')
       .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0))
       .slice(0, 10);
 
+    const totalPending = pending.length + reviewWait.length;
+
     // 탭 배지
     const badge = document.getElementById('coachingBadge');
     document.getElementById('coachingPendingCount').textContent =
-      '(대기중 ' + pending.length + '건 / 전체 ' + all.length + '건)';
-    if (pending.length > 0) {
-      badge.textContent = pending.length;
+      `(대기중 ${pending.length}건 / 검토대기 ${reviewWait.length}건 / 전체 ${all.length}건)`;
+    if (totalPending > 0) {
+      badge.textContent = totalPending;
       badge.style.display = 'flex';
     } else {
       badge.style.display = 'none';
@@ -1096,7 +1154,7 @@ function initCoachingTab() {
 
     // 대기중 목록 렌더
     if (pending.length === 0) {
-      pendingList.innerHTML = '<div class="empty-msg">대기중인 질문이 없습니다. ✅</div>';
+      pendingList.innerHTML = '<div class="empty-msg" style="padding:12px;font-size:13px">대기중인 질문이 없습니다. ✅</div>';
     } else {
       pendingList.innerHTML = '';
       pending.forEach(d => {
@@ -1108,15 +1166,39 @@ function initCoachingTab() {
           ? d.createdAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
           : '';
         const hasVideo = d.videoData ? '📊 ' : '';
+        const q = d.question || '';
         row.innerHTML =
-          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + d.question.slice(0, 60) + (d.question.length > 60 ? '…' : ''))}</div>` +
+          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
           `<div style="font-size:11px;color:#888">${dateStr}</div>` +
           `<div style="text-align:right"><button class="btn-edit" onclick="openCoachingDetail('${d.id}')">답변 작성</button></div>`;
         pendingList.appendChild(row);
       });
     }
 
+    // 검토대기 목록 렌더
+    const reviewWaitList = document.getElementById('coachingReviewWaitList');
+    if (reviewWait.length === 0) {
+      reviewWaitList.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0">검토대기 항목 없음</div>';
+    } else {
+      reviewWaitList.innerHTML = '';
+      reviewWait.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.style.cssText = 'grid-template-columns:1fr 110px 110px;background:#fffde7;border-left:3px solid #b07600';
+        const dateStr = d.updatedAt?.toDate
+          ? d.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+          : '';
+        const q = d.question || '';
+        row.innerHTML =
+          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
+          `<div style="font-size:11px;color:#888">${dateStr}</div>` +
+          `<div style="text-align:right"><button onclick="openReviewPanelFromDoc('${d.id}')" style="background:#b07600;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">검토 확인</button></div>`;
+        reviewWaitList.appendChild(row);
+      });
+    }
+
     // 답변완료 목록 렌더
+    const doneList = document.getElementById('coachingDoneList');
     if (done.length === 0) {
       doneList.innerHTML = '<div class="empty-msg" style="font-size:12px">아직 답변완료 항목이 없습니다.</div>';
     } else {
@@ -1127,28 +1209,29 @@ function initCoachingTab() {
         const dateStr = d.updatedAt?.toDate
           ? d.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
           : '';
+        const q = d.question || '';
         row.innerHTML =
           `<div style="display:flex;justify-content:space-between;margin-bottom:4px">` +
           `<span style="font-weight:700;color:#2e7d32">✅ 답변완료</span><span style="color:#888">${dateStr}</span></div>` +
-          `<div style="color:#333">${esc(d.question.slice(0, 80) + (d.question.length > 80 ? '…' : ''))}</div>`;
+          `<div style="color:#333">${esc(q.slice(0, 80) + (q.length > 80 ? '…' : ''))}</div>`;
         doneList.appendChild(row);
       });
     }
   }, (err) => {
-    pendingList.innerHTML = `<div class="empty-msg">오류: ${err.message}</div>`;
+    document.getElementById('coachingPendingList').innerHTML = `<div class="empty-msg">오류: ${err.message}</div>`;
   });
 }
 
 window.openCoachingDetail = (docId) => {
   activeCoachingDocId = docId;
-  const panel = document.getElementById('coachingDetailPanel');
+  document.getElementById('coachingReviewPanel').style.display = 'none';
 
-  // 현재 onSnapshot 데이터에서 해당 문서 찾기
   getDoc(doc(db, 'ai_coaching', docId)).then(snap => {
     if (!snap.exists()) return;
     const d = snap.data();
     document.getElementById('detailQuestion').textContent = d.question || '';
-    document.getElementById('masterFeedbackInput').value = d.masterFeedback || '';
+    // 재검토 시 correctedFeedback 우선 표시, 없으면 원본
+    document.getElementById('masterFeedbackInput').value = d.correctedFeedback || d.masterFeedback || '';
     document.getElementById('coachingSubmitErr').textContent = '';
 
     const videoSection = document.getElementById('detailVideoData');
@@ -1159,6 +1242,7 @@ window.openCoachingDetail = (docId) => {
       videoSection.style.display = 'none';
     }
 
+    const panel = document.getElementById('coachingDetailPanel');
     panel.style.display = 'block';
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
@@ -1169,6 +1253,52 @@ window.closeCoachingDetail = () => {
   document.getElementById('coachingDetailPanel').style.display = 'none';
 };
 
+window.openReviewPanelFromDoc = async (docId) => {
+  try {
+    const snap = await getDoc(doc(db, 'ai_coaching', docId));
+    if (!snap.exists()) { showToast('문서를 찾을 수 없습니다.', 'error'); return; }
+    const d = snap.data();
+    showReviewPanel(docId, {
+      question: d.question || '',
+      original: d.masterFeedback || '',
+      corrected: d.correctedFeedback || '',
+      finalResponse: d.finalAiResponse || ''
+    });
+  } catch(e) { showToast('오류: ' + e.message, 'error'); }
+};
+
+function showReviewPanel(docId, { question, original, corrected, finalResponse }) {
+  reviewPanelData = { docId, question, original, corrected, finalResponse };
+  document.getElementById('coachingDetailPanel').style.display = 'none';
+  document.getElementById('reviewQuestion').textContent = question;
+  document.getElementById('reviewOriginalFeedback').textContent = original;
+  document.getElementById('reviewCorrectedFeedback').textContent = corrected;
+  document.getElementById('reviewFinalResponse').textContent = finalResponse;
+  document.getElementById('reviewPanelErr').textContent = '';
+  const panel = document.getElementById('coachingReviewPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+window.closeReviewPanel = () => {
+  reviewPanelData = { docId: null, question: '', original: '', corrected: '', finalResponse: '' };
+  document.getElementById('coachingReviewPanel').style.display = 'none';
+};
+
+window.reEditCoaching = () => {
+  const { docId, question, corrected } = reviewPanelData;
+  document.getElementById('coachingReviewPanel').style.display = 'none';
+  if (!docId) return;
+  activeCoachingDocId = docId;
+  document.getElementById('detailQuestion').textContent = question;
+  document.getElementById('masterFeedbackInput').value = corrected;
+  document.getElementById('coachingSubmitErr').textContent = '';
+  document.getElementById('detailVideoData').style.display = 'none';
+  const panel = document.getElementById('coachingDetailPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
 window.submitCoachingFeedback = async () => {
   if (!activeCoachingDocId) return;
   const masterFeedback = document.getElementById('masterFeedbackInput').value.trim();
@@ -1176,8 +1306,11 @@ window.submitCoachingFeedback = async () => {
   if (!masterFeedback) { errEl.textContent = '핵심 피드백을 입력해주세요.'; return; }
 
   const btn = document.getElementById('coachingSubmitBtn');
-  btn.disabled = true; btn.textContent = '🤖 AI 답변 생성 중...';
+  btn.disabled = true; btn.textContent = '🤖 AI 검토 중... (약 15초 소요)';
   errEl.textContent = '';
+
+  const docIdSnapshot = activeCoachingDocId;
+  const questionText = document.getElementById('detailQuestion').textContent;
 
   try {
     const user = auth.currentUser;
@@ -1185,13 +1318,13 @@ window.submitCoachingFeedback = async () => {
     const token = await user.getIdToken();
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 40000);
+    const timeoutId = setTimeout(() => controller.abort(), 50000);
     let res;
     try {
       res = await fetch('https://thestepper-api.vercel.app/api/generate-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ docId: activeCoachingDocId, masterFeedback }),
+        body: JSON.stringify({ docId: docIdSnapshot, masterFeedback }),
         signal: controller.signal
       });
     } finally {
@@ -1200,13 +1333,95 @@ window.submitCoachingFeedback = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '서버 오류');
 
-    showToast('답변이 생성되어 수련생에게 전달되었습니다! ✅');
     closeCoachingDetail();
+    showReviewPanel(docIdSnapshot, {
+      question: questionText,
+      original: masterFeedback,
+      corrected: data.correctedFeedback || masterFeedback,
+      finalResponse: data.finalAiResponse || ''
+    });
   } catch(e) {
     errEl.textContent = '오류: ' + e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '🤖 AI 피드백 생성 및 전송';
+    btn.disabled = false; btn.textContent = '🤖 AI 검토 요청';
   }
+};
+
+window.confirmCoaching = async () => {
+  const { docId } = reviewPanelData;
+  if (!docId) return;
+
+  const btn = document.getElementById('confirmCoachingBtn');
+  const errEl = document.getElementById('reviewPanelErr');
+  btn.disabled = true; btn.textContent = '전송 중...';
+  errEl.textContent = '';
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('로그인이 필요합니다.');
+    const token = await user.getIdToken();
+
+    const res = await fetch(CONFIRM_COACHING_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ docId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '서버 오류');
+
+    showToast('확정 완료! 수련생에게 답변이 전달되었습니다. ✅');
+    closeReviewPanel();
+    loadKnowledgeLibrary();
+  } catch(e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ 확정 및 전송';
+  }
+};
+
+/* ---- KNOWLEDGE LIBRARY ---- */
+async function loadKnowledgeLibrary() {
+  const listEl = document.getElementById('knowledgeLibraryList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'coaching_knowledge'), orderBy('savedAt', 'desc')));
+    document.getElementById('knowledgeCount').textContent = snap.empty ? '' : `(${snap.size}건)`;
+    if (snap.empty) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">아직 축적된 코칭 지식이 없습니다.<br><small style="color:#aaa">코칭을 확정하면 자동으로 여기에 저장됩니다.</small></div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const savedAt = d.savedAt?.toDate
+        ? d.savedAt.toDate().toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'})
+        : '';
+      const item = document.createElement('div');
+      item.style.cssText = 'border:1px solid #e5e5e7;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:13px;background:#fafafa';
+      item.innerHTML =
+        `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">` +
+        `<span style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700">${esc(d.technique || '기타')}</span>` +
+        `<span style="font-size:11px;color:#aaa;margin-left:auto">${savedAt}</span>` +
+        `<button onclick="deleteKnowledgeItem('${docSnap.id}')" class="btn-danger" style="padding:3px 10px;font-size:11px">삭제</button>` +
+        `</div>` +
+        `<div style="font-size:12px;color:#555;margin-bottom:4px;font-weight:600">Q: ${esc(d.questionSummary || '')}</div>` +
+        `<div style="font-size:12px;color:#333;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(d.correctedFeedback || '')}</div>`;
+      listEl.appendChild(item);
+    });
+  } catch(e) {
+    const isPermError = e.code === 'permission-denied';
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}${isPermError ? '<br><small>Firestore 보안 규칙을 확인하세요.</small>' : ''}</div>`;
+  }
+}
+
+window.deleteKnowledgeItem = async (id) => {
+  if (!confirm('이 지식 항목을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'coaching_knowledge', id));
+    showToast('삭제되었습니다.');
+    loadKnowledgeLibrary();
+  } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
 };
 
 /* ---- NAV TOGGLE ---- */

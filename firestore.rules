@@ -17,7 +17,41 @@ service cloud.firestore {
       allow write: if request.auth != null
         && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
-    match /coaching_knowledge/{doc=**} {
+    match /inquiries/{docId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid
+            || request.auth.token.email == 'tkdboykms0007@gmail.com');
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+    }
+    match /aiUsage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if false;
+    }
+    match /ai_coaching/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        request.auth.token.email == 'tkdboykms0007@gmail.com'
+      );
+      allow update: if request.auth != null && (
+        request.auth.token.email == 'tkdboykms0007@gmail.com' ||
+        (resource.data.userId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']))
+      );
+    }
+    match /expertUsage/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /coaching_knowledge/{docId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.auth.token.email == 'tkdboykms0007@gmail.com';

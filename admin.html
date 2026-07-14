@@ -340,6 +340,30 @@ select.form-control{cursor:pointer}
 
   <!-- ===== 코칭 관리 탭 ===== -->
   <div id="tab-coaching" class="tab-content" style="display:none">
+
+    <!-- AI 수석 코치의 질문 카드 -->
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:20px 24px;margin-bottom:24px;border:1px solid rgba(201,168,76,0.3)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="font-size:22px">🤖</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#C9A84C;letter-spacing:2px">AI 수석 코치의 질문</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px">커리큘럼 지식 누적 인터뷰</div>
+        </div>
+        <span id="interviewChapterBadge" style="margin-left:auto;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0"></span>
+      </div>
+      <div id="interviewLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
+      <div id="interviewWithQuestion" style="display:none">
+        <div id="interviewQuestion" style="font-size:15px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
+        <textarea id="interviewAnswerInput" placeholder="대표님의 답변을 입력하세요..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(201,168,76,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
+        <div id="interviewErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
+        <button id="interviewSubmitBtn" onclick="submitInterviewAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C9A84C,#a58030);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📚 답변하고 AI 학습시키기</button>
+      </div>
+      <div id="interviewEmpty" style="display:none;text-align:center;padding:10px 0">
+        <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:12px">현재 대기중인 질문이 없습니다.</div>
+        <button onclick="generateInterviewQuestion()" style="background:transparent;border:1.5px solid rgba(201,168,76,0.5);color:#C9A84C;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✨ 새 질문 생성하기</button>
+      </div>
+    </div>
+
     <div class="form-card">
       <div class="form-card-title">📋 AI 코칭 피드백 관리
         <span id="coachingPendingCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
@@ -1128,6 +1152,7 @@ function initCoachingTab() {
   const pendingList = document.getElementById('coachingPendingList');
   pendingList.innerHTML = '<div class="loading-msg">실시간 연결 중...</div>';
   loadKnowledgeLibrary();
+  loadInterviewCard();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1422,6 +1447,119 @@ window.deleteKnowledgeItem = async (id) => {
     showToast('삭제되었습니다.');
     loadKnowledgeLibrary();
   } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+};
+
+/* ---- AI INTERVIEW ---- */
+const PROCESS_INTERVIEW_URL = 'https://thestepper-api.vercel.app/api/process-interview';
+let currentInterviewDocId = null;
+
+async function loadInterviewCard() {
+  const loading = document.getElementById('interviewLoading');
+  const withQ = document.getElementById('interviewWithQuestion');
+  const empty = document.getElementById('interviewEmpty');
+  loading.style.display = 'block';
+  withQ.style.display = 'none';
+  empty.style.display = 'none';
+  try {
+    const snap = await getDocs(collection(db, 'ai_interview'));
+    const pending = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => d.status === '대기중')
+      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+    loading.style.display = 'none';
+    if (pending.length === 0) {
+      empty.style.display = 'block';
+      currentInterviewDocId = null;
+      document.getElementById('interviewChapterBadge').textContent = '';
+    } else {
+      const item = pending[0];
+      currentInterviewDocId = item.id;
+      document.getElementById('interviewQuestion').textContent = item.question || '';
+      document.getElementById('interviewChapterBadge').textContent = item.chapter || '';
+      document.getElementById('interviewAnswerInput').value = '';
+      document.getElementById('interviewErr').textContent = '';
+      withQ.style.display = 'block';
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    empty.style.display = 'block';
+    console.error('[loadInterviewCard]', e);
+  }
+}
+
+window.submitInterviewAnswer = async () => {
+  const answer = document.getElementById('interviewAnswerInput').value.trim();
+  const errEl = document.getElementById('interviewErr');
+  const btn = document.getElementById('interviewSubmitBtn');
+  if (!answer) { errEl.textContent = '답변을 입력해주세요.'; return; }
+  if (!currentInterviewDocId) { errEl.textContent = '질문을 찾을 수 없습니다. 페이지를 새로고침하세요.'; return; }
+  const user = auth.currentUser;
+  if (!user) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ 학습 중...';
+  errEl.textContent = '';
+  try {
+    const token = await user.getIdToken();
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'answer', docId: currentInterviewDocId, adminAnswer: answer })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+    showToast('학습 완료! 다음 질문이 준비됐습니다.');
+    if (json.next) {
+      currentInterviewDocId = json.next.id;
+      document.getElementById('interviewQuestion').textContent = json.next.question;
+      document.getElementById('interviewChapterBadge').textContent = json.next.chapter;
+      document.getElementById('interviewAnswerInput').value = '';
+      document.getElementById('interviewWithQuestion').style.display = 'block';
+      document.getElementById('interviewEmpty').style.display = 'none';
+    } else {
+      await loadInterviewCard();
+    }
+    loadKnowledgeLibrary();
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📚 답변하고 AI 학습시키기';
+  }
+};
+
+window.generateInterviewQuestion = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+  const loading = document.getElementById('interviewLoading');
+  const empty = document.getElementById('interviewEmpty');
+  empty.style.display = 'none';
+  loading.style.display = 'block';
+  try {
+    const token = await user.getIdToken();
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'generate' })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+    loading.style.display = 'none';
+    if (json.next) {
+      currentInterviewDocId = json.next.id;
+      document.getElementById('interviewQuestion').textContent = json.next.question;
+      document.getElementById('interviewChapterBadge').textContent = json.next.chapter;
+      document.getElementById('interviewAnswerInput').value = '';
+      document.getElementById('interviewErr').textContent = '';
+      document.getElementById('interviewWithQuestion').style.display = 'block';
+      document.getElementById('interviewEmpty').style.display = 'none';
+    } else {
+      await loadInterviewCard();
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    empty.style.display = 'block';
+    showToast('질문 생성 오류: ' + e.message, 'error');
+  }
 };
 
 /* ---- NAV TOGGLE ---- */

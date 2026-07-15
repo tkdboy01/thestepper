@@ -1643,7 +1643,7 @@ async function loadSosCard() {
     const pending = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(d => d.status === '대기중' && d.trackType === 'sos')
-      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
     loading.style.display = 'none';
     if (pending.length === 0) {
       empty.style.display    = 'block';

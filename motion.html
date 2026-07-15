@@ -915,7 +915,7 @@ function openExpertCoaching() {
 
 // ── SOS 확신도 판단 ────────────────────────────────────────
 var LOWER_BODY_IDX    = [23, 24, 25, 26, 27, 28]; // 고관절·무릎·발목 양쪽
-var SOS_VIS_THRESHOLD = 0.55;
+var SOS_VIS_THRESHOLD = 0.99; // 테스트용 임시값 (원복 시 0.55로)
 
 function showSosByConfidence() {
   var totalVis = 0, count = 0;

@@ -379,9 +379,44 @@ select.form-control{cursor:pointer}
         </div>
         <div id="sosLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
         <div id="sosWithQuestion" style="display:none">
-          <div id="sosMeta" style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:8px;background:rgba(192,57,43,0.1);border-radius:8px;padding:8px 10px;line-height:1.7"></div>
-          <div id="sosVideoSummary" style="font-size:11px;color:rgba(255,255,255,0.38);margin-bottom:10px;border-left:2px solid rgba(192,57,43,0.4);padding-left:10px;line-height:1.6;word-break:break-all"></div>
-          <div id="sosQuestion" style="font-size:14px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
+
+          <!-- 회원 정보 -->
+          <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:10px;background:rgba(192,57,43,0.1);border-radius:8px;padding:8px 10px;line-height:1.8">
+            <span id="sosUserName" style="font-weight:700;color:#ff9999"></span>
+            <span id="sosUserEmail" style="margin-left:6px;color:rgba(255,255,255,0.45)"></span>
+            <span id="sosChapter" style="display:block;margin-top:2px;color:rgba(255,255,255,0.4)"></span>
+          </div>
+
+          <!-- 영상 플레이어 -->
+          <div id="sosVideoWrap" style="display:none;margin-bottom:10px">
+            <video id="sosVideoPlayer" controls playsinline
+              style="width:100%;border-radius:10px;background:#000;max-height:220px;object-fit:contain"></video>
+          </div>
+
+          <!-- 측정 수치 표 -->
+          <div id="sosMeasurementsWrap" style="display:none;margin-bottom:10px">
+            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.5px;margin-bottom:6px">측정 수치</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;color:rgba(255,255,255,0.8)">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.12)">
+                  <th style="text-align:left;padding:5px 6px;color:rgba(255,255,255,0.45);font-weight:600">항목</th>
+                  <th style="text-align:right;padding:5px 6px;color:rgba(255,255,255,0.45);font-weight:600">최대값</th>
+                  <th style="text-align:right;padding:5px 6px;color:rgba(255,255,255,0.45);font-weight:600">시점</th>
+                </tr>
+              </thead>
+              <tbody id="sosMeasurementsBody"></tbody>
+            </table>
+            <div id="sosFrameInfo" style="margin-top:5px;font-size:11px;color:rgba(255,255,255,0.35)"></div>
+          </div>
+
+          <!-- AI 1차 피드백 전문 -->
+          <div id="sosAiFeedbackWrap" style="display:none;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.5px;margin-bottom:6px">AI 1차 피드백</div>
+            <div id="sosAiFeedback"
+              style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.75;background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-word"></div>
+          </div>
+
+          <!-- 대표 답변 입력 -->
           <textarea id="sosAnswerInput" placeholder="대표님의 답변을 입력하세요. AI가 이를 바탕으로 회원에게 2차 프리미엄 피드백을 작성해 발송합니다..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(192,57,43,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
           <div id="sosErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
           <button id="sosSubmitBtn" onclick="submitSosAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C0392B,#8e1f14);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📤 2차 프리미엄 피드백 발송</button>
@@ -1619,13 +1654,61 @@ async function loadSosCard() {
       badge.style.display  = 'inline-flex';
       const item           = pending[0];
       currentSosDocId      = item.id;
-      document.getElementById('sosMeta').textContent =
-        '챕터: ' + (item.chapter || '미지정') +
-        (item.userId ? ' | UID: ' + item.userId.slice(0, 10) + '…' : '');
-      document.getElementById('sosVideoSummary').textContent = item.videoSummary || '(영상 요약 없음)';
-      document.getElementById('sosQuestion').textContent     = item.question || '';
-      document.getElementById('sosAnswerInput').value        = '';
-      document.getElementById('sosErr').textContent          = '';
+
+      // 회원 정보
+      document.getElementById('sosUserName').textContent  = item.userName || '(이름 없음)';
+      document.getElementById('sosUserEmail').textContent = item.userEmail || '';
+      document.getElementById('sosChapter').textContent   = '챕터: ' + (item.chapter || '미지정');
+
+      // 영상 플레이어
+      const videoWrap   = document.getElementById('sosVideoWrap');
+      const videoPlayer = document.getElementById('sosVideoPlayer');
+      if (item.videoUrl) {
+        videoPlayer.src          = item.videoUrl;
+        videoWrap.style.display  = 'block';
+      } else {
+        videoWrap.style.display  = 'none';
+        videoPlayer.src          = '';
+      }
+
+      // 측정 수치 표
+      const mWrap = document.getElementById('sosMeasurementsWrap');
+      const mBody = document.getElementById('sosMeasurementsBody');
+      const m     = item.measurements;
+      if (m) {
+        const rows = [
+          { label: '오른쪽 무릎', data: m.rightKnee },
+          { label: '왼쪽 무릎',   data: m.leftKnee  },
+          { label: '골반 회전',   data: m.hip        }
+        ];
+        mBody.innerHTML = rows.map(r => {
+          const val  = r.data ? r.data.value + '°' : '-';
+          const time = r.data ? r.data.time + 's'  : '-';
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.07)">
+            <td style="padding:5px 6px">${r.label}</td>
+            <td style="text-align:right;padding:5px 6px;font-weight:700;color:#ff9999">${val}</td>
+            <td style="text-align:right;padding:5px 6px;color:rgba(255,255,255,0.45)">${time}</td>
+          </tr>`;
+        }).join('');
+        document.getElementById('sosFrameInfo').textContent =
+          '총 ' + (m.totalFrames || '-') + '프레임 · 영상 ' + (m.videoDuration || '-') + '초';
+        mWrap.style.display = 'block';
+      } else {
+        mWrap.style.display = 'none';
+      }
+
+      // AI 1차 피드백 전문
+      const fbWrap = document.getElementById('sosAiFeedbackWrap');
+      const fbBox  = document.getElementById('sosAiFeedback');
+      if (item.aiFeedback) {
+        fbBox.textContent    = item.aiFeedback;
+        fbWrap.style.display = 'block';
+      } else {
+        fbWrap.style.display = 'none';
+      }
+
+      document.getElementById('sosAnswerInput').value = '';
+      document.getElementById('sosErr').textContent   = '';
       withQ.style.display = 'block';
     }
   } catch (e) {

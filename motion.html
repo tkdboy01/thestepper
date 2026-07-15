@@ -405,6 +405,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <!-- jsPDF — 화면 캡처 없이 좌표 직접 그리기 (한국어는 canvas 이미지로 삽입) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- MediaPipe Pose -->
@@ -437,6 +438,7 @@ let poseReady = false;
 let frameData = [];
 let isAnalyzing = false;
 let lastPoseResult = null;
+let currentVideoFile = null;
 
 // ── Firebase Auth ──────────────────────────────────────────
 firebase.initializeApp({
@@ -447,8 +449,9 @@ firebase.initializeApp({
   messagingSenderId: "787224576231",
   appId: "1:787224576231:web:04d4003f42ecace9016242"
 });
-const auth = firebase.auth();
-const db   = firebase.firestore();
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
 
 auth.onAuthStateChanged(function(user) {
   document.getElementById('initLoading').style.display = 'none';
@@ -584,6 +587,7 @@ function initPose() {
 function onVideoSelected(e) {
   var file = e.target.files[0];
   if (!file) return;
+  currentVideoFile = file;
 
   var video = document.getElementById('videoPlayer');
   video.src = URL.createObjectURL(file);
@@ -949,36 +953,70 @@ function closeSosModal() {
 // ── SOS 등록 ───────────────────────────────────────────────
 async function submitSosModal() {
   if (!currentUser) return;
-  var btn     = document.getElementById('sosModalSubmitBtn');
+  var btn = document.getElementById('sosModalSubmitBtn');
   btn.disabled    = true;
   btn.textContent = '⏳ 전송 중...';
 
-  var chapterId  = parseInt(document.getElementById('chapterSelect').value);
-  var chapter    = CHAPTERS[chapterId] || { name: '기타', tech: '' };
-  var maxRight   = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; }, frameData[0]);
-  var maxLeft    = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; }, frameData[0]);
-  var maxHip     = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; }, frameData[0]);
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter   = CHAPTERS[chapterId] || { name: '기타', tech: '' };
+  var video     = document.getElementById('videoPlayer');
+
+  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; }, frameData[0]);
+  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; }, frameData[0]);
+  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; }, frameData[0]);
+
+  var measurements = {
+    rightKnee:     { value: maxRight.angles.rightKnee, time: parseFloat(maxRight.time.toFixed(2)) },
+    leftKnee:      { value: maxLeft.angles.leftKnee,   time: parseFloat(maxLeft.time.toFixed(2)) },
+    hip:           { value: maxHip.angles.hipRot,       time: parseFloat(maxHip.time.toFixed(2)) },
+    totalFrames:   frameData.length,
+    videoDuration: parseFloat((video.duration || 0).toFixed(1))
+  };
+
   var aiFeedback = document.getElementById('feedbackText').textContent || '';
-  var videoSummary =
-    chapter.name + ' ' + chapter.tech +
-    ' | 오른쪽무릎 최대: ' + maxRight.angles.rightKnee + '° (' + maxRight.time.toFixed(1) + 's)' +
-    ' / 왼쪽무릎: ' + maxLeft.angles.leftKnee + '°' +
-    ' / 골반: ' + maxHip.angles.hipRot + '°' +
-    ' | AI 1차 피드백: ' + aiFeedback.slice(0, 300);
 
   try {
+    // 1. 영상 Storage 업로드
+    var videoUrl  = '';
+    var videoPath = '';
+    if (currentVideoFile) {
+      var newDocRef = db.collection('ai_interview').doc();
+      videoPath     = 'sos_videos/' + currentUser.uid + '/' + newDocRef.id + '.mp4';
+      btn.textContent = '⏳ 영상 업로드 중...';
+      var snapshot  = await storage.ref(videoPath).put(currentVideoFile);
+      videoUrl      = await snapshot.ref.getDownloadURL();
+    }
+
+    // 2. users 컬렉션에서 본명 조회
+    var userName = '';
+    try {
+      var userSnap = await db.collection('users').doc(currentUser.uid).get();
+      if (userSnap.exists) {
+        var ud = userSnap.data();
+        userName = ud.name || ud.displayName || ud.realName || '';
+      }
+    } catch (_) {}
+
+    // 3. ai_interview 저장
+    btn.textContent = '⏳ SOS 등록 중...';
     var now = firebase.firestore.FieldValue.serverTimestamp();
     await db.collection('ai_interview').add({
       trackType:    'sos',
       userId:       currentUser.uid,
+      userEmail:    currentUser.email || '',
+      userName:     userName,
       question:     '[SOS] ' + chapter.name + ' ' + chapter.tech + ' 동작 분석 추가 피드백 요청',
       chapter:      chapter.name + ' ' + chapter.tech,
-      videoSummary: videoSummary,
+      videoUrl:     videoUrl,
+      videoPath:    videoPath,
+      measurements: measurements,
+      aiFeedback:   aiFeedback,
       status:       '대기중',
       adminAnswer:  '',
       createdAt:    now,
       updatedAt:    now
     });
+
     document.getElementById('sosModalContent').style.display = 'none';
     document.getElementById('sosModalSuccess').style.display = 'block';
   } catch (e) {

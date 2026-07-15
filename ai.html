@@ -1213,35 +1213,52 @@ async function sendMessage() {
 }
 
 // ===== 전문가 코칭 — 알림 배지 =====
-var inboxUnsubscribe = null;
+var inboxUnsubscribe   = null;
+var userMsgUnsubscribe = null;
 
 function startInboxListener(uid) {
-  if (inboxUnsubscribe) inboxUnsubscribe();
-  var btn = document.getElementById('inboxNavBtn');
+  if (inboxUnsubscribe)   inboxUnsubscribe();
+  if (userMsgUnsubscribe) userMsgUnsubscribe();
+  var btn          = document.getElementById('inboxNavBtn');
+  var dot          = document.getElementById('inboxDot');
+  var coachUnread  = 0;
+  var msgUnread    = 0;
+
+  function syncBadge() {
+    var total = coachUnread + msgUnread;
+    if (!btn) return;
+    btn.style.display = 'flex';
+    if (total > 0) {
+      btn.classList.add('has-new');
+      dot.textContent   = total;
+      dot.style.display = 'flex';
+    } else {
+      btn.classList.remove('has-new');
+      dot.style.display = 'none';
+    }
+  }
+
   inboxUnsubscribe = db.collection('ai_coaching')
     .where('userId', '==', uid)
     .onSnapshot(function(snap) {
-      var unread = snap.docs.filter(function(d) {
+      coachUnread = snap.docs.filter(function(d) {
         var data = d.data();
         return data.status === '답변완료' && !data.viewed;
       }).length;
-      if (btn) {
-        btn.style.display = 'flex';
-        var dot = document.getElementById('inboxDot');
-        if (unread > 0) {
-          btn.classList.add('has-new');
-          dot.textContent = unread;
-          dot.style.display = 'flex';
-        } else {
-          btn.classList.remove('has-new');
-          dot.style.display = 'none';
-        }
-      }
+      syncBadge();
+    }, function() {});
+
+  userMsgUnsubscribe = db.collection('user_messages')
+    .where('userId', '==', uid)
+    .onSnapshot(function(snap) {
+      msgUnread = snap.docs.filter(function(d) { return !d.data().viewed; }).length;
+      syncBadge();
     }, function() {});
 }
 
 function stopInboxListener() {
-  if (inboxUnsubscribe) { inboxUnsubscribe(); inboxUnsubscribe = null; }
+  if (inboxUnsubscribe)   { inboxUnsubscribe();   inboxUnsubscribe   = null; }
+  if (userMsgUnsubscribe) { userMsgUnsubscribe(); userMsgUnsubscribe = null; }
   var btn = document.getElementById('inboxNavBtn');
   if (btn) btn.style.display = 'none';
 }
@@ -1266,58 +1283,130 @@ async function loadInbox() {
   var list = document.getElementById('inboxList');
   list.innerHTML = '<div style="text-align:center;color:#8e8e93;padding:40px 0">불러오는 중...</div>';
   try {
-    var snap = await db.collection('ai_coaching').where('userId', '==', uid).get();
-    if (snap.empty) {
-      list.innerHTML = '<div style="text-align:center;color:#8e8e93;padding:48px 0;line-height:2.2">아직 질문이 없습니다.<br><small style="font-size:12px">아래 전문가 코치에게 직접 질문하기 버튼을 눌러 시작해보세요.</small></div>';
+    var results = await Promise.all([
+      db.collection('ai_coaching').where('userId', '==', uid).get(),
+      db.collection('user_messages').where('userId', '==', uid).get()
+    ]);
+    var coachSnap = results[0];
+    var msgSnap   = results[1];
+
+    if (coachSnap.empty && msgSnap.empty) {
+      list.innerHTML = '<div style="text-align:center;color:#8e8e93;padding:48px 0;line-height:2.2">아직 코칭 내역이 없습니다.<br><small style="font-size:12px">아래 전문가 코치에게 직접 질문하기 버튼을 눌러 시작해보세요.</small></div>';
       return;
     }
-    var docs = snap.docs.slice().sort(function(a, b) {
-      var ta = a.data().createdAt && a.data().createdAt.toMillis ? a.data().createdAt.toMillis() : 0;
-      var tb = b.data().createdAt && b.data().createdAt.toMillis ? b.data().createdAt.toMillis() : 0;
-      return tb - ta;
-    });
     list.innerHTML = '';
-    docs.forEach(function(docSnap) {
-      var d = docSnap.data();
-      var isNew = d.status === '답변완료' && !d.viewed;
-      var card = document.createElement('div');
-      card.className = 'inbox-card' + (d.status === '답변완료' ? ' answered' : '') + (isNew ? ' is-new' : '');
-      card.id = 'icard-' + docSnap.id;
 
-      var top = document.createElement('div');
-      top.className = 'inbox-card-top';
+    // ── 2차 프리미엄 피드백 섹션 ──
+    if (!msgSnap.empty) {
+      var msgDocs = msgSnap.docs.slice().sort(function(a, b) {
+        var ta = a.data().createdAt && a.data().createdAt.toMillis ? a.data().createdAt.toMillis() : 0;
+        var tb = b.data().createdAt && b.data().createdAt.toMillis ? b.data().createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:11px;font-weight:700;color:#C9A84C;letter-spacing:1.5px;margin:0 0 8px';
+      hdr.textContent = '✦ 2차 프리미엄 피드백';
+      list.appendChild(hdr);
 
-      var statusEl = document.createElement('span');
-      statusEl.className = 'inbox-card-status ' + (d.status === '답변완료' ? 'status-done' : 'status-waiting');
-      statusEl.textContent = d.status === '답변완료' ? '✅ 답변완료' : '⏳ 대기중';
+      msgDocs.forEach(function(docSnap) {
+        var d     = docSnap.data();
+        var isNew = !d.viewed;
+        var card  = document.createElement('div');
+        card.className = 'inbox-card answered' + (isNew ? ' is-new' : '');
+        card.id        = 'umcard-' + docSnap.id;
 
-      var body = document.createElement('div');
-      body.className = 'inbox-card-body';
+        var top = document.createElement('div');
+        top.className   = 'inbox-card-top';
+        top.style.cursor = 'pointer';
 
-      var qEl = document.createElement('div');
-      qEl.className = 'inbox-card-q';
-      qEl.textContent = d.question;
+        var statusEl = document.createElement('span');
+        statusEl.className   = 'inbox-card-status status-done';
+        statusEl.textContent = '🤖 프리미엄';
 
-      var meta = document.createElement('div');
-      meta.className = 'inbox-card-meta';
-      var dateStr = d.createdAt && d.createdAt.toDate
-        ? d.createdAt.toDate().toLocaleString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
-        : '';
-      meta.textContent = dateStr + (d.videoData ? ' · 영상 데이터 첨부됨' : '');
+        var body = document.createElement('div');
+        body.className = 'inbox-card-body';
 
-      body.appendChild(qEl);
-      body.appendChild(meta);
-      top.appendChild(statusEl);
-      top.appendChild(body);
-      card.appendChild(top);
+        var qEl = document.createElement('div');
+        qEl.className   = 'inbox-card-q';
+        qEl.textContent = d.chapter || '동작 분석';
 
-      if (d.status === '답변완료') {
-        (function(id, ans, viewed, cardEl) {
-          top.onclick = function() { toggleInboxAnswer(id, ans, viewed, cardEl); };
-        })(docSnap.id, d.finalAiResponse, d.viewed, card);
+        var meta = document.createElement('div');
+        meta.className   = 'inbox-card-meta';
+        var dateStr = d.createdAt && d.createdAt.toDate
+          ? d.createdAt.toDate().toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+          : '';
+        meta.textContent = dateStr + ' · 전문 코치 2차 피드백';
+
+        body.appendChild(qEl);
+        body.appendChild(meta);
+        top.appendChild(statusEl);
+        top.appendChild(body);
+        card.appendChild(top);
+
+        (function(id, feedback, viewed, cardEl) {
+          top.onclick = function() { toggleUserMsgAnswer(id, feedback, viewed, cardEl); };
+        })(docSnap.id, d.premiumFeedback, d.viewed, card);
+
+        list.appendChild(card);
+      });
+
+      if (!coachSnap.empty) {
+        var divider = document.createElement('div');
+        divider.style.cssText = 'font-size:11px;font-weight:700;color:#6e6e73;letter-spacing:1.5px;margin:16px 0 8px';
+        divider.textContent = '전문가 코칭 Q&A';
+        list.appendChild(divider);
       }
-      list.appendChild(card);
-    });
+    }
+
+    // ── 전문가 코칭 Q&A 섹션 ──
+    if (!coachSnap.empty) {
+      var docs = coachSnap.docs.slice().sort(function(a, b) {
+        var ta = a.data().createdAt && a.data().createdAt.toMillis ? a.data().createdAt.toMillis() : 0;
+        var tb = b.data().createdAt && b.data().createdAt.toMillis ? b.data().createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      docs.forEach(function(docSnap) {
+        var d = docSnap.data();
+        var isNew = d.status === '답변완료' && !d.viewed;
+        var card = document.createElement('div');
+        card.className = 'inbox-card' + (d.status === '답변완료' ? ' answered' : '') + (isNew ? ' is-new' : '');
+        card.id = 'icard-' + docSnap.id;
+
+        var top = document.createElement('div');
+        top.className = 'inbox-card-top';
+
+        var statusEl = document.createElement('span');
+        statusEl.className   = 'inbox-card-status ' + (d.status === '답변완료' ? 'status-done' : 'status-waiting');
+        statusEl.textContent = d.status === '답변완료' ? '✅ 답변완료' : '⏳ 대기중';
+
+        var body = document.createElement('div');
+        body.className = 'inbox-card-body';
+
+        var qEl = document.createElement('div');
+        qEl.className   = 'inbox-card-q';
+        qEl.textContent = d.question;
+
+        var meta = document.createElement('div');
+        meta.className = 'inbox-card-meta';
+        var dateStr = d.createdAt && d.createdAt.toDate
+          ? d.createdAt.toDate().toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+          : '';
+        meta.textContent = dateStr + (d.videoData ? ' · 영상 데이터 첨부됨' : '');
+
+        body.appendChild(qEl);
+        body.appendChild(meta);
+        top.appendChild(statusEl);
+        top.appendChild(body);
+        card.appendChild(top);
+
+        if (d.status === '답변완료') {
+          (function(id, ans, viewed, cardEl) {
+            top.onclick = function() { toggleInboxAnswer(id, ans, viewed, cardEl); };
+          })(docSnap.id, d.finalAiResponse, d.viewed, card);
+        }
+        list.appendChild(card);
+      });
+    }
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:var(--red);padding:24px">오류: ' + e.message + '</div>';
   }
@@ -1342,6 +1431,26 @@ async function toggleInboxAnswer(docId, answerText, alreadyViewed, card) {
   if (!alreadyViewed) {
     card.classList.remove('is-new');
     try { await db.collection('ai_coaching').doc(docId).update({ viewed: true }); } catch(e) {}
+  }
+}
+
+async function toggleUserMsgAnswer(docId, answerText, alreadyViewed, card) {
+  var existing = card.querySelector('.inbox-answer-wrap');
+  if (existing) { existing.remove(); return; }
+  var wrap  = document.createElement('div');
+  wrap.className = 'inbox-answer-wrap';
+  var label = document.createElement('div');
+  label.className   = 'inbox-answer-label';
+  label.textContent = '✦ 전문 코치 2차 프리미엄 피드백';
+  var text  = document.createElement('div');
+  text.className   = 'inbox-answer-text';
+  text.textContent = answerText || '(내용 없음)';
+  wrap.appendChild(label);
+  wrap.appendChild(text);
+  card.appendChild(wrap);
+  if (!alreadyViewed) {
+    card.classList.remove('is-new');
+    try { await db.collection('user_messages').doc(docId).update({ viewed: true }); } catch(e) {}
   }
 }
 

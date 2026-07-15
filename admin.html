@@ -341,27 +341,56 @@ select.form-control{cursor:pointer}
   <!-- ===== 코칭 관리 탭 ===== -->
   <div id="tab-coaching" class="tab-content" style="display:none">
 
-    <!-- AI 수석 코치의 질문 카드 -->
-    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:20px 24px;margin-bottom:24px;border:1px solid rgba(201,168,76,0.3)">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="font-size:22px">🤖</div>
-        <div>
-          <div style="font-size:13px;font-weight:800;color:#C9A84C;letter-spacing:2px">AI 수석 코치의 질문</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px">커리큘럼 지식 누적 인터뷰</div>
+    <!-- AI 인터뷰 투 트랙 -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+
+      <!-- Track 1: 시나리오 인터뷰 -->
+      <div style="flex:1;min-width:280px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-radius:14px;padding:20px 24px;border:1px solid rgba(201,168,76,0.3)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="font-size:22px">🤖</div>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#C9A84C;letter-spacing:2px">AI 수석 코치의 질문</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px">커리큘럼 지식 누적 인터뷰</div>
+          </div>
+          <span id="interviewChapterBadge" style="margin-left:auto;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0"></span>
         </div>
-        <span id="interviewChapterBadge" style="margin-left:auto;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0"></span>
+        <div id="interviewLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
+        <div id="interviewWithQuestion" style="display:none">
+          <div id="interviewQuestion" style="font-size:15px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
+          <textarea id="interviewAnswerInput" placeholder="대표님의 답변을 입력하세요..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(201,168,76,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
+          <div id="interviewErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
+          <button id="interviewSubmitBtn" onclick="submitInterviewAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C9A84C,#a58030);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📚 답변하고 AI 학습시키기</button>
+        </div>
+        <div id="interviewEmpty" style="display:none;text-align:center;padding:10px 0">
+          <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:12px">현재 대기중인 질문이 없습니다.</div>
+          <button onclick="generateInterviewQuestion()" style="background:transparent;border:1.5px solid rgba(201,168,76,0.5);color:#C9A84C;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✨ 새 질문 생성하기</button>
+        </div>
       </div>
-      <div id="interviewLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
-      <div id="interviewWithQuestion" style="display:none">
-        <div id="interviewQuestion" style="font-size:15px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
-        <textarea id="interviewAnswerInput" placeholder="대표님의 답변을 입력하세요..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(201,168,76,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
-        <div id="interviewErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
-        <button id="interviewSubmitBtn" onclick="submitInterviewAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C9A84C,#a58030);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📚 답변하고 AI 학습시키기</button>
+
+      <!-- Track 2: SOS 동작 분석 -->
+      <div style="flex:1;min-width:280px;background:linear-gradient(135deg,#2e1a1a 0%,#3e1616 100%);border-radius:14px;padding:20px 24px;border:1px solid rgba(192,57,43,0.4)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="font-size:22px">🆘</div>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#ff7070;letter-spacing:2px">동작 분석 SOS</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px">회원 영상 추가 분석 요청</div>
+          </div>
+          <span id="sosBadge" style="display:none;margin-left:auto;background:rgba(192,57,43,0.2);border:1px solid rgba(192,57,43,0.5);color:#ff7070;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0"></span>
+        </div>
+        <div id="sosLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
+        <div id="sosWithQuestion" style="display:none">
+          <div id="sosMeta" style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:8px;background:rgba(192,57,43,0.1);border-radius:8px;padding:8px 10px;line-height:1.7"></div>
+          <div id="sosVideoSummary" style="font-size:11px;color:rgba(255,255,255,0.38);margin-bottom:10px;border-left:2px solid rgba(192,57,43,0.4);padding-left:10px;line-height:1.6;word-break:break-all"></div>
+          <div id="sosQuestion" style="font-size:14px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
+          <textarea id="sosAnswerInput" placeholder="대표님의 답변을 입력하세요. AI가 이를 바탕으로 회원에게 2차 프리미엄 피드백을 작성해 발송합니다..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(192,57,43,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
+          <div id="sosErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
+          <button id="sosSubmitBtn" onclick="submitSosAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C0392B,#8e1f14);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📤 2차 프리미엄 피드백 발송</button>
+        </div>
+        <div id="sosEmpty" style="display:none;text-align:center;padding:10px 0">
+          <div style="font-size:13px;color:rgba(255,255,255,0.55)">현재 대기중인 SOS 요청이 없습니다.</div>
+        </div>
       </div>
-      <div id="interviewEmpty" style="display:none;text-align:center;padding:10px 0">
-        <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:12px">현재 대기중인 질문이 없습니다.</div>
-        <button onclick="generateInterviewQuestion()" style="background:transparent;border:1.5px solid rgba(201,168,76,0.5);color:#C9A84C;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✨ 새 질문 생성하기</button>
-      </div>
+
     </div>
 
     <div class="form-card">
@@ -1153,6 +1182,7 @@ function initCoachingTab() {
   pendingList.innerHTML = '<div class="loading-msg">실시간 연결 중...</div>';
   loadKnowledgeLibrary();
   loadInterviewCard();
+  loadSosCard();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1464,7 +1494,7 @@ async function loadInterviewCard() {
     const snap = await getDocs(collection(db, 'ai_interview'));
     const pending = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(d => d.status === '대기중')
+      .filter(d => d.status === '대기중' && d.trackType !== 'sos')
       .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
     loading.style.display = 'none';
     if (pending.length === 0) {
@@ -1559,6 +1589,79 @@ window.generateInterviewQuestion = async () => {
     loading.style.display = 'none';
     empty.style.display = 'block';
     showToast('질문 생성 오류: ' + e.message, 'error');
+  }
+};
+
+/* ---- SOS TRACK 2 ---- */
+let currentSosDocId = null;
+
+async function loadSosCard() {
+  const loading = document.getElementById('sosLoading');
+  const withQ   = document.getElementById('sosWithQuestion');
+  const empty   = document.getElementById('sosEmpty');
+  const badge   = document.getElementById('sosBadge');
+  loading.style.display = 'block';
+  withQ.style.display   = 'none';
+  empty.style.display   = 'none';
+  try {
+    const snap = await getDocs(collection(db, 'ai_interview'));
+    const pending = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => d.status === '대기중' && d.trackType === 'sos')
+      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+    loading.style.display = 'none';
+    if (pending.length === 0) {
+      empty.style.display    = 'block';
+      badge.style.display    = 'none';
+      currentSosDocId        = null;
+    } else {
+      badge.textContent    = pending.length + '건';
+      badge.style.display  = 'inline-flex';
+      const item           = pending[0];
+      currentSosDocId      = item.id;
+      document.getElementById('sosMeta').textContent =
+        '챕터: ' + (item.chapter || '미지정') +
+        (item.userId ? ' | UID: ' + item.userId.slice(0, 10) + '…' : '');
+      document.getElementById('sosVideoSummary').textContent = item.videoSummary || '(영상 요약 없음)';
+      document.getElementById('sosQuestion').textContent     = item.question || '';
+      document.getElementById('sosAnswerInput').value        = '';
+      document.getElementById('sosErr').textContent          = '';
+      withQ.style.display = 'block';
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    empty.style.display   = 'block';
+    console.error('[loadSosCard]', e);
+  }
+}
+
+window.submitSosAnswer = async () => {
+  const answer = document.getElementById('sosAnswerInput').value.trim();
+  const errEl  = document.getElementById('sosErr');
+  const btn    = document.getElementById('sosSubmitBtn');
+  if (!answer)        { errEl.textContent = '답변을 입력해주세요.'; return; }
+  if (!currentSosDocId) { errEl.textContent = '요청을 찾을 수 없습니다. 새로고침하세요.'; return; }
+  const user = auth.currentUser;
+  if (!user) return;
+  btn.disabled    = true;
+  btn.textContent = '⏳ 발송 중...';
+  errEl.textContent = '';
+  try {
+    const token = await user.getIdToken();
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body:    JSON.stringify({ mode: 'answer', docId: currentSosDocId, adminAnswer: answer })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+    showToast('2차 피드백이 회원에게 발송됐습니다! ✅');
+    await loadSosCard();
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '📤 2차 프리미엄 피드백 발송';
   }
 };
 

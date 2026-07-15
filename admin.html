@@ -380,6 +380,15 @@ select.form-control{cursor:pointer}
         <div id="sosLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
         <div id="sosWithQuestion" style="display:none">
 
+          <!-- 넘기기 네비게이션 -->
+          <div id="sosNav" style="display:none;align-items:center;justify-content:space-between;margin-bottom:12px;background:rgba(255,255,255,0.05);border-radius:8px;padding:6px 10px">
+            <button id="sosPrevBtn" onclick="moveSos(-1)"
+              style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.7);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">◀ 이전</button>
+            <span id="sosNavInfo" style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:600"></span>
+            <button id="sosNextBtn" onclick="moveSos(1)"
+              style="background:transparent;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.7);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">다음 ▶</button>
+          </div>
+
           <!-- 회원 정보 -->
           <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:10px;background:rgba(192,57,43,0.1);border-radius:8px;padding:8px 10px;line-height:1.8">
             <span id="sosUserName" style="font-weight:700;color:#ff9999"></span>
@@ -1629,6 +1638,8 @@ window.generateInterviewQuestion = async () => {
 
 /* ---- SOS TRACK 2 ---- */
 let currentSosDocId = null;
+let pendingSosList  = [];
+let currentSosIndex = 0;
 
 async function loadSosCard() {
   const loading = document.getElementById('sosLoading');
@@ -1640,75 +1651,20 @@ async function loadSosCard() {
   empty.style.display   = 'none';
   try {
     const snap = await getDocs(collection(db, 'ai_interview'));
-    const pending = snap.docs
+    pendingSosList = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(d => d.status === '대기중' && d.trackType === 'sos')
       .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
     loading.style.display = 'none';
-    if (pending.length === 0) {
-      empty.style.display    = 'block';
-      badge.style.display    = 'none';
-      currentSosDocId        = null;
+    if (pendingSosList.length === 0) {
+      empty.style.display = 'block';
+      badge.style.display = 'none';
+      currentSosDocId     = null;
     } else {
-      badge.textContent    = pending.length + '건';
-      badge.style.display  = 'inline-flex';
-      const item           = pending[0];
-      currentSosDocId      = item.id;
-
-      // 회원 정보
-      document.getElementById('sosUserName').textContent  = item.userName || '(이름 없음)';
-      document.getElementById('sosUserEmail').textContent = item.userEmail || '';
-      document.getElementById('sosChapter').textContent   = '챕터: ' + (item.chapter || '미지정');
-
-      // 영상 플레이어
-      const videoWrap   = document.getElementById('sosVideoWrap');
-      const videoPlayer = document.getElementById('sosVideoPlayer');
-      if (item.videoUrl) {
-        videoPlayer.src          = item.videoUrl;
-        videoWrap.style.display  = 'block';
-      } else {
-        videoWrap.style.display  = 'none';
-        videoPlayer.src          = '';
-      }
-
-      // 측정 수치 표
-      const mWrap = document.getElementById('sosMeasurementsWrap');
-      const mBody = document.getElementById('sosMeasurementsBody');
-      const m     = item.measurements;
-      if (m) {
-        const rows = [
-          { label: '오른쪽 무릎', data: m.rightKnee },
-          { label: '왼쪽 무릎',   data: m.leftKnee  },
-          { label: '골반 회전',   data: m.hip        }
-        ];
-        mBody.innerHTML = rows.map(r => {
-          const val  = r.data ? r.data.value + '°' : '-';
-          const time = r.data ? r.data.time + 's'  : '-';
-          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.07)">
-            <td style="padding:5px 6px">${r.label}</td>
-            <td style="text-align:right;padding:5px 6px;font-weight:700;color:#ff9999">${val}</td>
-            <td style="text-align:right;padding:5px 6px;color:rgba(255,255,255,0.45)">${time}</td>
-          </tr>`;
-        }).join('');
-        document.getElementById('sosFrameInfo').textContent =
-          '총 ' + (m.totalFrames || '-') + '프레임 · 영상 ' + (m.videoDuration || '-') + '초';
-        mWrap.style.display = 'block';
-      } else {
-        mWrap.style.display = 'none';
-      }
-
-      // AI 1차 피드백 전문
-      const fbWrap = document.getElementById('sosAiFeedbackWrap');
-      const fbBox  = document.getElementById('sosAiFeedback');
-      if (item.aiFeedback) {
-        fbBox.textContent    = item.aiFeedback;
-        fbWrap.style.display = 'block';
-      } else {
-        fbWrap.style.display = 'none';
-      }
-
-      document.getElementById('sosAnswerInput').value = '';
-      document.getElementById('sosErr').textContent   = '';
+      badge.textContent   = pendingSosList.length + '건';
+      badge.style.display = 'inline-flex';
+      currentSosIndex     = 0;
+      renderSosItem(0);
       withQ.style.display = 'block';
     }
   } catch (e) {
@@ -1716,6 +1672,85 @@ async function loadSosCard() {
     empty.style.display   = 'block';
     console.error('[loadSosCard]', e);
   }
+}
+
+function renderSosItem(idx) {
+  const item = pendingSosList[idx];
+  if (!item) return;
+  currentSosDocId = item.id;
+  currentSosIndex = idx;
+
+  // 네비게이션 (2건 이상일 때만 표시)
+  const nav = document.getElementById('sosNav');
+  if (pendingSosList.length > 1) {
+    document.getElementById('sosNavInfo').textContent = pendingSosList.length + '건 중 ' + (idx + 1) + '번째';
+    document.getElementById('sosPrevBtn').disabled    = idx === 0;
+    document.getElementById('sosNextBtn').disabled    = idx === pendingSosList.length - 1;
+    nav.style.display = 'flex';
+  } else {
+    nav.style.display = 'none';
+  }
+
+  // 회원 정보
+  document.getElementById('sosUserName').textContent  = item.userName  || '(이름 없음)';
+  document.getElementById('sosUserEmail').textContent = item.userEmail || '';
+  document.getElementById('sosChapter').textContent   = '챕터: ' + (item.chapter || '미지정');
+
+  // 영상 플레이어
+  const videoWrap   = document.getElementById('sosVideoWrap');
+  const videoPlayer = document.getElementById('sosVideoPlayer');
+  if (item.videoUrl) {
+    videoPlayer.src         = item.videoUrl;
+    videoWrap.style.display = 'block';
+  } else {
+    videoWrap.style.display = 'none';
+    videoPlayer.src         = '';
+  }
+
+  // 측정 수치 표
+  const mWrap = document.getElementById('sosMeasurementsWrap');
+  const mBody = document.getElementById('sosMeasurementsBody');
+  const m     = item.measurements;
+  if (m) {
+    const rows = [
+      { label: '오른쪽 무릎', data: m.rightKnee },
+      { label: '왼쪽 무릎',   data: m.leftKnee  },
+      { label: '골반 회전',   data: m.hip        }
+    ];
+    mBody.innerHTML = rows.map(r => {
+      const val  = r.data ? r.data.value + '°' : '-';
+      const time = r.data ? r.data.time + 's'  : '-';
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,0.07)">
+        <td style="padding:5px 6px">${r.label}</td>
+        <td style="text-align:right;padding:5px 6px;font-weight:700;color:#ff9999">${val}</td>
+        <td style="text-align:right;padding:5px 6px;color:rgba(255,255,255,0.45)">${time}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('sosFrameInfo').textContent =
+      '총 ' + (m.totalFrames || '-') + '프레임 · 영상 ' + (m.videoDuration || '-') + '초';
+    mWrap.style.display = 'block';
+  } else {
+    mWrap.style.display = 'none';
+  }
+
+  // AI 1차 피드백 전문
+  const fbWrap = document.getElementById('sosAiFeedbackWrap');
+  const fbBox  = document.getElementById('sosAiFeedback');
+  if (item.aiFeedback) {
+    fbBox.textContent    = item.aiFeedback;
+    fbWrap.style.display = 'block';
+  } else {
+    fbWrap.style.display = 'none';
+  }
+
+  document.getElementById('sosAnswerInput').value = '';
+  document.getElementById('sosErr').textContent   = '';
+}
+
+function moveSos(dir) {
+  const next = currentSosIndex + dir;
+  if (next < 0 || next >= pendingSosList.length) return;
+  renderSosItem(next);
 }
 
 window.submitSosAnswer = async () => {

@@ -355,12 +355,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
     <div class="feedback-text" id="feedbackText"></div>
     <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">📄 결과 PDF로 다운로드</button>
     <button id="expertCoachBtn" onclick="openExpertCoaching()" style="display:none;margin-top:10px;width:100%;padding:11px;background:transparent;border:1.5px solid #C9A84C;color:#C9A84C;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px">👨‍🏫 전문가 코치에게 직접 질문하기</button>
-    <!-- SOS 2차 분석 요청 배너 -->
-    <div id="sosBannerSection" style="display:none;margin-top:14px;background:#fff8f8;border:1.5px solid rgba(192,57,43,0.2);border-radius:12px;padding:14px 16px;text-align:center">
-      <div style="font-size:12px;color:#6e6e73;margin-bottom:10px">AI 분석이 부정확하거나 더 정밀한 피드백이 필요하신가요?</div>
-      <button onclick="requestSOS()" id="sosRequestBtn" style="background:transparent;border:1.5px solid #C0392B;color:#C0392B;border-radius:10px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🆘 전문 코치에게 2차 분석 요청</button>
-      <div id="sosSuccessMsg" style="display:none;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:600">✅ SOS 요청이 전송됐습니다! <a href="ai.html" style="color:#C0392B">코칭 보관함에서 답변 확인 →</a></div>
+    <!-- A: 낮은 확신도 자동 배너 (visibility < 0.55) -->
+    <div id="sosBannerAuto" style="display:none;margin-top:14px;background:linear-gradient(135deg,#fff5f5,#fff0f0);border:1.5px solid rgba(192,57,43,0.35);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:13px;font-weight:700;color:#C0392B;margin-bottom:6px">⚠️ AI 분석 신뢰도 약 80%</div>
+      <div style="font-size:12px;color:#6e6e73;margin-bottom:12px;line-height:1.7">영상 일부 구간에서 포즈 인식이 불안정합니다.<br>전문 코치가 직접 검토하는 2차 프리미엄 피드백을 보내드리겠습니다.</div>
+      <button id="sosAutoBtnEl" onclick="requestSOS(this)" style="background:linear-gradient(135deg,#C0392B,#8e1f14);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🆘 2차 프리미엄 피드백 받기</button>
     </div>
+    <!-- C: 상시 소형 버튼 (visibility >= 0.55) -->
+    <div id="sosBtnSmall" style="display:none;margin-top:8px;text-align:right">
+      <button id="sosSmallBtnEl" onclick="requestSOS(this)" style="background:transparent;border:none;color:#aaa;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;padding:4px 0;text-decoration:underline">더 정밀한 코치 검토를 원하시면 2차 피드백 요청</button>
+    </div>
+    <!-- 공통 완료 메시지 -->
+    <div id="sosSuccessMsg" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:#2e7d32;font-weight:600">✅ SOS 요청이 전송됐습니다! <a href="ai.html" style="color:#C0392B">코칭 보관함에서 답변 확인 →</a></div>
   </div>
 
 </div>
@@ -830,10 +836,7 @@ async function requestFeedback() {
       document.getElementById('feedbackText').textContent    = data.reply;
       document.getElementById('feedbackText').style.display  = 'block';
       document.getElementById('pdfBtn').style.display        = 'block';
-      document.getElementById('sosBannerSection').style.display = 'block';
-      document.getElementById('sosRequestBtn').disabled      = false;
-      document.getElementById('sosRequestBtn').textContent   = '🆘 전문 코치에게 2차 분석 요청';
-      document.getElementById('sosSuccessMsg').style.display = 'none';
+      showSosByConfidence();
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
@@ -876,21 +879,56 @@ function openExpertCoaching() {
   window.location.href = 'ai.html#expert';
 }
 
-// ── SOS 2차 분석 요청 ──────────────────────────────────────
-async function requestSOS() {
+// ── SOS 확신도 판단 + 배너/버튼 노출 ──────────────────────
+var LOWER_BODY_IDX   = [23, 24, 25, 26, 27, 28]; // 고관절·무릎·발목 양쪽
+var SOS_VIS_THRESHOLD = 0.55;
+
+function showSosByConfidence() {
+  var totalVis = 0, count = 0;
+  frameData.forEach(function(f) {
+    LOWER_BODY_IDX.forEach(function(idx) {
+      var lm = f.landmarks[idx];
+      if (lm) { totalVis += (lm.visibility || 0); count++; }
+    });
+  });
+  var avgVis = count > 0 ? totalVis / count : 0;
+
+  console.log(
+    '[SOS] 하체 랜드마크 평균 visibility:', avgVis.toFixed(3),
+    avgVis < SOS_VIS_THRESHOLD
+      ? '→ 낮음 (자동 SOS 배너 노출)'
+      : '→ 충분 (상시 소형 버튼 노출)'
+  );
+
+  // 초기화
+  document.getElementById('sosBannerAuto').style.display = 'none';
+  document.getElementById('sosBtnSmall').style.display   = 'none';
+  document.getElementById('sosSuccessMsg').style.display = 'none';
+  document.getElementById('sosAutoBtnEl').disabled       = false;
+  document.getElementById('sosAutoBtnEl').textContent    = '🆘 2차 프리미엄 피드백 받기';
+  document.getElementById('sosSmallBtnEl').disabled      = false;
+  document.getElementById('sosSmallBtnEl').textContent   = '더 정밀한 코치 검토를 원하시면 2차 피드백 요청';
+
+  if (avgVis < SOS_VIS_THRESHOLD) {
+    document.getElementById('sosBannerAuto').style.display = 'block';
+  } else {
+    document.getElementById('sosBtnSmall').style.display = 'block';
+  }
+}
+
+// ── SOS 등록 ───────────────────────────────────────────────
+async function requestSOS(btn) {
   if (!currentUser) return;
-  var btn = document.getElementById('sosRequestBtn');
+  var origText    = btn.textContent;
   btn.disabled    = true;
   btn.textContent = '⏳ 전송 중...';
 
   var chapterId = parseInt(document.getElementById('chapterSelect').value);
   var chapter   = CHAPTERS[chapterId] || { name: '기타', tech: '' };
-
-  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; }, frameData[0]);
-  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; }, frameData[0]);
-  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; }, frameData[0]);
-
-  var aiFeedback   = document.getElementById('feedbackText').textContent || '';
+  var maxRight  = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; }, frameData[0]);
+  var maxLeft   = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; }, frameData[0]);
+  var maxHip    = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; }, frameData[0]);
+  var aiFeedback = document.getElementById('feedbackText').textContent || '';
   var videoSummary =
     chapter.name + ' ' + chapter.tech +
     ' | 오른쪽무릎 최대: ' + maxRight.angles.rightKnee + '° (' + maxRight.time.toFixed(1) + 's)' +
@@ -911,11 +949,12 @@ async function requestSOS() {
       createdAt:    now,
       updatedAt:    now
     });
-    btn.style.display = 'none';
+    document.getElementById('sosBannerAuto').style.display = 'none';
+    document.getElementById('sosBtnSmall').style.display   = 'none';
     document.getElementById('sosSuccessMsg').style.display = 'block';
   } catch (e) {
     btn.disabled    = false;
-    btn.textContent = '🆘 전문 코치에게 2차 분석 요청';
+    btn.textContent = origText;
     alert('전송 실패: ' + e.message);
   }
 }

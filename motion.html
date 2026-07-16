@@ -814,6 +814,21 @@ async function requestFeedback() {
     return;
   }
 
+  // ── SW 해제: MediaPipe가 등록한 Service Worker가 API fetch를 가로채는 현상 대비 ──
+  var swCount = 0;
+  var fetchNative = (typeof fetch === 'function' && fetch.toString().indexOf('[native code]') !== -1);
+  if ('serviceWorker' in navigator) {
+    try {
+      var swRegs = await navigator.serviceWorker.getRegistrations();
+      swCount = swRegs.length;
+      for (var swReg of swRegs) await swReg.unregister();
+    } catch(swErr) {}
+  }
+  var errEl = document.getElementById('feedbackError');
+  errEl.style.cssText = 'display:block;background:#fff3cd;color:#444;font-size:11px;font-family:monospace;padding:6px 10px;border-radius:4px';
+  errEl.textContent = '[진단] SW ' + swCount + '개 해제 | fetch네이티브:' + fetchNative + ' | 서버 요청 중...';
+  // ──────────────────────────────────────────────────────────────────────────────
+
   var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
   var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
   var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
@@ -877,10 +892,12 @@ async function requestFeedback() {
     });
     var data = await res.json();
     document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.style.cssText = '';
     if (!res.ok) {
-      document.getElementById('feedbackError').textContent    = data.error || '오류가 발생했습니다.';
-      document.getElementById('feedbackError').style.display  = 'block';
+      errEl.textContent   = data.error || '오류가 발생했습니다.';
+      errEl.style.display = 'block';
     } else {
+      errEl.style.display = 'none';
       document.getElementById('feedbackText').textContent    = data.reply;
       document.getElementById('feedbackText').style.display  = 'block';
       document.getElementById('pdfBtn').style.display        = 'block';
@@ -888,8 +905,9 @@ async function requestFeedback() {
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
-    document.getElementById('feedbackError').textContent    = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')';
-    document.getElementById('feedbackError').style.display  = 'block';
+    errEl.style.cssText = '';
+    errEl.textContent   = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')  [SW:' + swCount + '개 fetch네이티브:' + fetchNative + ']';
+    errEl.style.display = 'block';
     console.error('[requestFeedback error]', e);
   } finally {
     document.getElementById('feedbackBtn').disabled = false;

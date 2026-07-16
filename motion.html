@@ -866,6 +866,24 @@ async function requestFeedback() {
     ' 기술 관점에서 이 학생 동작의 특이점과 개선 포인트를 구체적으로 알려주세요.' +
     ' 수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
 
+  var bodyStr = JSON.stringify({ message: msg });
+
+  // ── 임시 진단 표시 (확인 후 제거 예정) ──────────────────────
+  var dbgEl = document.getElementById('feedbackError');
+  dbgEl.style.background  = '#dbeafe';
+  dbgEl.style.color       = '#1e3a5f';
+  dbgEl.style.fontFamily  = 'monospace';
+  dbgEl.style.fontSize    = '12px';
+  dbgEl.style.whiteSpace  = 'pre-wrap';
+  dbgEl.textContent =
+    '[진단 정보]\n' +
+    '페이지 origin : ' + window.location.origin + '\n' +
+    '요청 URL      : ' + API_URL + '\n' +
+    'body 크기     : ' + bodyStr.length + ' 자\n' +
+    'body 앞 120자 : ' + bodyStr.slice(0, 120) + '...';
+  dbgEl.style.display = 'block';
+  // ── 진단 표시 끝 ─────────────────────────────────────────────
+
   try {
     var res  = await fetch(API_URL, {
       method: 'POST',
@@ -873,14 +891,21 @@ async function requestFeedback() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + idToken
       },
-      body: JSON.stringify({ message: msg })
+      body: bodyStr
     });
     var data = await res.json();
     document.getElementById('feedbackLoading').style.display = 'none';
+    // 진단 박스 스타일 원복
+    dbgEl.style.background = '';
+    dbgEl.style.color      = '';
+    dbgEl.style.fontFamily = '';
+    dbgEl.style.fontSize   = '';
+    dbgEl.style.whiteSpace = '';
     if (!res.ok) {
-      document.getElementById('feedbackError').textContent    = data.error || '오류가 발생했습니다.';
-      document.getElementById('feedbackError').style.display  = 'block';
+      dbgEl.textContent   = data.error || '오류가 발생했습니다.';
+      dbgEl.style.display = 'block';
     } else {
+      dbgEl.style.display = 'none';
       document.getElementById('feedbackText').textContent    = data.reply;
       document.getElementById('feedbackText').style.display  = 'block';
       document.getElementById('pdfBtn').style.display        = 'block';
@@ -888,8 +913,15 @@ async function requestFeedback() {
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
-    document.getElementById('feedbackError').textContent    = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')';
-    document.getElementById('feedbackError').style.display  = 'block';
+    // 진단 정보에 에러 추가
+    dbgEl.style.background = '';
+    dbgEl.style.color      = '';
+    dbgEl.style.fontFamily = '';
+    dbgEl.style.fontSize   = '';
+    dbgEl.style.whiteSpace = '';
+    dbgEl.textContent = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')\n\n' +
+      '[진단] origin: ' + window.location.origin + ' | body: ' + bodyStr.length + '자';
+    dbgEl.style.display = 'block';
     console.error('[requestFeedback error]', e);
   } finally {
     document.getElementById('feedbackBtn').disabled = false;

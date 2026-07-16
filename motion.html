@@ -797,90 +797,69 @@ async function requestFeedback() {
   var chapter   = CHAPTERS[chapterId];
   if (!chapter) { alert('장을 선택해주세요.'); return; }
 
-  document.getElementById('feedbackBtn').disabled           = true;
-  document.getElementById('feedbackLoading').style.display  = 'block';
-  document.getElementById('feedbackText').style.display     = 'none';
-  document.getElementById('feedbackError').style.display    = 'none';
+  document.getElementById('feedbackBtn').disabled          = true;
+  document.getElementById('feedbackLoading').style.display = 'block';
+  document.getElementById('feedbackText').style.display    = 'none';
+  document.getElementById('feedbackError').style.display   = 'none';
 
-  // ai.html과 동일하게 getIdToken을 별도 try-catch로 분리
+  var errEl = document.getElementById('feedbackError');
+
+  // ── getIdToken 별도 try-catch (ai.html 패턴과 동일) ──
   var idToken;
   try {
     idToken = await user.getIdToken();
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
-    document.getElementById('feedbackError').textContent    = '세션이 만료됐습니다. 다시 로그인해주세요.';
-    document.getElementById('feedbackError').style.display  = 'block';
+    errEl.textContent   = '세션이 만료됐습니다. 다시 로그인해주세요.';
+    errEl.style.display = 'block';
     document.getElementById('feedbackBtn').disabled = false;
     return;
   }
 
-  // ── SW 해제: MediaPipe가 등록한 Service Worker가 API fetch를 가로채는 현상 대비 ──
-  var swCount = 0;
-  var fetchNative = (typeof fetch === 'function' && fetch.toString().indexOf('[native code]') !== -1);
-  if ('serviceWorker' in navigator) {
-    try {
-      var swRegs = await navigator.serviceWorker.getRegistrations();
-      swCount = swRegs.length;
-      for (var swReg of swRegs) await swReg.unregister();
-    } catch(swErr) {}
-  }
-  var errEl = document.getElementById('feedbackError');
-  errEl.style.cssText = 'display:block;background:#fff3cd;color:#444;font-size:11px;font-family:monospace;padding:6px 10px;border-radius:4px';
-  errEl.textContent = '[진단] SW ' + swCount + '개 해제 | fetch네이티브:' + fetchNative + ' | 서버 요청 중...';
-  // ──────────────────────────────────────────────────────────────────────────────
+  // ── 안전한 숫자 변환 (NaN/Infinity 방어) ──
+  var safeNum = function(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; };
+  var safeFixed = function(v, d) { var n = safeNum(v); return n.toFixed(d); };
 
+  // ── 최소한의 깨끗한 데이터만 추출 ──
   var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
   var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
   var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
-  var avgRight = Math.round(frameData.reduce(function(s, f) { return s + f.angles.rightKnee; }, 0) / frameData.length);
-  var avgLeft  = Math.round(frameData.reduce(function(s, f) { return s + f.angles.leftKnee;  }, 0) / frameData.length);
-  var avgHip   = Math.round(frameData.reduce(function(s, f) { return s + f.angles.hipRot;    }, 0) / frameData.length);
-  var dur      = document.getElementById('videoPlayer').duration;
 
-  // Compact timeline — one point every ~0.2 s, capped at 40 entries
-  var timelineStep = Math.max(1, Math.round(0.2 / STEP));
-  var timelineRows = [];
-  for (var ti = 0; ti < frameData.length; ti += timelineStep) {
-    var tf = frameData[ti];
-    timelineRows.push(
-      tf.time.toFixed(2) + 's:R' + tf.angles.rightKnee +
-      '/L' + tf.angles.leftKnee + '/H' + tf.angles.hipRot
-    );
-  }
-  if (timelineRows.length > 40) {
-    var capStep = Math.ceil(timelineRows.length / 40);
-    var capped = [];
-    for (var ci2 = 0; ci2 < timelineRows.length; ci2 += capStep) capped.push(timelineRows[ci2]);
-    timelineRows = capped;
-  }
-
-  // Key motion milestones
-  var firstR90 = null;
-  for (var mi = 0; mi < frameData.length; mi++) {
-    if (frameData[mi].angles.rightKnee >= 90) { firstR90 = frameData[mi]; break; }
-  }
+  var rK = safeNum(maxRight.angles.rightKnee);
+  var lK = safeNum(maxLeft.angles.leftKnee);
+  var hR = safeNum(maxHip.angles.hipRot);
+  var rT = safeFixed(maxRight.time, 2);
+  var lT = safeFixed(maxLeft.time, 2);
+  var hT = safeFixed(maxHip.time, 2);
 
   var msg =
     '[THE STEPPER 동작 분석] ' + chapter.name + ' ' + chapter.tech + '\n\n' +
-    '분석 영상: 총 ' + frameData.length + '프레임 (영상 ' + dur.toFixed(1) + '초 · 약 ' +
-      Math.round(frameData.length / dur) + 'fps)\n\n' +
     '[핵심 각도 — 최대값]\n' +
-    '· 오른쪽 무릎: ' + maxRight.angles.rightKnee + '° (' + maxRight.time.toFixed(2) + '초)\n' +
-    '· 왼쪽 무릎: '   + maxLeft.angles.leftKnee   + '° (' + maxLeft.time.toFixed(2) + '초)\n' +
-    '· 골반 회전: '   + maxHip.angles.hipRot       + '° (' + maxHip.time.toFixed(2) + '초)\n\n' +
-    '[전체 평균]\n' +
-    '· 오른쪽 무릎: ' + avgRight + '° / 왼쪽 무릎: ' + avgLeft + '° / 골반: ' + avgHip + '°\n\n' +
-    '[동작 이정표]\n' +
-    (firstR90 ? '· 오른쪽 무릎 90° 최초 도달: ' + firstR90.time.toFixed(2) + '초\n' : '· 오른쪽 무릎 90° 미도달\n') +
-    '· 최대 무릎각 도달 시점: ' + maxRight.time.toFixed(2) + '초\n' +
-    '· 최대각 시점 골반 회전: ' + maxRight.angles.hipRot + '°\n' +
-    '· 최대각 시점 반대(왼쪽) 무릎: ' + maxRight.angles.leftKnee + '°\n\n' +
-    '[프레임별 각도 타임라인 — R=오른쪽무릎 / L=왼쪽무릎 / H=골반회전]\n' +
-    timelineRows.join(', ') + '\n\n' +
-    '위 시계열 데이터를 분석하여 더스텝퍼 ' + chapter.name + ' ' + chapter.tech +
+    '· 오른쪽 무릎: ' + rK + '° (' + rT + '초)\n' +
+    '· 왼쪽 무릎: '   + lK + '° (' + lT + '초)\n' +
+    '· 골반 회전: '   + hR + '° (' + hT + '초)\n\n' +
+    '총 분석 프레임: ' + frameData.length + '개\n\n' +
+    '더스텝퍼 ' + chapter.name + ' ' + chapter.tech +
     ' 기술 관점에서 이 학생 동작의 특이점과 개선 포인트를 구체적으로 알려주세요.' +
     ' 수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
 
+  // ── JSON 직렬화 — fetch와 별도 try-catch로 분리 ──
+  var bodyStr;
+  try {
+    bodyStr = JSON.stringify({ message: msg });
+  } catch(jsonErr) {
+    document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.textContent   = 'JSON 오류: ' + jsonErr.message;
+    errEl.style.display = 'block';
+    document.getElementById('feedbackBtn').disabled = false;
+    return;
+  }
+
+  // 진단 표시 (body 크기 확인용)
+  errEl.style.cssText = 'display:block;background:#fff3cd;color:#444;font-size:11px;font-family:monospace;padding:6px 10px;border-radius:4px';
+  errEl.textContent   = '[진단] body ' + bodyStr.length + '자 | 서버 요청 중...';
+
+  // ── fetch (ai.html과 완전히 동일한 구조) ──
   try {
     var res  = await fetch(API_URL, {
       method: 'POST',
@@ -888,7 +867,7 @@ async function requestFeedback() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + idToken
       },
-      body: JSON.stringify({ message: msg })
+      body: bodyStr
     });
     var data = await res.json();
     document.getElementById('feedbackLoading').style.display = 'none';
@@ -898,15 +877,15 @@ async function requestFeedback() {
       errEl.style.display = 'block';
     } else {
       errEl.style.display = 'none';
-      document.getElementById('feedbackText').textContent    = data.reply;
-      document.getElementById('feedbackText').style.display  = 'block';
-      document.getElementById('pdfBtn').style.display        = 'block';
+      document.getElementById('feedbackText').textContent   = data.reply;
+      document.getElementById('feedbackText').style.display = 'block';
+      document.getElementById('pdfBtn').style.display       = 'block';
       showSosByConfidence();
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
     errEl.style.cssText = '';
-    errEl.textContent   = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')  [SW:' + swCount + '개 fetch네이티브:' + fetchNative + ']';
+    errEl.textContent   = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')';
     errEl.style.display = 'block';
     console.error('[requestFeedback error]', e);
   } finally {

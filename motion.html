@@ -874,8 +874,9 @@ async function requestFeedback() {
     }
   } catch(e) {
     document.getElementById('feedbackLoading').style.display = 'none';
-    document.getElementById('feedbackError').textContent    = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+    document.getElementById('feedbackError').textContent    = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')';
     document.getElementById('feedbackError').style.display  = 'block';
+    console.error('[requestFeedback error]', e);
   } finally {
     document.getElementById('feedbackBtn').disabled = false;
   }

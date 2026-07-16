@@ -789,7 +789,10 @@ var STEP = 0.067;  // ~15 fps pre-processing
 
 // ── AI Feedback ────────────────────────────────────────────
 async function requestFeedback() {
-  if (!currentUser || !frameData.length) return;
+  if (!frameData.length) return;
+  var user = auth.currentUser;
+  if (!user) { window.location.href = 'ai.html'; return; }
+
   var chapterId = parseInt(document.getElementById('chapterSelect').value);
   var chapter   = CHAPTERS[chapterId];
   if (!chapter) { alert('장을 선택해주세요.'); return; }
@@ -798,6 +801,18 @@ async function requestFeedback() {
   document.getElementById('feedbackLoading').style.display  = 'block';
   document.getElementById('feedbackText').style.display     = 'none';
   document.getElementById('feedbackError').style.display    = 'none';
+
+  // ai.html과 동일하게 getIdToken을 별도 try-catch로 분리
+  var idToken;
+  try {
+    idToken = await user.getIdToken();
+  } catch(e) {
+    document.getElementById('feedbackLoading').style.display = 'none';
+    document.getElementById('feedbackError').textContent    = '세션이 만료됐습니다. 다시 로그인해주세요.';
+    document.getElementById('feedbackError').style.display  = 'block';
+    document.getElementById('feedbackBtn').disabled = false;
+    return;
+  }
 
   var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
   var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
@@ -852,7 +867,6 @@ async function requestFeedback() {
     ' 수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
 
   try {
-    var idToken = await currentUser.getIdToken();
     var res  = await fetch(API_URL, {
       method: 'POST',
       headers: {

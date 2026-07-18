@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>동작 분석 서버 테스트 — ADMIN</title>
 <style>
-  body { font-family: monospace; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+  body { font-family: monospace; max-width: 860px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
   h2   { font-size: 1.1rem; color: #333; border-bottom: 2px solid #333; padding-bottom: 8px; }
   .section { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 20px; margin: 16px 0; }
   .section h3 { margin: 0 0 12px; font-size: 0.95rem; color: #555; }
@@ -13,17 +13,20 @@
   button:disabled { opacity: 0.45; cursor: not-allowed; }
   #status { margin: 10px 0 4px; font-size: 0.85rem; color: #666; }
   #result { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; min-height: 60px; }
+  #videoWrapper { position: relative; display: inline-block; max-width: 100%; background: #000; }
+  #skeletonVideo { display: block; max-width: 100%; }
+  #skeletonCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 </style>
 </head>
 <body>
 
 <h2>⚙ 동작 분석 서버 테스트 (관리자 전용)</h2>
 
-<!-- ── 섹션 1: 영상 업로드 & 분석 ───────────────────────────── -->
+<!-- ── 섹션 0: 진단 정보 ──────────────────────────────────────── -->
 <div class="section" id="section-diagnose">
   <h3>0. 진단 정보</h3>
   <p style="margin:4px 0;font-size:0.85rem;">페이지 origin: <strong id="diagOrigin"></strong></p>
-  <p style="margin:4px 0;font-size:0.85rem;">API 서버: <strong>https://thestepper-motion-api.onrender.com</strong></p>
+  <p style="margin:4px 0;font-size:0.85rem;">API 서버: <strong>https://thestepper-motion-api-1.onrender.com</strong></p>
   <button onclick="runHealthCheck()">서버 헬스체크 (GET /)</button>
   <pre id="healthResult" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:4px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;min-height:30px;"></pre>
 </div>
@@ -37,19 +40,39 @@
   <pre id="result"></pre>
 </div>
 
-<!-- ── 섹션 2~N: 앞으로 기능 추가 예정 ──────────────────────── -->
-<!--
-<div class="section" id="section-xxx">
-  <h3>2. 다음 기능</h3>
+<!-- ── 섹션 2: 영상 + 스켈레톤 재생 ─────────────────────────── -->
+<div class="section" id="section-skeleton" style="display:none;">
+  <h3>2. 영상 + 스켈레톤 재생</h3>
+  <div id="videoWrapper">
+    <video id="skeletonVideo" controls></video>
+    <canvas id="skeletonCanvas"></canvas>
+  </div>
 </div>
--->
 
 <script>
-var API_BASE = 'https://thestepper-motion-api-1.onrender.com';
+var API_BASE      = 'https://thestepper-motion-api-1.onrender.com';
+var landmarksData = [];
+
+// MediaPipe Pose 33 랜드마크 연결 구조 (POSE_CONNECTIONS)
+var CONNECTIONS = [
+  // 얼굴
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],
+  // 몸통
+  [11,12],[11,23],[12,24],[23,24],
+  // 왼쪽 팔
+  [11,13],[13,15],[15,17],[17,19],[19,15],[15,21],
+  // 오른쪽 팔
+  [12,14],[14,16],[16,18],[18,20],[20,16],[16,22],
+  // 왼쪽 다리
+  [23,25],[25,27],[27,29],[29,31],[31,27],
+  // 오른쪽 다리
+  [24,26],[26,28],[28,30],[30,32],[32,28]
+];
 
 // 페이지 로드 시 origin 즉시 표시
 document.getElementById('diagOrigin').textContent = location.origin;
 
+// ── 헬스체크 ────────────────────────────────────────────────────
 async function runHealthCheck() {
   var el = document.getElementById('healthResult');
   el.textContent = 'GET / 요청 중...';
@@ -67,6 +90,7 @@ async function runHealthCheck() {
   }
 }
 
+// ── 업로드 & 분석 ───────────────────────────────────────────────
 async function runAnalyze() {
   var file = document.getElementById('videoFile').files[0];
   if (!file) { alert('파일을 먼저 선택해주세요.'); return; }
@@ -74,6 +98,7 @@ async function runAnalyze() {
   setStatus('업로드 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
   document.getElementById('uploadBtn').disabled = true;
   document.getElementById('result').textContent = '';
+  document.getElementById('section-skeleton').style.display = 'none';
 
   var form = new FormData();
   form.append('file', file);
@@ -82,7 +107,19 @@ async function runAnalyze() {
     var res  = await fetch(API_BASE + '/analyze', { method: 'POST', body: form });
     var data = await res.json();
     setStatus(res.ok ? '✅ 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
-    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+
+    if (res.ok && data.landmarks_by_frame && data.landmarks_by_frame.length) {
+      landmarksData = data.landmarks_by_frame;
+
+      // JSON 표시 시 landmarks_by_frame은 요약 문자열로 대체 (너무 길어서)
+      var display = Object.assign({}, data);
+      display.landmarks_by_frame = '[' + landmarksData.length + '개 프레임 데이터 — 아래 스켈레톤 재생 섹션에서 확인]';
+      document.getElementById('result').textContent = JSON.stringify(display, null, 2);
+
+      setupSkeletonPlayer(file);
+    } else {
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
   } catch (e) {
     setStatus('❌ 연결 실패');
     document.getElementById('result').textContent =
@@ -91,6 +128,87 @@ async function runAnalyze() {
   } finally {
     document.getElementById('uploadBtn').disabled = false;
   }
+}
+
+// ── 스켈레톤 플레이어 초기화 ─────────────────────────────────────
+function setupSkeletonPlayer(file) {
+  var section = document.getElementById('section-skeleton');
+  var video   = document.getElementById('skeletonVideo');
+  var canvas  = document.getElementById('skeletonCanvas');
+
+  // 이전 blob URL 해제
+  if (video.src && video.src.startsWith('blob:')) URL.revokeObjectURL(video.src);
+
+  video.src = URL.createObjectURL(file);
+  section.style.display = 'block';
+
+  // 영상 메타데이터 로드 완료 시 캔버스 크기 동기화
+  video.onloadedmetadata = function() { syncCanvasSize(); };
+
+  // 재생 중 스켈레톤 그리기
+  video.ontimeupdate = function() { drawSkeleton(video.currentTime); };
+
+  // 창 크기 바뀌면 캔버스 크기 재동기화
+  window.onresize = function() {
+    syncCanvasSize();
+    drawSkeleton(video.currentTime);
+  };
+}
+
+// 캔버스 크기를 video 표시 크기에 맞춤
+function syncCanvasSize() {
+  var video  = document.getElementById('skeletonVideo');
+  var canvas = document.getElementById('skeletonCanvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.style.width  = video.offsetWidth  + 'px';
+  canvas.style.height = video.offsetHeight + 'px';
+}
+
+// ── 스켈레톤 그리기 ─────────────────────────────────────────────
+function drawSkeleton(currentTime) {
+  if (!landmarksData.length) return;
+
+  var canvas = document.getElementById('skeletonCanvas');
+  var video  = document.getElementById('skeletonVideo');
+
+  // 표시 크기 불일치 시 재동기화
+  if (parseInt(canvas.style.width) !== video.offsetWidth) syncCanvasSize();
+
+  // 현재 시간에 가장 가까운 프레임 찾기
+  var frame = landmarksData.reduce(function(prev, curr) {
+    return Math.abs(curr.time - currentTime) < Math.abs(prev.time - currentTime) ? curr : prev;
+  });
+
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  var pts = frame.points;
+  var W   = canvas.width;
+  var H   = canvas.height;
+
+  // 연결선 그리기
+  ctx.strokeStyle = 'rgba(0,220,80,0.85)';
+  ctx.lineWidth   = 2;
+  CONNECTIONS.forEach(function(c) {
+    var a = pts[c[0]], b = pts[c[1]];
+    if (a.visibility > 0.3 && b.visibility > 0.3) {
+      ctx.beginPath();
+      ctx.moveTo(a.x * W, a.y * H);
+      ctx.lineTo(b.x * W, b.y * H);
+      ctx.stroke();
+    }
+  });
+
+  // 관절 점 그리기
+  pts.forEach(function(p) {
+    if (p.visibility > 0.3) {
+      ctx.beginPath();
+      ctx.arc(p.x * W, p.y * H, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,50,50,0.9)';
+      ctx.fill();
+    }
+  });
 }
 
 function setStatus(msg) {

@@ -8,7 +8,7 @@
   body { font-family: monospace; max-width: 860px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
   h2   { font-size: 1.1rem; color: #333; border-bottom: 2px solid #333; padding-bottom: 8px; }
   .section { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 20px; margin: 16px 0; }
-  .section h3 { margin: 0 0 12px; font-size: 0.95rem; color: #555; }
+  .section h3 { margin: 0 0 14px; font-size: 0.95rem; color: #555; }
   button { padding: 8px 18px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
   #status { margin: 10px 0 4px; font-size: 0.85rem; color: #666; }
@@ -16,6 +16,16 @@
   #videoWrapper { position: relative; display: inline-block; max-width: 100%; background: #000; }
   #skeletonVideo { display: block; max-width: 100%; }
   #skeletonCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  /* 신체 프로필 폼 */
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 12px; }
+  .profile-grid label { font-size: 0.85rem; color: #444; display: flex; flex-direction: column; gap: 4px; }
+  .profile-grid input,
+  .profile-grid select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+  .profile-grid input:focus,
+  .profile-grid select:focus { outline: none; border-color: #666; }
+  #profileWarning { font-size: 0.8rem; color: #c00; margin: 6px 0 0; min-height: 18px; }
+  #saveStatus { font-size: 0.85rem; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -31,46 +41,137 @@
   <pre id="healthResult" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:4px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;min-height:30px;"></pre>
 </div>
 
-<!-- ── 섹션 1: 영상 업로드 & 분석 ───────────────────────────── -->
-<div class="section" id="section-analyze">
-  <h3>1. 영상 업로드 → /analyze</h3>
-  <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm">
-  <button id="uploadBtn" onclick="runAnalyze()">업로드 &amp; 분석</button>
-  <p id="status">파일을 선택하고 버튼을 누르세요.</p>
-  <pre id="result"></pre>
+<!-- ── 섹션 1: 신체 프로필 입력 ──────────────────────────────── -->
+<div class="section" id="section-profile">
+  <h3>1. 신체 프로필 입력 (필수)</h3>
+  <div class="profile-grid">
+    <label>이름
+      <input type="text" id="pName" placeholder="홍길동" oninput="checkProfile()">
+    </label>
+    <label>나이 (세)
+      <input type="number" id="pAge" placeholder="20" min="1" max="120" oninput="checkProfile()">
+    </label>
+    <label>성별
+      <select id="pGender" onchange="checkProfile()">
+        <option value="">-- 선택 --</option>
+        <option value="남">남</option>
+        <option value="여">여</option>
+      </select>
+    </label>
+    <label>키 (cm)
+      <input type="number" id="pHeight" placeholder="170" min="50" max="250" oninput="checkProfile()">
+    </label>
+    <label>몸무게 (kg)
+      <input type="number" id="pWeight" placeholder="65" min="20" max="300" oninput="checkProfile()">
+    </label>
+    <label>띠
+      <select id="pBelt" onchange="checkProfile()">
+        <option value="">-- 선택 --</option>
+        <option value="흰띠">흰띠 (8급)</option>
+        <option value="노란띠">노란띠 (7~6급)</option>
+        <option value="초록띠">초록띠 (5~4급)</option>
+        <option value="파란띠">파란띠 (3~2급)</option>
+        <option value="빨간띠">빨간띠 (1급)</option>
+        <option value="검은띠1단">검은띠 1단</option>
+        <option value="검은띠2단">검은띠 2단</option>
+        <option value="검은띠3단">검은띠 3단</option>
+        <option value="검은띠4단이상">검은띠 4단 이상</option>
+      </select>
+    </label>
+  </div>
+  <div id="profileWarning"></div>
 </div>
 
-<!-- ── 섹션 2: 영상 + 스켈레톤 재생 ─────────────────────────── -->
+<!-- ── 섹션 2: 영상 업로드 & 분석 ───────────────────────────── -->
+<div class="section" id="section-analyze">
+  <h3>2. 영상 업로드 → /analyze</h3>
+  <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm" onchange="checkProfile()">
+  <button id="uploadBtn" onclick="runAnalyze()" disabled>업로드 &amp; 분석</button>
+  <p id="status">신체 프로필을 먼저 입력해주세요.</p>
+  <pre id="result"></pre>
+  <div id="saveStatus"></div>
+</div>
+
+<!-- ── 섹션 3: 영상 + 스켈레톤 재생 ─────────────────────────── -->
 <div class="section" id="section-skeleton" style="display:none;">
-  <h3>2. 영상 + 스켈레톤 재생</h3>
+  <h3>3. 영상 + 스켈레톤 재생</h3>
   <div id="videoWrapper">
     <video id="skeletonVideo" controls></video>
     <canvas id="skeletonCanvas"></canvas>
   </div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
+// ── Firebase 초기화 ──────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:            "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain:        "thestepper-c9bfb.firebaseapp.com",
+  projectId:         "thestepper-c9bfb",
+  storageBucket:     "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId:             "1:787224576231:web:04d4003f42ecace9016242"
+});
+var db = firebase.firestore();
+
+// ── 설정 ────────────────────────────────────────────────────────
 var API_BASE      = 'https://thestepper-motion-api-1.onrender.com';
 var landmarksData = [];
 
-// MediaPipe Pose 33 랜드마크 연결 구조 (POSE_CONNECTIONS)
 var CONNECTIONS = [
-  // 얼굴
   [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],
-  // 몸통
   [11,12],[11,23],[12,24],[23,24],
-  // 왼쪽 팔
   [11,13],[13,15],[15,17],[17,19],[19,15],[15,21],
-  // 오른쪽 팔
   [12,14],[14,16],[16,18],[18,20],[20,16],[16,22],
-  // 왼쪽 다리
   [23,25],[25,27],[27,29],[29,31],[31,27],
-  // 오른쪽 다리
   [24,26],[26,28],[28,30],[30,32],[32,28]
 ];
 
-// 페이지 로드 시 origin 즉시 표시
 document.getElementById('diagOrigin').textContent = location.origin;
+
+// ── 신체 프로필 유효성 검사 & 버튼 제어 ─────────────────────────
+function checkProfile() {
+  var fields = [
+    { id: 'pName',   label: '이름' },
+    { id: 'pAge',    label: '나이' },
+    { id: 'pGender', label: '성별' },
+    { id: 'pHeight', label: '키'   },
+    { id: 'pWeight', label: '몸무게' },
+    { id: 'pBelt',   label: '띠'   }
+  ];
+  var empty = fields.filter(function(f) {
+    return !document.getElementById(f.id).value.trim();
+  });
+  var hasFile = document.getElementById('videoFile').files.length > 0;
+
+  var warn = document.getElementById('profileWarning');
+  if (empty.length) {
+    warn.textContent = '미입력 항목: ' + empty.map(function(f) { return f.label; }).join(', ');
+  } else {
+    warn.textContent = '';
+  }
+
+  document.getElementById('uploadBtn').disabled = (empty.length > 0 || !hasFile);
+  if (!hasFile && empty.length === 0) {
+    setStatus('영상 파일을 선택해주세요.');
+  } else if (empty.length === 0 && hasFile) {
+    setStatus('준비 완료. 버튼을 눌러 분석을 시작하세요.');
+  }
+}
+
+function getProfile() {
+  return {
+    name:   document.getElementById('pName').value.trim(),
+    age:    Number(document.getElementById('pAge').value),
+    gender: document.getElementById('pGender').value,
+    height: Number(document.getElementById('pHeight').value),
+    weight: Number(document.getElementById('pWeight').value),
+    belt:   document.getElementById('pBelt').value
+  };
+}
 
 // ── 헬스체크 ────────────────────────────────────────────────────
 async function runHealthCheck() {
@@ -98,6 +199,7 @@ async function runAnalyze() {
   setStatus('업로드 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
   document.getElementById('uploadBtn').disabled = true;
   document.getElementById('result').textContent = '';
+  document.getElementById('saveStatus').textContent = '';
   document.getElementById('section-skeleton').style.display = 'none';
 
   var form = new FormData();
@@ -106,17 +208,17 @@ async function runAnalyze() {
   try {
     var res  = await fetch(API_BASE + '/analyze', { method: 'POST', body: form });
     var data = await res.json();
-    setStatus(res.ok ? '✅ 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
+    setStatus(res.ok ? '✅ 분석 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
 
     if (res.ok && data.landmarks_by_frame && data.landmarks_by_frame.length) {
       landmarksData = data.landmarks_by_frame;
 
-      // JSON 표시 시 landmarks_by_frame은 요약 문자열로 대체 (너무 길어서)
       var display = Object.assign({}, data);
       display.landmarks_by_frame = '[' + landmarksData.length + '개 프레임 데이터 — 아래 스켈레톤 재생 섹션에서 확인]';
       document.getElementById('result').textContent = JSON.stringify(display, null, 2);
 
       setupSkeletonPlayer(file);
+      await saveToFirestore(data);
     } else {
       document.getElementById('result').textContent = JSON.stringify(data, null, 2);
     }
@@ -130,32 +232,62 @@ async function runAnalyze() {
   }
 }
 
+// ── Firestore 저장 ──────────────────────────────────────────────
+async function saveToFirestore(analysisData) {
+  var saveEl = document.getElementById('saveStatus');
+  saveEl.textContent = '💾 Firestore 저장 중...';
+  saveEl.style.color = '#666';
+
+  var profile = getProfile();
+
+  var doc = {
+    // 신체 프로필
+    name:   profile.name,
+    age:    profile.age,
+    gender: profile.gender,
+    height: profile.height,
+    weight: profile.weight,
+    belt:   profile.belt,
+
+    // 분석 결과 (landmarks_by_frame 제외)
+    max_angles:            analysisData.max_angles            || null,
+    frame_count:           analysisData.frame_count           || 0,
+    duration_sec:          analysisData.duration_sec          || 0,
+    total_frames_in_video: analysisData.total_frames_in_video || 0,
+    detected_frames:       analysisData.detected_frames       || 0,
+    video_fps:             analysisData.video_fps             || 0,
+
+    // 저장 시각
+    created_at: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    var ref = await db.collection('movement_data').add(doc);
+    saveEl.textContent = '✅ 저장 완료 — 문서 ID: ' + ref.id;
+    saveEl.style.color = '#060';
+  } catch (e) {
+    saveEl.textContent = '❌ 저장 실패: ' + e.message;
+    saveEl.style.color = '#c00';
+  }
+}
+
 // ── 스켈레톤 플레이어 초기화 ─────────────────────────────────────
 function setupSkeletonPlayer(file) {
   var section = document.getElementById('section-skeleton');
   var video   = document.getElementById('skeletonVideo');
-  var canvas  = document.getElementById('skeletonCanvas');
 
-  // 이전 blob URL 해제
   if (video.src && video.src.startsWith('blob:')) URL.revokeObjectURL(video.src);
-
   video.src = URL.createObjectURL(file);
   section.style.display = 'block';
 
-  // 영상 메타데이터 로드 완료 시 캔버스 크기 동기화
   video.onloadedmetadata = function() { syncCanvasSize(); };
-
-  // 재생 중 스켈레톤 그리기
-  video.ontimeupdate = function() { drawSkeleton(video.currentTime); };
-
-  // 창 크기 바뀌면 캔버스 크기 재동기화
+  video.ontimeupdate     = function() { drawSkeleton(video.currentTime); };
   window.onresize = function() {
     syncCanvasSize();
     drawSkeleton(video.currentTime);
   };
 }
 
-// 캔버스 크기를 video 표시 크기에 맞춤
 function syncCanvasSize() {
   var video  = document.getElementById('skeletonVideo');
   var canvas = document.getElementById('skeletonCanvas');
@@ -168,14 +300,11 @@ function syncCanvasSize() {
 // ── 스켈레톤 그리기 ─────────────────────────────────────────────
 function drawSkeleton(currentTime) {
   if (!landmarksData.length) return;
-
-  var canvas = document.getElementById('skeletonCanvas');
   var video  = document.getElementById('skeletonVideo');
+  var canvas = document.getElementById('skeletonCanvas');
 
-  // 표시 크기 불일치 시 재동기화
   if (parseInt(canvas.style.width) !== video.offsetWidth) syncCanvasSize();
 
-  // 현재 시간에 가장 가까운 프레임 찾기
   var frame = landmarksData.reduce(function(prev, curr) {
     return Math.abs(curr.time - currentTime) < Math.abs(prev.time - currentTime) ? curr : prev;
   });
@@ -187,7 +316,6 @@ function drawSkeleton(currentTime) {
   var W   = canvas.width;
   var H   = canvas.height;
 
-  // 연결선 그리기
   ctx.strokeStyle = 'rgba(0,220,80,0.85)';
   ctx.lineWidth   = 2;
   CONNECTIONS.forEach(function(c) {
@@ -200,7 +328,6 @@ function drawSkeleton(currentTime) {
     }
   });
 
-  // 관절 점 그리기
   pts.forEach(function(p) {
     if (p.visibility > 0.3) {
       ctx.beginPath();

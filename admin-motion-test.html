@@ -34,7 +34,7 @@
 
   .report-row { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ccc; }
   #reportBtn { background: #14532d; }
-  #reportStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; white-space: pre-wrap; }
+  #reportStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; }
 </style>
 </head>
 <body>
@@ -172,7 +172,7 @@ function updateFbDebug(label) {
 
 // ── Firebase 초기화 (방어적 패턴: 이미 앱이 있으면 재사용) ──────
 var MY_CONFIG = {
-  apiKey: "AIzaSyBD•••••••••••••••••••••••••••••••",
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
   authDomain: "thestepper-c9bfb.firebaseapp.com",
   projectId: "thestepper-c9bfb",
   storageBucket: "thestepper-c9bfb.firebasestorage.app",
@@ -445,7 +445,7 @@ async function runPipeline() {
 function setReportReady(ready, msg) {
   var btn = document.getElementById('reportBtn');
   var el  = document.getElementById('reportStatus');
-  btn.disabled   = !ready;
+  btn.disabled = !ready;
   el.textContent = msg || '';
   el.style.color = ready ? '#060' : '#888';
 }
@@ -459,7 +459,7 @@ async function downloadReport() {
 
   var btn = document.getElementById('reportBtn');
   var el  = document.getElementById('reportStatus');
-  btn.disabled   = true;
+  btn.disabled = true;
   el.textContent = '⏳ PDF 생성 중... (10~20초 걸릴 수 있음)';
   el.style.color = '#666';
 
@@ -500,7 +500,7 @@ async function downloadReport() {
       }
       el.textContent = '❌ PDF 생성 실패 (HTTP ' + res.status + ')\n' + errText;
       el.style.color = '#c00';
-      btn.disabled   = false;
+      btn.disabled = false;
       return;
     }
 
@@ -509,13 +509,7 @@ async function downloadReport() {
     var cd = res.headers.get('Content-Disposition');
     if (cd) {
       var m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
-      if (m && m[1]) {
-        try {
-          filename = decodeURIComponent(m[1].trim());
-        } catch (e3) {
-          filename = m[1].trim();
-        }
-      }
+      if (m && m[1]) filename = decodeURIComponent(m[1].trim());
     }
 
     var blob = await res.blob();

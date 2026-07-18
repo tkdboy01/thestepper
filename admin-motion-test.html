@@ -11,13 +11,13 @@
   .section h3 { margin: 0 0 14px; font-size: 0.95rem; color: #555; }
   button { padding: 8px 18px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
-  #status { margin: 10px 0 4px; font-size: 0.85rem; color: #666; }
-  #result { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; min-height: 60px; }
+  #status    { margin: 10px 0 4px; font-size: 0.85rem; color: #666; }
+  #result    { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; min-height: 60px; }
+  #aiFeedback{ background: #f0f8ff; border: 1px solid #b0d0f0; border-radius: 4px; padding: 14px; font-size: 0.88rem; line-height: 1.7; white-space: pre-wrap; margin-top: 12px; display: none; }
   #videoWrapper { position: relative; display: inline-block; max-width: 100%; background: #000; }
-  #skeletonVideo { display: block; max-width: 100%; }
+  #skeletonVideo  { display: block; max-width: 100%; }
   #skeletonCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 
-  /* 신체 프로필 폼 */
   .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 12px; }
   .profile-grid label { font-size: 0.85rem; color: #444; display: flex; flex-direction: column; gap: 4px; }
   .profile-grid input,
@@ -25,7 +25,10 @@
   .profile-grid input:focus,
   .profile-grid select:focus { outline: none; border-color: #666; }
   #profileWarning { font-size: 0.8rem; color: #c00; margin: 6px 0 0; min-height: 18px; }
-  #saveStatus { font-size: 0.85rem; margin-top: 10px; }
+  #saveStatus  { font-size: 0.85rem; margin-top: 10px; }
+  #authStatus  { font-size: 0.82rem; margin-top: 8px; }
+  .login-row   { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .login-row input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 0.82rem; }
 </style>
 </head>
 <body>
@@ -36,9 +39,17 @@
 <div class="section" id="section-diagnose">
   <h3>0. 진단 정보</h3>
   <p style="margin:4px 0;font-size:0.85rem;">페이지 origin: <strong id="diagOrigin"></strong></p>
-  <p style="margin:4px 0;font-size:0.85rem;">API 서버: <strong>https://thestepper-motion-api-1.onrender.com</strong></p>
-  <button onclick="runHealthCheck()">서버 헬스체크 (GET /)</button>
+  <p style="margin:4px 0;font-size:0.85rem;">분석 서버: <strong>https://thestepper-motion-api-1.onrender.com</strong></p>
+  <p style="margin:4px 0;font-size:0.85rem;">AI 코치 API: <strong>https://thestepper-api.vercel.app/api/coach</strong></p>
+  <button onclick="runHealthCheck()">분석 서버 헬스체크 (GET /)</button>
   <pre id="healthResult" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:4px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;min-height:30px;"></pre>
+  <div id="authStatus">Firebase 인증 상태 확인 중...</div>
+  <div class="login-row" id="loginRow" style="display:none;">
+    <input type="email"    id="loginEmail" placeholder="이메일" style="width:200px;">
+    <input type="password" id="loginPw"    placeholder="비밀번호" style="width:140px;">
+    <button onclick="doLogin()">로그인</button>
+    <span id="loginErr" style="color:#c00;font-size:0.8rem;"></span>
+  </div>
 </div>
 
 <!-- ── 섹션 1: 신체 프로필 입력 ──────────────────────────────── -->
@@ -46,10 +57,10 @@
   <h3>1. 신체 프로필 입력 (필수)</h3>
   <div class="profile-grid">
     <label>이름
-      <input type="text" id="pName" placeholder="홍길동" oninput="checkProfile()">
+      <input type="text"   id="pName"   placeholder="홍길동"  oninput="checkProfile()">
     </label>
     <label>나이 (세)
-      <input type="number" id="pAge" placeholder="20" min="1" max="120" oninput="checkProfile()">
+      <input type="number" id="pAge"    placeholder="20" min="1" max="120" oninput="checkProfile()">
     </label>
     <label>성별
       <select id="pGender" onchange="checkProfile()">
@@ -62,7 +73,7 @@
       <input type="number" id="pHeight" placeholder="170" min="50" max="250" oninput="checkProfile()">
     </label>
     <label>몸무게 (kg)
-      <input type="number" id="pWeight" placeholder="65" min="20" max="300" oninput="checkProfile()">
+      <input type="number" id="pWeight" placeholder="65"  min="20" max="300" oninput="checkProfile()">
     </label>
     <label>띠
       <select id="pBelt" onchange="checkProfile()">
@@ -82,13 +93,14 @@
   <div id="profileWarning"></div>
 </div>
 
-<!-- ── 섹션 2: 영상 업로드 & 분석 ───────────────────────────── -->
+<!-- ── 섹션 2: 영상 업로드 & 분석 + AI 피드백 ───────────────── -->
 <div class="section" id="section-analyze">
-  <h3>2. 영상 업로드 → /analyze</h3>
+  <h3>2. 영상 업로드 → 분석 → AI 피드백</h3>
   <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm" onchange="checkProfile()">
-  <button id="uploadBtn" onclick="runAnalyze()" disabled>업로드 &amp; 분석</button>
+  <button id="uploadBtn" onclick="runPipeline()" disabled>업로드 &amp; 분석 시작</button>
   <p id="status">신체 프로필을 먼저 입력해주세요.</p>
   <pre id="result"></pre>
+  <div id="aiFeedback"></div>
   <div id="saveStatus"></div>
 </div>
 
@@ -103,6 +115,7 @@
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
@@ -115,10 +128,12 @@ firebase.initializeApp({
   messagingSenderId: "787224576231",
   appId:             "1:787224576231:web:04d4003f42ecace9016242"
 });
-var db = firebase.firestore();
+var auth = firebase.auth();
+var db   = firebase.firestore();
 
 // ── 설정 ────────────────────────────────────────────────────────
-var API_BASE      = 'https://thestepper-motion-api-1.onrender.com';
+var API_ANALYZE = 'https://thestepper-motion-api-1.onrender.com';
+var API_COACH   = 'https://thestepper-api.vercel.app/api/coach';
 var landmarksData = [];
 
 var CONNECTIONS = [
@@ -132,33 +147,60 @@ var CONNECTIONS = [
 
 document.getElementById('diagOrigin').textContent = location.origin;
 
+// ── Firebase 인증 상태 감시 ─────────────────────────────────────
+auth.onAuthStateChanged(function(user) {
+  var el  = document.getElementById('authStatus');
+  var row = document.getElementById('loginRow');
+  if (user) {
+    el.innerHTML  = '🔐 로그인됨: <strong>' + user.email + '</strong>';
+    el.style.color = '#060';
+    row.style.display = 'none';
+  } else {
+    el.textContent = '⚠ 로그인 필요 — AI 코치 API는 인증이 필요합니다.';
+    el.style.color = '#c00';
+    row.style.display = 'flex';
+  }
+  checkProfile();
+});
+
+async function doLogin() {
+  var email = document.getElementById('loginEmail').value.trim();
+  var pw    = document.getElementById('loginPw').value;
+  var errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+}
+
 // ── 신체 프로필 유효성 검사 & 버튼 제어 ─────────────────────────
 function checkProfile() {
   var fields = [
-    { id: 'pName',   label: '이름' },
-    { id: 'pAge',    label: '나이' },
-    { id: 'pGender', label: '성별' },
-    { id: 'pHeight', label: '키'   },
-    { id: 'pWeight', label: '몸무게' },
-    { id: 'pBelt',   label: '띠'   }
+    { id: 'pName',   label: '이름'    },
+    { id: 'pAge',    label: '나이'    },
+    { id: 'pGender', label: '성별'    },
+    { id: 'pHeight', label: '키'      },
+    { id: 'pWeight', label: '몸무게'  },
+    { id: 'pBelt',   label: '띠'      }
   ];
-  var empty = fields.filter(function(f) {
-    return !document.getElementById(f.id).value.trim();
-  });
+  var empty   = fields.filter(function(f) { return !document.getElementById(f.id).value.trim(); });
   var hasFile = document.getElementById('videoFile').files.length > 0;
+  var isAuth  = !!auth.currentUser;
 
   var warn = document.getElementById('profileWarning');
-  if (empty.length) {
-    warn.textContent = '미입력 항목: ' + empty.map(function(f) { return f.label; }).join(', ');
-  } else {
-    warn.textContent = '';
-  }
+  warn.textContent = empty.length ? '미입력 항목: ' + empty.map(function(f){ return f.label; }).join(', ') : '';
 
-  document.getElementById('uploadBtn').disabled = (empty.length > 0 || !hasFile);
-  if (!hasFile && empty.length === 0) {
-    setStatus('영상 파일을 선택해주세요.');
+  var ready = empty.length === 0 && hasFile && isAuth;
+  document.getElementById('uploadBtn').disabled = !ready;
+
+  if (!isAuth) {
+    setStatus('로그인 후 사용할 수 있습니다.');
   } else if (empty.length === 0 && hasFile) {
     setStatus('준비 완료. 버튼을 눌러 분석을 시작하세요.');
+  } else if (!hasFile && empty.length === 0) {
+    setStatus('영상 파일을 선택해주세요.');
   }
 }
 
@@ -178,70 +220,128 @@ async function runHealthCheck() {
   var el = document.getElementById('healthResult');
   el.textContent = 'GET / 요청 중...';
   try {
-    var res  = await fetch(API_BASE + '/');
+    var res  = await fetch(API_ANALYZE + '/');
     var data = await res.json();
-    el.textContent =
-      '✅ HTTP ' + res.status + '\n' +
-      JSON.stringify(data, null, 2);
+    el.textContent = '✅ HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
   } catch (e) {
-    el.textContent =
-      '❌ 연결 실패\n' +
-      'error.name:    ' + e.name + '\n' +
-      'error.message: ' + e.message;
+    el.textContent = '❌ 연결 실패\nerror.name:    ' + e.name + '\nerror.message: ' + e.message;
   }
 }
 
-// ── 업로드 & 분석 ───────────────────────────────────────────────
-async function runAnalyze() {
+// ── 전체 파이프라인 ──────────────────────────────────────────────
+async function runPipeline() {
   var file = document.getElementById('videoFile').files[0];
   if (!file) { alert('파일을 먼저 선택해주세요.'); return; }
+  if (!auth.currentUser) { alert('로그인이 필요합니다.'); return; }
 
-  setStatus('업로드 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
   document.getElementById('uploadBtn').disabled = true;
-  document.getElementById('result').textContent = '';
+  document.getElementById('result').textContent     = '';
+  document.getElementById('aiFeedback').style.display = 'none';
+  document.getElementById('aiFeedback').textContent = '';
   document.getElementById('saveStatus').textContent = '';
   document.getElementById('section-skeleton').style.display = 'none';
+  landmarksData = [];
 
-  var form = new FormData();
-  form.append('file', file);
-
+  // ── STEP 1: 파이썬 서버 분석 ──
+  setStatus('① 분석 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
+  var analyzeData = null;
   try {
-    var res  = await fetch(API_BASE + '/analyze', { method: 'POST', body: form });
-    var data = await res.json();
-    setStatus(res.ok ? '✅ 분석 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
+    var form = new FormData();
+    form.append('file', file);
+    var res1  = await fetch(API_ANALYZE + '/analyze', { method: 'POST', body: form });
+    analyzeData = await res1.json();
 
-    if (res.ok && data.landmarks_by_frame && data.landmarks_by_frame.length) {
-      landmarksData = data.landmarks_by_frame;
+    if (!res1.ok) {
+      setStatus('❌ 분석 서버 오류 (HTTP ' + res1.status + ')');
+      document.getElementById('result').textContent = JSON.stringify(analyzeData, null, 2);
+      document.getElementById('uploadBtn').disabled = false;
+      return;
+    }
 
-      var display = Object.assign({}, data);
-      display.landmarks_by_frame = '[' + landmarksData.length + '개 프레임 데이터 — 아래 스켈레톤 재생 섹션에서 확인]';
-      document.getElementById('result').textContent = JSON.stringify(display, null, 2);
+    // landmarks_by_frame 분리 보관
+    if (analyzeData.landmarks_by_frame && analyzeData.landmarks_by_frame.length) {
+      landmarksData = analyzeData.landmarks_by_frame;
+    }
+    var display = Object.assign({}, analyzeData);
+    if (landmarksData.length) {
+      display.landmarks_by_frame = '[' + landmarksData.length + '개 프레임 — 스켈레톤 섹션 참고]';
+    }
+    document.getElementById('result').textContent = JSON.stringify(display, null, 2);
 
-      setupSkeletonPlayer(file);
-      await saveToFirestore(data);
+    if (landmarksData.length) setupSkeletonPlayer(file);
+
+  } catch (e) {
+    setStatus('❌ 분석 서버 연결 실패: ' + e.message);
+    document.getElementById('uploadBtn').disabled = false;
+    return;
+  }
+
+  // ── STEP 2: AI 코치 피드백 ──
+  setStatus('② AI 피드백 생성 중...');
+  var aiFeedbackText = '';
+  try {
+    var idToken = await auth.currentUser.getIdToken();
+    var profile = getProfile();
+    var ma      = analyzeData.max_angles || {};
+    var rk      = ma.right_knee || {};
+    var lk      = ma.left_knee  || {};
+    var hr      = ma.hip_rot    || {};
+
+    var msg =
+      '[THE STEPPER 파이썬 서버 동작 분석]\n\n' +
+      '▶ 신체 프로필\n' +
+      '· 이름: '   + profile.name   + ' / 나이: ' + profile.age    + '세 / 성별: ' + profile.gender + '\n' +
+      '· 키: '     + profile.height + 'cm / 몸무게: ' + profile.weight + 'kg / 띠: ' + profile.belt + '\n\n' +
+      '▶ 분석 결과 (최대값)\n' +
+      '· 오른쪽 무릎: ' + (rk.angle || 0) + '° (' + (rk.time || 0) + '초)\n' +
+      '· 왼쪽 무릎: '   + (lk.angle || 0) + '° (' + (lk.time || 0) + '초)\n' +
+      '· 골반 회전: '   + (hr.angle || 0) + '° (' + (hr.time || 0) + '초)\n\n' +
+      '총 ' + (analyzeData.detected_frames || 0) + '프레임 분석 / 영상 ' + (analyzeData.duration_sec || 0) + '초\n\n' +
+      '위 분석 수치와 신체 프로필을 참고하여 이 학생의 동작 특이점과 개선 포인트를 구체적으로 알려주세요. ' +
+      '수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
+
+    var bodyStr = JSON.stringify({ message: msg });
+    var res2    = await fetch(API_COACH, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body:    bodyStr
+    });
+    var coachData = await res2.json();
+
+    if (res2.ok && coachData.reply) {
+      aiFeedbackText = coachData.reply;
+      var fbEl = document.getElementById('aiFeedback');
+      fbEl.textContent    = '🤖 AI 코치 피드백\n\n' + aiFeedbackText;
+      fbEl.style.display  = 'block';
     } else {
-      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+      aiFeedbackText = '[AI 피드백 오류] ' + (coachData.error || JSON.stringify(coachData));
+      var fbEl = document.getElementById('aiFeedback');
+      fbEl.textContent   = aiFeedbackText;
+      fbEl.style.display = 'block';
+      fbEl.style.background = '#fff0f0';
     }
   } catch (e) {
-    setStatus('❌ 연결 실패');
-    document.getElementById('result').textContent =
-      'error.name:    ' + e.name + '\n' +
-      'error.message: ' + e.message;
-  } finally {
-    document.getElementById('uploadBtn').disabled = false;
+    aiFeedbackText = '[AI 피드백 연결 실패] ' + e.message;
+    var fbEl = document.getElementById('aiFeedback');
+    fbEl.textContent   = aiFeedbackText;
+    fbEl.style.display = 'block';
+    fbEl.style.background = '#fff0f0';
   }
+
+  // ── STEP 3: Firestore 저장 ──
+  setStatus('③ Firestore 저장 중...');
+  await saveToFirestore(analyzeData, aiFeedbackText);
+
+  setStatus('✅ 완료');
+  document.getElementById('uploadBtn').disabled = false;
 }
 
 // ── Firestore 저장 ──────────────────────────────────────────────
-async function saveToFirestore(analysisData) {
-  var saveEl = document.getElementById('saveStatus');
-  saveEl.textContent = '💾 Firestore 저장 중...';
-  saveEl.style.color = '#666';
-
+async function saveToFirestore(analysisData, aiFeedbackText) {
+  var saveEl  = document.getElementById('saveStatus');
   var profile = getProfile();
 
   var doc = {
-    // 신체 프로필
     name:   profile.name,
     age:    profile.age,
     gender: profile.gender,
@@ -249,7 +349,6 @@ async function saveToFirestore(analysisData) {
     weight: profile.weight,
     belt:   profile.belt,
 
-    // 분석 결과 (landmarks_by_frame 제외)
     max_angles:            analysisData.max_angles            || null,
     frame_count:           analysisData.frame_count           || 0,
     duration_sec:          analysisData.duration_sec          || 0,
@@ -257,13 +356,13 @@ async function saveToFirestore(analysisData) {
     detected_frames:       analysisData.detected_frames       || 0,
     video_fps:             analysisData.video_fps             || 0,
 
-    // 저장 시각
-    created_at: firebase.firestore.FieldValue.serverTimestamp()
+    ai_feedback: aiFeedbackText || '',
+    created_at:  firebase.firestore.FieldValue.serverTimestamp()
   };
 
   try {
     var ref = await db.collection('movement_data').add(doc);
-    saveEl.textContent = '✅ 저장 완료 — 문서 ID: ' + ref.id;
+    saveEl.textContent = '💾 저장 완료 — 문서 ID: ' + ref.id;
     saveEl.style.color = '#060';
   } catch (e) {
     saveEl.textContent = '❌ 저장 실패: ' + e.message;
@@ -271,7 +370,7 @@ async function saveToFirestore(analysisData) {
   }
 }
 
-// ── 스켈레톤 플레이어 초기화 ─────────────────────────────────────
+// ── 스켈레톤 플레이어 ────────────────────────────────────────────
 function setupSkeletonPlayer(file) {
   var section = document.getElementById('section-skeleton');
   var video   = document.getElementById('skeletonVideo');
@@ -282,10 +381,7 @@ function setupSkeletonPlayer(file) {
 
   video.onloadedmetadata = function() { syncCanvasSize(); };
   video.ontimeupdate     = function() { drawSkeleton(video.currentTime); };
-  window.onresize = function() {
-    syncCanvasSize();
-    drawSkeleton(video.currentTime);
-  };
+  window.onresize = function() { syncCanvasSize(); drawSkeleton(video.currentTime); };
 }
 
 function syncCanvasSize() {
@@ -297,12 +393,10 @@ function syncCanvasSize() {
   canvas.style.height = video.offsetHeight + 'px';
 }
 
-// ── 스켈레톤 그리기 ─────────────────────────────────────────────
 function drawSkeleton(currentTime) {
   if (!landmarksData.length) return;
   var video  = document.getElementById('skeletonVideo');
   var canvas = document.getElementById('skeletonCanvas');
-
   if (parseInt(canvas.style.width) !== video.offsetWidth) syncCanvasSize();
 
   var frame = landmarksData.reduce(function(prev, curr) {
@@ -311,7 +405,6 @@ function drawSkeleton(currentTime) {
 
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   var pts = frame.points;
   var W   = canvas.width;
   var H   = canvas.height;

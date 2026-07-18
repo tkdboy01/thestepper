@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>동작 분석 서버 테스트 — ADMIN</title>
+<style>
+  body { font-family: monospace; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+  h2   { font-size: 1.1rem; color: #333; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  .section { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 20px; margin: 16px 0; }
+  .section h3 { margin: 0 0 12px; font-size: 0.95rem; color: #555; }
+  button { padding: 8px 18px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #status { margin: 10px 0 4px; font-size: 0.85rem; color: #666; }
+  #result { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; min-height: 60px; }
+</style>
+</head>
+<body>
+
+<h2>⚙ 동작 분석 서버 테스트 (관리자 전용)</h2>
+
+<!-- ── 섹션 1: 영상 업로드 & 분석 ───────────────────────────── -->
+<div class="section" id="section-analyze">
+  <h3>1. 영상 업로드 → /analyze</h3>
+  <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm">
+  <button id="uploadBtn" onclick="runAnalyze()">업로드 &amp; 분석</button>
+  <p id="status">파일을 선택하고 버튼을 누르세요.</p>
+  <pre id="result"></pre>
+</div>
+
+<!-- ── 섹션 2~N: 앞으로 기능 추가 예정 ──────────────────────── -->
+<!--
+<div class="section" id="section-xxx">
+  <h3>2. 다음 기능</h3>
+</div>
+-->
+
+<script>
+var API_BASE = 'https://thestepper-motion-api.onrender.com';
+
+async function runAnalyze() {
+  var file = document.getElementById('videoFile').files[0];
+  if (!file) { alert('파일을 먼저 선택해주세요.'); return; }
+
+  setStatus('업로드 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
+  document.getElementById('uploadBtn').disabled = true;
+  document.getElementById('result').textContent = '';
+
+  var form = new FormData();
+  form.append('file', file);
+
+  try {
+    var res  = await fetch(API_BASE + '/analyze', { method: 'POST', body: form });
+    var data = await res.json();
+    setStatus(res.ok ? '✅ 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
+    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    setStatus('❌ 연결 실패: ' + e.message);
+  } finally {
+    document.getElementById('uploadBtn').disabled = false;
+  }
+}
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+</script>
+
+</body>
+</html>

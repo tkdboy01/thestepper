@@ -30,6 +30,7 @@
   #authStatus  { font-size: 0.82rem; margin-top: 8px; }
   .login-row   { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
   .login-row input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 0.82rem; }
+  #fbDebug { background: #0d1117; color: #7ee787; padding: 12px; border-radius: 4px; font-size: 0.78rem; margin-top: 10px; white-space: pre-wrap; min-height: 40px; }
 </style>
 </head>
 <body>
@@ -44,6 +45,10 @@
   <p style="margin:4px 0;font-size:0.85rem;">AI 코치 API: <strong>https://thestepper-api.vercel.app/api/coach</strong></p>
   <button onclick="runHealthCheck()">분석 서버 헬스체크 (GET /)</button>
   <pre id="healthResult" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:4px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;min-height:30px;"></pre>
+
+  <p style="margin:12px 0 4px;font-size:0.85rem;font-weight:bold;">▼ Firebase 초기화 디버그</p>
+  <pre id="fbDebug">Firebase SDK 로드 대기 중...</pre>
+
   <div id="authStatus">Firebase 인증 상태 확인 중...</div>
   <div class="login-row" id="loginRow" style="display:none;">
     <input type="email"    id="loginEmail" placeholder="이메일" style="width:200px;">
@@ -129,17 +134,49 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// ── Firebase 초기화 ──────────────────────────────────────────────
-firebase.initializeApp({
-  apiKey:            "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
-  authDomain:        "thestepper-c9bfb.firebaseapp.com",
-  projectId:         "thestepper-c9bfb",
-  storageBucket:     "thestepper-c9bfb.firebasestorage.app",
+// ── Firebase 디버그 패널 갱신 ────────────────────────────────────
+function updateFbDebug(label) {
+  var lines = [];
+  lines.push('[' + (label || '현재 상태') + ']');
+  lines.push('');
+
+  // 1. SDK 스크립트 태그 목록
+  var scripts = document.querySelectorAll('script[src*="firebasejs"]');
+  lines.push('Firebase SDK <script> 태그 수 : ' + scripts.length);
+  for (var i = 0; i < scripts.length; i++) {
+    lines.push('  [' + i + '] ' + scripts[i].src);
+  }
+  lines.push('');
+
+  // 2. 초기화된 앱 목록
+  var apps = firebase.apps;
+  lines.push('firebase.apps.length : ' + apps.length);
+  for (var j = 0; j < apps.length; j++) {
+    var a = apps[j];
+    lines.push('  apps[' + j + '].name             : ' + a.name);
+    lines.push('  apps[' + j + '].options.apiKey    : ' + (a.options && a.options.apiKey ? a.options.apiKey : '(없음)'));
+    lines.push('  apps[' + j + '].options.projectId : ' + (a.options && a.options.projectId ? a.options.projectId : '(없음)'));
+  }
+
+  document.getElementById('fbDebug').textContent = lines.join('\n');
+}
+
+// ── Firebase 초기화 (방어적 패턴: 이미 앱이 있으면 재사용) ──────
+var MY_CONFIG = {
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
   messagingSenderId: "787224576231",
-  appId:             "1:787224576231:web:04d4003f42ecace9016242"
-});
-var auth = firebase.auth();
-var db   = firebase.firestore();
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+};
+
+var fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(MY_CONFIG);
+var auth  = firebase.auth(fbApp);
+var db    = firebase.firestore(fbApp);
+
+// 초기화 직후 디버그 출력
+updateFbDebug('initializeApp 직후');
 
 // ── 설정 ────────────────────────────────────────────────────────
 var API_ANALYZE = 'https://thestepper-motion-api-1.onrender.com';
@@ -170,6 +207,7 @@ auth.onAuthStateChanged(function(user) {
     el.style.color = '#c00';
     row.style.display = 'flex';
   }
+  updateFbDebug('onAuthStateChanged 콜백');
   checkProfile();
 });
 
@@ -178,10 +216,20 @@ async function doLogin() {
   var pw    = document.getElementById('loginPw').value;
   var errEl = document.getElementById('loginErr');
   errEl.textContent = '';
+
+  // 로그인 직전 상태 기록
+  updateFbDebug('signInWithEmailAndPassword 호출 직전');
+
   try {
     await auth.signInWithEmailAndPassword(email, pw);
+    updateFbDebug('로그인 성공 후');
   } catch(e) {
     errEl.textContent = e.message;
+    updateFbDebug('로그인 실패 (code: ' + e.code + ')');
+
+    // 실패 시 에러 상세도 패널에 추가
+    var extra = '\n\n[에러 상세]\ncode   : ' + e.code + '\nmessage: ' + e.message;
+    document.getElementById('fbDebug').textContent += extra;
   }
 }
 

@@ -20,6 +20,15 @@
 <h2>⚙ 동작 분석 서버 테스트 (관리자 전용)</h2>
 
 <!-- ── 섹션 1: 영상 업로드 & 분석 ───────────────────────────── -->
+<div class="section" id="section-diagnose">
+  <h3>0. 진단 정보</h3>
+  <p style="margin:4px 0;font-size:0.85rem;">페이지 origin: <strong id="diagOrigin"></strong></p>
+  <p style="margin:4px 0;font-size:0.85rem;">API 서버: <strong>https://thestepper-motion-api.onrender.com</strong></p>
+  <button onclick="runHealthCheck()">서버 헬스체크 (GET /)</button>
+  <pre id="healthResult" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:4px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;min-height:30px;"></pre>
+</div>
+
+<!-- ── 섹션 1: 영상 업로드 & 분석 ───────────────────────────── -->
 <div class="section" id="section-analyze">
   <h3>1. 영상 업로드 → /analyze</h3>
   <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm">
@@ -38,6 +47,26 @@
 <script>
 var API_BASE = 'https://thestepper-motion-api.onrender.com';
 
+// 페이지 로드 시 origin 즉시 표시
+document.getElementById('diagOrigin').textContent = location.origin;
+
+async function runHealthCheck() {
+  var el = document.getElementById('healthResult');
+  el.textContent = 'GET / 요청 중...';
+  try {
+    var res  = await fetch(API_BASE + '/');
+    var data = await res.json();
+    el.textContent =
+      '✅ HTTP ' + res.status + '\n' +
+      JSON.stringify(data, null, 2);
+  } catch (e) {
+    el.textContent =
+      '❌ 연결 실패\n' +
+      'error.name:    ' + e.name + '\n' +
+      'error.message: ' + e.message;
+  }
+}
+
 async function runAnalyze() {
   var file = document.getElementById('videoFile').files[0];
   if (!file) { alert('파일을 먼저 선택해주세요.'); return; }
@@ -55,7 +84,10 @@ async function runAnalyze() {
     setStatus(res.ok ? '✅ 완료' : '❌ 서버 오류 (HTTP ' + res.status + ')');
     document.getElementById('result').textContent = JSON.stringify(data, null, 2);
   } catch (e) {
-    setStatus('❌ 연결 실패: ' + e.message);
+    setStatus('❌ 연결 실패');
+    document.getElementById('result').textContent =
+      'error.name:    ' + e.name + '\n' +
+      'error.message: ' + e.message;
   } finally {
     document.getElementById('uploadBtn').disabled = false;
   }

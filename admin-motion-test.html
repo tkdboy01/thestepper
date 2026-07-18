@@ -31,6 +31,10 @@
   .login-row   { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
   .login-row input { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 0.82rem; }
   #fbDebug { background: #0d1117; color: #7ee787; padding: 12px; border-radius: 4px; font-size: 0.78rem; margin-top: 10px; white-space: pre-wrap; min-height: 40px; }
+
+  .report-row { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ccc; }
+  #reportBtn { background: #14532d; }
+  #reportStatus { font-size: 0.85rem; margin-top: 8px; min-height: 18px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -117,6 +121,11 @@
   <pre id="result"></pre>
   <div id="aiFeedback"></div>
   <div id="saveStatus"></div>
+
+  <div class="report-row">
+    <button id="reportBtn" onclick="downloadReport()" disabled>📄 PDF 리포트 다운로드</button>
+    <div id="reportStatus">분석과 AI 피드백이 완료되면 활성화됩니다.</div>
+  </div>
 </div>
 
 <!-- ── 섹션 3: 영상 + 스켈레톤 재생 ─────────────────────────── -->
@@ -163,7 +172,7 @@ function updateFbDebug(label) {
 
 // ── Firebase 초기화 (방어적 패턴: 이미 앱이 있으면 재사용) ──────
 var MY_CONFIG = {
-  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  apiKey: "AIzaSyBD•••••••••••••••••••••••••••••••",
   authDomain: "thestepper-c9bfb.firebaseapp.com",
   projectId: "thestepper-c9bfb",
   storageBucket: "thestepper-c9bfb.firebasestorage.app",
@@ -182,6 +191,10 @@ updateFbDebug('initializeApp 직후');
 var API_ANALYZE = 'https://thestepper-motion-api-1.onrender.com';
 var API_COACH   = 'https://thestepper-api.vercel.app/api/coach';
 var landmarksData = [];
+
+// PDF 리포트용 최근 결과 보관
+var lastAnalyzeData = null;
+var lastAiFeedback  = '';
 
 var CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],
@@ -308,6 +321,11 @@ async function runPipeline() {
   document.getElementById('section-skeleton').style.display = 'none';
   landmarksData = [];
 
+  // PDF 버튼 초기화
+  lastAnalyzeData = null;
+  lastAiFeedback  = '';
+  setReportReady(false, '분석과 AI 피드백이 완료되면 활성화됩니다.');
+
   // ── STEP 1: 파이썬 서버 분석 ──
   setStatus('① 분석 중... (첫 요청은 서버 웜업으로 30~60초 걸릴 수 있음)');
   var analyzeData = null;
@@ -414,8 +432,111 @@ async function runPipeline() {
   setStatus('③ Firestore 저장 중...');
   await saveToFirestore(analyzeData, aiFeedbackText);
 
+  // ── PDF 리포트 버튼 활성화 ──
+  lastAnalyzeData = analyzeData;
+  lastAiFeedback  = aiFeedbackText;
+  setReportReady(true, '준비 완료 — 버튼을 눌러 PDF 리포트를 받으세요.');
+
   setStatus('✅ 완료');
   document.getElementById('uploadBtn').disabled = false;
+}
+
+// ── PDF 리포트 버튼 상태 제어 ────────────────────────────────────
+function setReportReady(ready, msg) {
+  var btn = document.getElementById('reportBtn');
+  var el  = document.getElementById('reportStatus');
+  btn.disabled   = !ready;
+  el.textContent = msg || '';
+  el.style.color = ready ? '#060' : '#888';
+}
+
+// ── PDF 리포트 다운로드 ─────────────────────────────────────────
+async function downloadReport() {
+  if (!lastAnalyzeData) {
+    setReportReady(false, '먼저 영상 분석을 완료해주세요.');
+    return;
+  }
+
+  var btn = document.getElementById('reportBtn');
+  var el  = document.getElementById('reportStatus');
+  btn.disabled   = true;
+  el.textContent = '⏳ PDF 생성 중... (10~20초 걸릴 수 있음)';
+  el.style.color = '#666';
+
+  var profile = getProfile();
+  var payload = {
+    name:    profile.name,
+    age:     profile.age,
+    gender:  profile.gender,
+    height:  profile.height,
+    weight:  profile.weight,
+    belt:    profile.belt,
+    chapter: profile.chapter,
+
+    max_angles:            lastAnalyzeData.max_angles            || {},
+    frame_count:           lastAnalyzeData.frame_count           || 0,
+    duration_sec:          lastAnalyzeData.duration_sec          || 0,
+    total_frames_in_video: lastAnalyzeData.total_frames_in_video || 0,
+    detected_frames:       lastAnalyzeData.detected_frames       || 0,
+    video_fps:             lastAnalyzeData.video_fps             || 0,
+
+    ai_feedback: lastAiFeedback || ''
+  };
+
+  try {
+    var res = await fetch(API_ANALYZE + '/generate-report', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      var errText = '';
+      try {
+        var errJson = await res.json();
+        errText = errJson.detail || JSON.stringify(errJson);
+      } catch (e2) {
+        errText = await res.text();
+      }
+      el.textContent = '❌ PDF 생성 실패 (HTTP ' + res.status + ')\n' + errText;
+      el.style.color = '#c00';
+      btn.disabled   = false;
+      return;
+    }
+
+    // 서버가 지정한 파일명 사용, 없으면 기본값
+    var filename = 'stepper_report.pdf';
+    var cd = res.headers.get('Content-Disposition');
+    if (cd) {
+      var m = cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+      if (m && m[1]) {
+        try {
+          filename = decodeURIComponent(m[1].trim());
+        } catch (e3) {
+          filename = m[1].trim();
+        }
+      }
+    }
+
+    var blob = await res.blob();
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+
+    el.textContent = '✅ 다운로드 완료 — ' + filename;
+    el.style.color = '#060';
+
+  } catch (e) {
+    el.textContent = '❌ PDF 요청 실패\nerror.name:    ' + e.name + '\nerror.message: ' + e.message;
+    el.style.color = '#c00';
+  }
+
+  btn.disabled = false;
 }
 
 // ── Firestore 저장 ──────────────────────────────────────────────

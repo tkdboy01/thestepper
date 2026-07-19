@@ -1,0 +1,1304 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ══════════════════════════════════════════════════════════════════
+     [보관용 백업] 구 동작분석 페이지 (브라우저 MediaPipe 15fps 버전)
+
+     2026-07-19 파이썬 분석 서버 버전으로 교체하면서 motion.html →
+     motion-legacy.html 로 이름만 변경해 보관. 삭제하지 않음.
+
+     · 사이트 어느 메뉴에서도 링크되지 않으며 검색엔진 색인도 차단한다.
+     · 이 페이지에만 있는 기능:
+         - SOS 요청 흐름 (Storage sos_videos/ 업로드 + ai_interview 저장)
+         - ai.html 전문가 질문 모달로 넘기는 expertVideoData 브릿지
+       새 motion.html에는 위 두 기능이 없다. SOS 접수를 다시 열려면
+       이 파일을 복구하거나 새 페이지로 흐름을 이식해야 한다.
+     · admin.html의 SOS 카드와 백엔드(ai_interview / user_messages /
+       /api/process-interview)는 그대로 살아 있다. 기존에 접수된 건은
+       계속 조회·답변 가능하며, 신규 접수만 중단된 상태다.
+     ══════════════════════════════════════════════════════════════════ -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="동작 영상을 업로드하면 AI가 겨루기 자세와 발차기를 자동 분석해 드립니다.">
+<meta name="keywords" content="더스텝퍼,태권도,겨루기,동작분석,AI분석,THE STEPPER">
+<meta name="author" content="THE STEPPER">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thestepper.co.kr/motion.html">
+<meta property="og:title" content="동작 분석 AI | THE STEPPER">
+<meta property="og:description" content="동작 영상을 업로드하면 AI가 겨루기 자세와 발차기를 자동 분석해 드립니다.">
+<meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Fog_image.png?alt=media">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="THE STEPPER">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="동작 분석 AI | THE STEPPER">
+<meta name="twitter:description" content="동작 영상을 업로드하면 AI가 겨루기 자세와 발차기를 자동 분석해 드립니다.">
+<meta name="twitter:image" content="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Fog_image.png?alt=media">
+<title>동작 분석 (베타) - THE STEPPER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap">
+<style>
+:root{--red:#C0392B;--gold:#C9A84C;--border:#e5e5e7;--text:#1d1d1f;--text2:#6e6e73;--gray:#f5f5f7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:2px solid var(--red);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-left{display:flex;align-items:center;gap:16px}
+.nav-back{color:#6e6e73;text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px;transition:color 0.2s}
+.nav-back:hover{color:var(--gold)}
+.nav-logo-link{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-img{height:44px;width:auto}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--gold)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-user-area{display:none;align-items:center;gap:8px}
+.nav-user-email{font-size:11px;color:#6e6e73;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-logout-btn{background:transparent;border:1px solid #d2d2d7;color:#6e6e73;font-family:'Noto Sans KR',sans-serif;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s}
+.nav-logout-btn:hover{border-color:var(--red);color:var(--red)}
+.hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
+.hamburger span{display:block;width:24px;height:2px;background:#1d1d1f;transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-quick{display:flex;align-items:center;gap:6px;margin-right:8px}
+.nav-quick-btn{text-decoration:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;letter-spacing:0.3px;white-space:nowrap;transition:all 0.2s}
+.nqb-red{background:var(--red);color:#fff}.nqb-red:hover{background:#a0301f}
+.nqb-gold{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}.nqb-gold:hover{background:rgba(201,168,76,0.12)}
+.nqb-ai{background:transparent;color:#6e6e73;border:1.5px solid #d2d2d7}.nqb-ai:hover{border-color:#1d1d1f;color:#1d1d1f}
+@media(max-width:768px){.nav-quick{display:none}}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(10,10,10,0.97);border:1px solid rgba(255,255,255,0.08);border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.nav-menu a{display:block;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,0.08);letter-spacing:0.5px;transition:all 0.15s}
+.nav-menu a:last-child{border-bottom:none}
+.nav-menu a:hover{color:var(--gold);background:rgba(255,255,255,0.06);padding-left:26px}
+
+/* INIT LOADING */
+.init-loading{display:flex;align-items:center;justify-content:center;height:100vh}
+.init-spinner{width:36px;height:36px;border:3px solid #eee;border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* MAIN */
+.main-section{display:none;padding:88px 24px 60px;max-width:760px;margin:0 auto}
+
+/* BETA BANNER */
+.beta-banner{background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.28);border-radius:8px;padding:10px 16px;font-size:12px;color:var(--text2);text-align:center;margin-bottom:30px;line-height:1.7}
+.beta-banner strong{color:var(--gold);font-weight:700}
+
+/* GUIDE */
+.guide-section{margin-bottom:28px}
+.guide-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;transition:border-color 0.2s,background 0.2s,border-radius 0.01s;text-align:left}
+.guide-toggle:hover{border-color:rgba(192,57,43,0.5);background:rgba(192,57,43,0.02)}
+.guide-toggle.open{border-radius:12px 12px 0 0;border-bottom-color:transparent}
+.guide-toggle-left{display:flex;align-items:center;gap:10px}
+.guide-toggle-icon{font-size:18px}
+.guide-toggle-title{font-size:14px;font-weight:700;color:var(--text)}
+.guide-toggle-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.guide-arrow{font-size:12px;color:var(--text2);transition:transform 0.3s ease}
+.guide-toggle.open .guide-arrow{transform:rotate(180deg)}
+/* 아코디언 본체: max-height 애니메이션 — overflow는 JS로 제어 */
+.guide-body{
+  max-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+  transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
+}
+.guide-body img{width:100%;max-width:100%;display:block;cursor:zoom-in;border-radius:0}
+.guide-caption{font-size:12px;color:var(--text2);text-align:center;padding:10px 16px 14px;line-height:1.6}
+
+/* LIGHTBOX */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:94vw;max-height:90vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+.lightbox-close{position:absolute;top:18px;right:22px;color:#fff;font-size:28px;cursor:pointer;line-height:1;opacity:0.8;transition:opacity 0.2s}
+.lightbox-close:hover{opacity:1}
+
+/* STEP LABELS */
+.step-label{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--red);margin-bottom:5px;text-transform:uppercase}
+.step-title{font-size:20px;font-weight:900;color:var(--text);margin-bottom:18px}
+
+/* SETUP CARD */
+.setup-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px 24px;margin-bottom:22px}
+.field-label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:0.3px}
+.chapter-select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;cursor:pointer;transition:border-color 0.2s;margin-bottom:20px}
+.chapter-select:focus{border-color:var(--red)}
+.upload-area{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.upload-area:hover{border-color:rgba(192,57,43,0.5);background:rgba(192,57,43,0.02)}
+.upload-area.has-file{border-color:var(--gold);border-style:solid;background:rgba(201,168,76,0.04)}
+.upload-icon{font-size:32px;margin-bottom:8px}
+.upload-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--text2);line-height:1.6}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* VIDEO PLAYER */
+.video-wrap{display:none;position:relative;width:100%;background:#0a0a0a;border-radius:12px;overflow:hidden;margin-bottom:20px}
+.video-wrap video{width:100%;display:block}
+.video-wrap canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* MODEL STATUS */
+.model-status{font-size:12px;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.model-dot{width:8px;height:8px;border-radius:50%;background:#e0e0e0;display:inline-block;transition:background 0.3s}
+.model-dot.loading{background:var(--gold);animation:pulse 1s infinite}
+.model-dot.ready{background:#34a853}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ANALYZE BUTTON */
+.analyze-btn{width:100%;padding:15px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;margin-bottom:18px}
+.analyze-btn:hover:not(:disabled){background:#a0301f;transform:translateY(-1px);box-shadow:0 4px 16px rgba(192,57,43,0.3)}
+.analyze-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* PROGRESS */
+.progress-section{display:none;background:var(--gray);border-radius:12px;padding:20px 22px;margin-bottom:20px}
+.progress-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
+.progress-bar-wrap{background:#e5e5e7;border-radius:6px;height:8px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:6px;width:0%;transition:width 0.2s}
+.progress-info{font-size:12px;color:var(--text2);margin-top:8px;text-align:right}
+
+/* RESULTS */
+.result-section{display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px 24px;margin-bottom:22px}
+.result-header{font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.angle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.angle-card{background:var(--gray);border-radius:10px;padding:16px 12px;text-align:center;border:1px solid transparent;transition:border-color 0.2s}
+.angle-card:hover{border-color:rgba(192,57,43,0.2)}
+.angle-label{font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;letter-spacing:0.3px}
+.angle-value{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--red);line-height:1}
+.angle-unit{font-size:12px;color:var(--text2);margin-top:2px}
+.angle-time{font-size:11px;color:var(--gold);margin-top:5px;font-weight:600}
+.result-info-bar{background:rgba(192,57,43,0.05);border:1px solid rgba(192,57,43,0.12);border-radius:8px;padding:11px 16px;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px}
+
+/* AI FEEDBACK */
+.feedback-section{display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px 24px;margin-bottom:40px}
+.feedback-btn{width:100%;padding:14px;background:#1d1d1f;color:#fff;border:none;border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;margin-bottom:18px}
+.feedback-btn:hover:not(:disabled){background:#333;transform:translateY(-1px)}
+.feedback-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+.feedback-loading{display:none;text-align:center;padding:18px;color:var(--text2);font-size:14px}
+.feedback-spinner{width:22px;height:22px;border:2px solid #eee;border-top-color:var(--red);border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+.feedback-text{background:var(--gray);border-radius:10px;padding:20px;font-size:14px;line-height:1.95;color:var(--text);white-space:pre-wrap;display:none;word-break:keep-all}
+.feedback-error{color:var(--red);font-size:13px;padding:10px 0;display:none}
+
+/* PDF BUTTON */
+.pdf-btn{display:none;width:100%;margin-top:14px;padding:13px;background:#fff;color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.3px;cursor:pointer;transition:all 0.2s;text-align:center}
+.pdf-btn:hover:not(:disabled){border-color:var(--red);color:var(--red);background:rgba(192,57,43,0.03)}
+.pdf-btn:disabled{opacity:0.45;cursor:not-allowed}
+
+@media(max-width:600px){
+  .angle-grid{grid-template-columns:repeat(2,1fr)}
+  .main-section{padding:82px 16px 40px}
+  .nav-user-email{display:none}
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="nav-back">← 메인</a>
+    <a href="index.html" class="nav-logo-link">
+      <picture><source srcset="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.webp?alt=media" type="image/webp"><img src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" alt="THE STEPPER" class="nav-logo-img" loading="eager"></picture>
+      <span class="nav-brand">THE STEPPER</span>
+    </a>
+  </div>
+  <div class="nav-quick">
+    <a href="center.html" class="nav-quick-btn nqb-red">성인&amp;입시</a>
+    <a href="virtual.html" class="nav-quick-btn nqb-gold">VR 태권도</a>
+    <a href="ai.html" class="nav-quick-btn nqb-ai">AI 코치</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user-area" id="navUserArea">
+      <span class="nav-user-email" id="navUserEmail"></span>
+      <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="nav-menu" id="navMenu">
+  <a href="index.html" onclick="toggleMenu()">홈</a>
+  <a href="index.html#about" onclick="toggleMenu()">브랜드 스토리</a>
+  <a href="index.html#curriculum" onclick="toggleMenu()">커리큘럼</a>
+  <a href="schedule.html" onclick="toggleMenu()">세미나 일정</a>
+  <a href="staff.html" onclick="toggleMenu()">스텝 소개</a>
+  <a href="locations.html" onclick="toggleMenu()">회원 도장</a>
+  <a href="index.html#reviews" onclick="toggleMenu()">회원 도장 후기</a>
+  <a href="index.html#gallery" onclick="toggleMenu()">활동 갤러리</a>
+  <a href="contact.html" onclick="toggleMenu()">회원 가입 문의</a>
+  <a href="ai.html" onclick="toggleMenu()">AI 겨루기 코치</a>
+  <a href="motion.html" onclick="toggleMenu()" style="color:var(--gold);font-weight:800">동작 분석 (베타)</a>
+  <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
+  <a href="virtual.html" onclick="toggleMenu()">VR 버추얼 태권도</a>
+  <a href="admin.html" onclick="toggleMenu()" style="font-size:11px;letter-spacing:2px;opacity:0.45;padding-top:8px;padding-bottom:8px">⚙ ADMIN</a>
+</div>
+
+<!-- INIT LOADING -->
+<div class="init-loading" id="initLoading">
+  <div class="init-spinner"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main-section" id="mainSection">
+
+  <div class="beta-banner">
+    <strong>베타 버전</strong> · 정밀 심사가 아닌 참고용 자가진단 도구입니다.<br>
+    분석 결과는 실제 심사나 경기 판정과 다를 수 있으며, 전신이 잘 보이는 영상에서 정확도가 높아집니다.
+  </div>
+
+  <!-- GUIDE IMAGE -->
+  <div class="guide-section">
+    <button class="guide-toggle" id="guideToggle" onclick="toggleGuide()">
+      <div class="guide-toggle-left">
+        <span class="guide-toggle-icon">📋</span>
+        <div>
+          <div class="guide-toggle-title">촬영 전 확인하세요</div>
+          <div class="guide-toggle-sub">촬영 가이드 보기 (탭하여 펼치기)</div>
+        </div>
+      </div>
+      <span class="guide-arrow">▼</span>
+    </button>
+    <div class="guide-body" id="guideBody">
+      <picture>
+        <source srcset="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.webp?alt=media" type="image/webp">
+        <img id="guideImg"
+             src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/guide%2Fmotion_guide3.png?alt=media&v=4"
+             alt="동작 분석 촬영 가이드" loading="eager" onclick="openLightbox(this.src)">
+      </picture>
+      <div class="guide-caption">정확한 분석을 위해 촬영 가이드를 꼭 확인해주세요</div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+    <img id="lightboxImg" src="" alt="가이드 확대">
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step-label">STEP 1</div>
+  <div class="step-title">장(章) 선택 + 영상 업로드</div>
+
+  <div class="setup-card">
+    <label class="field-label" for="chapterSelect">분석할 장(章) 선택</label>
+    <select class="chapter-select" id="chapterSelect" onchange="checkAnalyzeBtn()">
+      <option value="">— 장을 선택하세요 —</option>
+      <option value="3">제3장 — 돌려차기</option>
+      <option value="6">제6장 — 붙여차기</option>
+      <option value="7">제7장 — 앞발돌려차기</option>
+      <option value="15">제15장 — 뒤차기</option>
+    </select>
+
+    <label class="field-label">영상 선택</label>
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📹</div>
+      <div class="upload-text" id="uploadText">영상 파일을 선택하세요</div>
+      <div class="upload-sub">MP4 · MOV · AVI 지원 · 최대 200MB<br>갤러리/파일 앱에서 미리 촬영한 영상을 선택하세요</div>
+      <input type="file" accept="video/*" class="upload-input" id="videoInput" onchange="onVideoSelected(event)">
+    </div>
+  </div>
+
+  <!-- VIDEO PLAYER -->
+  <div class="video-wrap" id="videoWrap">
+    <video id="videoPlayer" controls preload="metadata" playsinline></video>
+    <canvas id="canvasOverlay"></canvas>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-label">STEP 2</div>
+  <div class="step-title">동작 분석</div>
+
+  <div class="model-status" id="modelStatus">
+    <span class="model-dot loading" id="modelDot"></span>
+    <span id="modelStatusText">MediaPipe 모델 로딩 중...</span>
+  </div>
+
+  <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()" disabled>
+    📊 분석 시작
+  </button>
+
+  <div class="progress-section" id="progressSection">
+    <div class="progress-label" id="progressLabel">프레임 분석 중...</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-info" id="progressInfo">0 / 0 프레임</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="result-section" id="resultSection">
+    <div class="result-header">📐 최대 각도 측정값 <span style="font-size:12px;color:var(--text2);font-weight:400;margin-left:4px">(가장 크게 벌어진 프레임 기준)</span></div>
+    <div class="angle-grid">
+      <div class="angle-card">
+        <div class="angle-label">오른쪽 무릎</div>
+        <div class="angle-value" id="rightKneeVal">—</div>
+        <div class="angle-unit">도(°)</div>
+        <div class="angle-time" id="rightKneeTime"></div>
+      </div>
+      <div class="angle-card">
+        <div class="angle-label">왼쪽 무릎</div>
+        <div class="angle-value" id="leftKneeVal">—</div>
+        <div class="angle-unit">도(°)</div>
+        <div class="angle-time" id="leftKneeTime"></div>
+      </div>
+      <div class="angle-card">
+        <div class="angle-label">골반 회전</div>
+        <div class="angle-value" id="hipRotVal">—</div>
+        <div class="angle-unit">도(°)</div>
+        <div class="angle-time" id="hipRotTime"></div>
+      </div>
+    </div>
+    <div class="result-info-bar">
+      <span>📊</span>
+      <span id="frameCountInfo">분석 완료</span>
+    </div>
+  </div>
+
+  <!-- AI FEEDBACK -->
+  <div class="feedback-section" id="feedbackSection">
+    <div class="step-label">STEP 3</div>
+    <div class="step-title" style="margin-bottom:16px">AI 코치 피드백</div>
+    <button class="feedback-btn" id="feedbackBtn" onclick="requestFeedback()">
+      🤖 AI 코치에게 피드백 받기
+    </button>
+    <div class="feedback-loading" id="feedbackLoading">
+      <span class="feedback-spinner"></span> AI 코치가 분석 중입니다...
+    </div>
+    <div class="feedback-error" id="feedbackError"></div>
+    <div class="feedback-text" id="feedbackText"></div>
+    <button class="pdf-btn" id="pdfBtn" onclick="downloadPDF()">📄 결과 PDF로 다운로드</button>
+    <button id="expertCoachBtn" onclick="openExpertCoaching()" style="display:none;margin-top:10px;width:100%;padding:11px;background:transparent;border:1.5px solid #C9A84C;color:#C9A84C;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px">👨‍🏫 전문가 코치에게 직접 질문하기</button>
+  </div>
+
+</div>
+
+<!-- SOS 모달 -->
+<div id="sosModalOverlay"
+     onclick="if(event.target===this)closeSosModal()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;align-items:center;justify-content:center;padding:20px;box-sizing:border-box">
+  <div style="background:#fff;border-radius:20px;padding:32px 28px;max-width:360px;width:100%;box-shadow:0 24px 72px rgba(0,0,0,0.28);text-align:center">
+
+    <!-- 요청 전 -->
+    <div id="sosModalContent">
+      <div style="font-size:28px;margin-bottom:14px">🆘</div>
+      <div style="font-size:17px;font-weight:800;color:#1d1d1f;margin-bottom:14px;letter-spacing:-0.3px">정밀 분석 요청</div>
+      <div style="font-size:13px;color:#6e6e73;line-height:1.85;margin-bottom:26px">
+        현재 AI 분석 내용이 아직 덜 학습된 부분이<br>존재하여 전문가에게 SOS 무료 분석을<br>요청할 수 있습니다.<br><br>
+        <span style="font-weight:600;color:#1d1d1f">요청하시겠습니까?</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="sosModalSubmitBtn" onclick="submitSosModal()"
+                style="flex:1;background:linear-gradient(135deg,#C0392B,#8e1f14);color:#fff;border:none;border-radius:12px;padding:13px 0;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.2px">
+          SOS 요청하기
+        </button>
+        <button onclick="closeSosModal()"
+                style="flex:1;background:#f0f0f2;color:#6e6e73;border:none;border-radius:12px;padding:13px 0;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
+          요청 안 함
+        </button>
+      </div>
+    </div>
+
+    <!-- 요청 완료 -->
+    <div id="sosModalSuccess" style="display:none">
+      <div style="font-size:36px;margin-bottom:16px">✅</div>
+      <div style="font-size:16px;font-weight:800;color:#1d1d1f;margin-bottom:10px">SOS 요청이 전송됐습니다!</div>
+      <div style="font-size:13px;color:#6e6e73;line-height:1.8;margin-bottom:24px">
+        코칭 보관함에서 답변을<br>확인하실 수 있습니다.
+      </div>
+      <button onclick="closeSosModal()"
+              style="background:#f0f0f2;color:#1d1d1f;border:none;border-radius:12px;padding:12px 36px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
+        확인
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<!-- jsPDF — 화면 캡처 없이 좌표 직접 그리기 (한국어는 canvas 이미지로 삽입) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- MediaPipe Pose -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const API_URL = 'https://thestepper-api.vercel.app/api/coach';
+
+const CHAPTERS = {
+  3:  { name: '제3장',  tech: '돌려차기' },
+  6:  { name: '제6장',  tech: '붙여차기' },
+  7:  { name: '제7장',  tech: '앞발돌려차기' },
+  15: { name: '제15장', tech: '뒤차기' }
+};
+
+// MediaPipe Pose landmark connections
+const POSE_CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],
+  [11,12],[11,13],[13,15],[15,17],[15,19],[15,21],[17,19],
+  [12,14],[14,16],[16,18],[16,20],[16,22],[18,20],
+  [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],
+  [27,29],[28,30],[29,31],[30,32],[27,31],[28,32]
+];
+
+// ── State ──────────────────────────────────────────────────
+let currentUser = null;
+let pose = null;
+let poseReady = false;
+let frameData = [];
+let isAnalyzing = false;
+let lastPoseResult = null;
+let currentVideoFile = null;
+
+// ── Firebase Auth ──────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+});
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
+
+auth.onAuthStateChanged(function(user) {
+  document.getElementById('initLoading').style.display = 'none';
+  if (!user || !user.emailVerified) {
+    window.location.href = 'ai.html';
+    return;
+  }
+  currentUser = user;
+  var area = document.getElementById('navUserArea');
+  area.style.display = 'flex';
+  var em = user.email || '';
+  document.getElementById('navUserEmail').textContent = em.length > 16 ? em.slice(0, 16) + '…' : em;
+  document.getElementById('mainSection').style.display = 'block';
+  initPose();
+});
+
+function doLogout() {
+  auth.signOut().then(function() { window.location.href = 'ai.html'; });
+}
+
+// ── Guide toggle & lightbox ────────────────────────────────
+function toggleGuide() {
+  var toggle = document.getElementById('guideToggle');
+  var body   = document.getElementById('guideBody');
+  var opening = !toggle.classList.contains('open');
+
+  toggle.classList.toggle('open');
+
+  if (opening) {
+    // 열기: 실제 scrollHeight로 max-height 설정 후 transition
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    // transition 완료 후 overflow:visible로 풀어서 clipping 방지
+    setTimeout(function() {
+      if (toggle.classList.contains('open')) {
+        body.style.maxHeight = 'none';
+        body.style.overflow  = 'visible';
+      }
+    }, 420);
+  } else {
+    // 닫기: 현재 높이를 명시적으로 지정한 뒤 0으로 애니메이션
+    body.style.overflow  = 'hidden';
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        body.style.maxHeight = '0';
+      });
+    });
+  }
+}
+
+// 이미지 로드 완료 시 아코디언이 열려있으면 높이 재계산
+(function() {
+  var guideImg = document.getElementById('guideImg');
+  if (!guideImg) return;
+  guideImg.addEventListener('load', function() {
+    var toggle = document.getElementById('guideToggle');
+    var body   = document.getElementById('guideBody');
+    if (toggle && toggle.classList.contains('open') && body.style.maxHeight !== 'none') {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      setTimeout(function() {
+        if (toggle.classList.contains('open')) {
+          body.style.maxHeight = 'none';
+          body.style.overflow  = 'visible';
+        }
+      }, 420);
+    }
+  });
+})();
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// ── Nav ────────────────────────────────────────────────────
+function toggleMenu() {
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('navMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('navMenu');
+  var ham  = document.getElementById('hamburger');
+  if (menu.classList.contains('open') && !menu.contains(e.target) && !ham.contains(e.target)) {
+    menu.classList.remove('open');
+    ham.classList.remove('open');
+  }
+});
+
+// ── MediaPipe Pose ─────────────────────────────────────────
+function initPose() {
+  if (typeof Pose === 'undefined') {
+    setTimeout(initPose, 300);
+    return;
+  }
+  pose = new Pose({
+    locateFile: function(file) {
+      return 'https://cdn.jsdelivr.net/npm/@mediapipe/pose/' + file;
+    }
+  });
+  pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    smoothSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+  pose.onResults(function(result) {
+    lastPoseResult = result;
+  });
+
+  var initPromise = pose.initialize ? pose.initialize() : Promise.resolve();
+  initPromise.then(function() {
+    poseReady = true;
+    document.getElementById('modelDot').className = 'model-dot ready';
+    document.getElementById('modelStatusText').textContent = 'MediaPipe Pose 준비 완료 ✅';
+    checkAnalyzeBtn();
+  }).catch(function(e) {
+    document.getElementById('modelStatusText').textContent = '모델 로드 실패 — 페이지를 새로고침 해주세요.';
+    console.error('Pose init error:', e);
+  });
+}
+
+// ── Video Selection ────────────────────────────────────────
+function onVideoSelected(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  currentVideoFile = file;
+
+  var video = document.getElementById('videoPlayer');
+  video.src = URL.createObjectURL(file);
+  document.getElementById('videoWrap').style.display = 'block';
+  document.getElementById('uploadText').textContent = '✅ ' + file.name;
+  document.getElementById('uploadArea').classList.add('has-file');
+
+  frameData = [];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('feedbackSection').style.display = 'none';
+  document.getElementById('feedbackText').style.display = 'none';
+  checkAnalyzeBtn();
+
+  video.addEventListener('loadedmetadata', function() {
+    var canvas = document.getElementById('canvasOverlay');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }, { once: true });
+
+  video.addEventListener('timeupdate', drawPlaybackOverlay);
+}
+
+function checkAnalyzeBtn() {
+  var hasVideo   = !!document.getElementById('videoPlayer').src;
+  var hasChapter = !!document.getElementById('chapterSelect').value;
+  document.getElementById('analyzeBtn').disabled = !(hasVideo && poseReady && hasChapter);
+}
+
+// ── Angle Calculations ─────────────────────────────────────
+function angle3pt(A, B, C) {
+  var bax = A.x - B.x, bay = A.y - B.y;
+  var bcx = C.x - B.x, bcy = C.y - B.y;
+  var dot = bax * bcx + bay * bcy;
+  var mag = Math.sqrt(bax * bax + bay * bay) * Math.sqrt(bcx * bcx + bcy * bcy);
+  if (mag < 1e-6) return 180;
+  return Math.round(Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180 / Math.PI);
+}
+
+function calcAngles(lm) {
+  // Knee angles: hip → knee → ankle (엉덩이-무릎-발목)
+  var leftKnee  = angle3pt(lm[23], lm[25], lm[27]);
+  var rightKnee = angle3pt(lm[24], lm[26], lm[28]);
+
+  // Hip rotation: ratio of hip width to shoulder width projected on X axis
+  // When facing sideways, hip width collapses relative to shoulder width
+  var hipW  = Math.abs(lm[24].x - lm[23].x);
+  var shlW  = Math.abs(lm[12].x - lm[11].x);
+  var ratio = shlW > 0.01 ? hipW / shlW : 1;
+  var hipRot = Math.round((1 - Math.min(1, ratio)) * 90);
+
+  return { leftKnee: leftKnee, rightKnee: rightKnee, hipRot: hipRot };
+}
+
+// ── Analysis ───────────────────────────────────────────────
+async function startAnalysis() {
+  if (isAnalyzing || !poseReady) return;
+  var video = document.getElementById('videoPlayer');
+  if (!video.src || !video.duration) { alert('영상을 먼저 선택해주세요.'); return; }
+
+  isAnalyzing = true;
+  frameData   = [];
+
+  var btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 분석 중...';
+
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('resultSection').style.display   = 'none';
+  document.getElementById('feedbackSection').style.display = 'none';
+  clearCanvas();
+
+  var W = video.videoWidth, H = video.videoHeight;
+  var offCanvas = document.createElement('canvas');
+  offCanvas.width = W; offCanvas.height = H;
+  var offCtx = offCanvas.getContext('2d');
+
+  var duration  = video.duration;
+  var total     = Math.ceil(duration / STEP) + 1;
+  var processed = 0;
+
+  video.pause();
+
+  async function seekTo(t) {
+    return new Promise(function(resolve) {
+      video.addEventListener('seeked', resolve, { once: true });
+      video.currentTime = Math.min(t, duration);
+    });
+  }
+
+  try {
+    for (var t = 0; t <= duration + 0.01; t += STEP) {
+      if (!isAnalyzing) break;
+      await seekTo(t);
+      offCtx.drawImage(video, 0, 0);
+
+      lastPoseResult = null;
+      await pose.send({ image: offCanvas });
+      var result = lastPoseResult;
+
+      if (result && result.poseLandmarks) {
+        var lm = result.poseLandmarks;
+        frameData.push({
+          time: video.currentTime,
+          landmarks: lm,
+          angles: calcAngles(lm)
+        });
+        drawSkeleton(lm);
+      }
+
+      processed++;
+      var pct = Math.round(processed / total * 100);
+      document.getElementById('progressBar').style.width   = pct + '%';
+      document.getElementById('progressLabel').textContent = '프레임 분석 중 — ' + pct + '%';
+      document.getElementById('progressInfo').textContent  = processed + ' / ' + total + ' 프레임';
+    }
+  } catch(e) {
+    console.error('Analysis error:', e);
+  }
+
+  finishAnalysis();
+}
+
+function finishAnalysis() {
+  isAnalyzing = false;
+  document.getElementById('progressSection').style.display = 'none';
+  var btn = document.getElementById('analyzeBtn');
+  btn.disabled    = false;
+  btn.textContent = '📊 다시 분석하기';
+
+  if (!frameData.length) {
+    alert('포즈를 감지하지 못했습니다.\n전신이 잘 보이는 밝은 영상을 사용해주세요.');
+    return;
+  }
+
+  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
+  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
+  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
+
+  document.getElementById('rightKneeVal').textContent  = maxRight.angles.rightKnee;
+  document.getElementById('rightKneeTime').textContent = maxRight.time.toFixed(1) + '초 시점';
+  document.getElementById('leftKneeVal').textContent   = maxLeft.angles.leftKnee;
+  document.getElementById('leftKneeTime').textContent  = maxLeft.time.toFixed(1) + '초 시점';
+  document.getElementById('hipRotVal').textContent     = maxHip.angles.hipRot;
+  document.getElementById('hipRotTime').textContent    = maxHip.time.toFixed(1) + '초 시점';
+
+  document.getElementById('frameCountInfo').textContent =
+    '총 ' + frameData.length + '프레임 분석 완료 · 영상 길이 ' +
+    document.getElementById('videoPlayer').duration.toFixed(1) + '초';
+
+  document.getElementById('resultSection').style.display  = 'block';
+  document.getElementById('feedbackSection').style.display = 'block';
+  document.getElementById('expertCoachBtn').style.display = 'block';
+}
+
+// ── Skeleton Drawing ───────────────────────────────────────
+function drawSkeleton(landmarks) {
+  var canvas = document.getElementById('canvasOverlay');
+  var ctx    = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.lineWidth = 2;
+  for (var ci = 0; ci < POSE_CONNECTIONS.length; ci++) {
+    var ai = POSE_CONNECTIONS[ci][0], bi = POSE_CONNECTIONS[ci][1];
+    var a  = landmarks[ai], b = landmarks[bi];
+    if ((a.visibility || 0) < 0.35 || (b.visibility || 0) < 0.35) continue;
+    ctx.beginPath();
+    ctx.moveTo(a.x * W, a.y * H);
+    ctx.lineTo(b.x * W, b.y * H);
+    ctx.strokeStyle = 'rgba(201,168,76,0.85)';
+    ctx.stroke();
+  }
+  for (var i = 0; i < landmarks.length; i++) {
+    var lm = landmarks[i];
+    if ((lm.visibility || 0) < 0.35) continue;
+    ctx.beginPath();
+    ctx.arc(lm.x * W, lm.y * H, i >= 11 ? 5 : 3, 0, 2 * Math.PI);
+    ctx.fillStyle = '#C0392B';
+    ctx.fill();
+  }
+}
+
+function clearCanvas() {
+  var canvas = document.getElementById('canvasOverlay');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawPlaybackOverlay() {
+  if (!frameData.length) return;
+  var t = document.getElementById('videoPlayer').currentTime;
+  var nearest = frameData.reduce(function(prev, curr) {
+    return Math.abs(curr.time - t) < Math.abs(prev.time - t) ? curr : prev;
+  });
+  if (Math.abs(nearest.time - t) < STEP * 1.5) {
+    drawSkeleton(nearest.landmarks);
+  }
+}
+var STEP = 0.067;  // ~15 fps pre-processing
+
+// ── AI Feedback ────────────────────────────────────────────
+async function requestFeedback() {
+  if (!frameData.length) return;
+  var user = auth.currentUser;
+  if (!user) { window.location.href = 'ai.html'; return; }
+
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter   = CHAPTERS[chapterId];
+  if (!chapter) { alert('장을 선택해주세요.'); return; }
+
+  document.getElementById('feedbackBtn').disabled          = true;
+  document.getElementById('feedbackLoading').style.display = 'block';
+  document.getElementById('feedbackText').style.display    = 'none';
+  document.getElementById('feedbackError').style.display   = 'none';
+
+  var errEl = document.getElementById('feedbackError');
+
+  // ── getIdToken 별도 try-catch (ai.html 패턴과 동일) ──
+  var idToken;
+  try {
+    idToken = await user.getIdToken();
+  } catch(e) {
+    document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.textContent   = '세션이 만료됐습니다. 다시 로그인해주세요.';
+    errEl.style.display = 'block';
+    document.getElementById('feedbackBtn').disabled = false;
+    return;
+  }
+
+  // ── 안전한 숫자 변환 (NaN/Infinity 방어) ──
+  var safeNum = function(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; };
+  var safeFixed = function(v, d) { var n = safeNum(v); return n.toFixed(d); };
+
+  // ── 최소한의 깨끗한 데이터만 추출 ──
+  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
+  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
+  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
+
+  var rK = safeNum(maxRight.angles.rightKnee);
+  var lK = safeNum(maxLeft.angles.leftKnee);
+  var hR = safeNum(maxHip.angles.hipRot);
+  var rT = safeFixed(maxRight.time, 2);
+  var lT = safeFixed(maxLeft.time, 2);
+  var hT = safeFixed(maxHip.time, 2);
+
+  var msg =
+    '[THE STEPPER 동작 분석] ' + chapter.name + ' ' + chapter.tech + '\n\n' +
+    '[핵심 각도 — 최대값]\n' +
+    '· 오른쪽 무릎: ' + rK + '° (' + rT + '초)\n' +
+    '· 왼쪽 무릎: '   + lK + '° (' + lT + '초)\n' +
+    '· 골반 회전: '   + hR + '° (' + hT + '초)\n\n' +
+    '총 분석 프레임: ' + frameData.length + '개\n\n' +
+    '더스텝퍼 ' + chapter.name + ' ' + chapter.tech +
+    ' 기술 관점에서 이 학생 동작의 특이점과 개선 포인트를 구체적으로 알려주세요.' +
+    ' 수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
+
+  // ── JSON 직렬화 — fetch와 별도 try-catch로 분리 ──
+  var bodyStr;
+  try {
+    bodyStr = JSON.stringify({ message: msg });
+  } catch(jsonErr) {
+    document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.textContent   = 'JSON 오류: ' + jsonErr.message;
+    errEl.style.display = 'block';
+    document.getElementById('feedbackBtn').disabled = false;
+    return;
+  }
+
+  // 진단 표시 (body 크기 확인용)
+  errEl.style.cssText = 'display:block;background:#fff3cd;color:#444;font-size:11px;font-family:monospace;padding:6px 10px;border-radius:4px';
+  errEl.textContent   = '[진단] body ' + bodyStr.length + '자 | 서버 요청 중...';
+
+  // ── fetch (ai.html과 완전히 동일한 구조) ──
+  try {
+    var res  = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken
+      },
+      body: bodyStr
+    });
+    var data = await res.json();
+    document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.style.cssText = '';
+    if (!res.ok) {
+      errEl.textContent   = data.error || '오류가 발생했습니다.';
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+      document.getElementById('feedbackText').textContent   = data.reply;
+      document.getElementById('feedbackText').style.display = 'block';
+      document.getElementById('pdfBtn').style.display       = 'block';
+      showSosByConfidence();
+    }
+  } catch(e) {
+    document.getElementById('feedbackLoading').style.display = 'none';
+    errEl.style.cssText = '';
+    errEl.textContent   = '서버에 연결할 수 없습니다. (' + (e && e.message ? e.message : String(e)) + ')';
+    errEl.style.display = 'block';
+    console.error('[requestFeedback error]', e);
+  } finally {
+    document.getElementById('feedbackBtn').disabled = false;
+  }
+}
+
+// ── 전문가 코치에게 질문하기 ────────────────────────────────
+function openExpertCoaching() {
+  if (!frameData.length) return;
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter = CHAPTERS[chapterId] || null;
+
+  var step = Math.max(1, Math.round(frameData.length / 40));
+  var timeline = [];
+  for (var i = 0; i < frameData.length; i += step) {
+    timeline.push({ time: parseFloat(frameData[i].time.toFixed(2)), angles: frameData[i].angles });
+  }
+
+  var maxRight = frameData.reduce(function(m, f) { return f.angles.rightKnee > m.angles.rightKnee ? f : m; }, frameData[0]);
+  var maxLeft  = frameData.reduce(function(m, f) { return f.angles.leftKnee  > m.angles.leftKnee  ? f : m; }, frameData[0]);
+  var maxHip   = frameData.reduce(function(m, f) { return f.angles.hipRot    > m.angles.hipRot    ? f : m; }, frameData[0]);
+
+  var videoData = {
+    chapter: chapter,
+    frameCount: frameData.length,
+    duration: parseFloat((frameData[frameData.length - 1].time).toFixed(1)),
+    maxAngles: {
+      rightKnee: maxRight.angles.rightKnee, rightKneeAt: parseFloat(maxRight.time.toFixed(2)),
+      leftKnee:  maxLeft.angles.leftKnee,  leftKneeAt:  parseFloat(maxLeft.time.toFixed(2)),
+      hipRot:    maxHip.angles.hipRot,     hipRotAt:    parseFloat(maxHip.time.toFixed(2))
+    },
+    timeline: timeline
+  };
+
+  sessionStorage.setItem('expertVideoData', JSON.stringify(videoData));
+  window.location.href = 'ai.html#expert';
+}
+
+// ── SOS 확신도 판단 ────────────────────────────────────────
+var LOWER_BODY_IDX    = [23, 24, 25, 26, 27, 28]; // 고관절·무릎·발목 양쪽
+var SOS_VIS_THRESHOLD = 0.55;
+
+function showSosByConfidence() {
+  var totalVis = 0, count = 0;
+  frameData.forEach(function(f) {
+    LOWER_BODY_IDX.forEach(function(idx) {
+      var lm = f.landmarks[idx];
+      if (lm) { totalVis += (lm.visibility || 0); count++; }
+    });
+  });
+  var avgVis = count > 0 ? totalVis / count : 0;
+
+  console.log(
+    '[SOS] 하체 랜드마크 평균 visibility:', avgVis.toFixed(3),
+    avgVis < SOS_VIS_THRESHOLD ? '→ 낮음 (모달 팝업)' : '→ 충분 (팝업 없음)'
+  );
+
+  if (avgVis < SOS_VIS_THRESHOLD) {
+    openSosModal();
+  }
+}
+
+// ── SOS 모달 제어 ──────────────────────────────────────────
+function openSosModal() {
+  document.getElementById('sosModalContent').style.display  = 'block';
+  document.getElementById('sosModalSuccess').style.display  = 'none';
+  document.getElementById('sosModalSubmitBtn').disabled     = false;
+  document.getElementById('sosModalSubmitBtn').textContent  = 'SOS 요청하기';
+  document.getElementById('sosModalOverlay').style.display  = 'flex';
+}
+
+function closeSosModal() {
+  document.getElementById('sosModalOverlay').style.display = 'none';
+}
+
+// ── SOS 등록 ───────────────────────────────────────────────
+async function submitSosModal() {
+  if (!currentUser) return;
+  var btn = document.getElementById('sosModalSubmitBtn');
+  btn.disabled    = true;
+  btn.textContent = '⏳ 전송 중...';
+
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter   = CHAPTERS[chapterId] || { name: '기타', tech: '' };
+  var video     = document.getElementById('videoPlayer');
+
+  var maxRight = frameData.reduce(function(a, b) { return b.angles.rightKnee > a.angles.rightKnee ? b : a; }, frameData[0]);
+  var maxLeft  = frameData.reduce(function(a, b) { return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; }, frameData[0]);
+  var maxHip   = frameData.reduce(function(a, b) { return b.angles.hipRot    > a.angles.hipRot    ? b : a; }, frameData[0]);
+
+  var measurements = {
+    rightKnee:     { value: maxRight.angles.rightKnee, time: parseFloat(maxRight.time.toFixed(2)) },
+    leftKnee:      { value: maxLeft.angles.leftKnee,   time: parseFloat(maxLeft.time.toFixed(2)) },
+    hip:           { value: maxHip.angles.hipRot,       time: parseFloat(maxHip.time.toFixed(2)) },
+    totalFrames:   frameData.length,
+    videoDuration: parseFloat((video.duration || 0).toFixed(1))
+  };
+
+  var aiFeedback = document.getElementById('feedbackText').textContent || '';
+
+  try {
+    // 1. 영상 Storage 업로드
+    var videoUrl  = '';
+    var videoPath = '';
+    if (currentVideoFile) {
+      var newDocRef = db.collection('ai_interview').doc();
+      videoPath     = 'sos_videos/' + currentUser.uid + '/' + newDocRef.id + '.mp4';
+      btn.textContent = '⏳ 영상 업로드 중...';
+      var snapshot  = await storage.ref(videoPath).put(currentVideoFile);
+      videoUrl      = await snapshot.ref.getDownloadURL();
+    }
+
+    // 2. users 컬렉션에서 본명 조회
+    var userName = '';
+    try {
+      var userSnap = await db.collection('users').doc(currentUser.uid).get();
+      if (userSnap.exists) {
+        var ud = userSnap.data();
+        userName = ud.name || ud.displayName || ud.realName || '';
+      }
+    } catch (_) {}
+
+    // 3. ai_interview 저장
+    btn.textContent = '⏳ SOS 등록 중...';
+    var now = firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('ai_interview').add({
+      trackType:    'sos',
+      userId:       currentUser.uid,
+      userEmail:    currentUser.email || '',
+      userName:     userName,
+      question:     '[SOS] ' + chapter.name + ' ' + chapter.tech + ' 동작 분석 추가 피드백 요청',
+      chapter:      chapter.name + ' ' + chapter.tech,
+      videoUrl:     videoUrl,
+      videoPath:    videoPath,
+      measurements: measurements,
+      aiFeedback:   aiFeedback,
+      status:       '대기중',
+      adminAnswer:  '',
+      createdAt:    now,
+      updatedAt:    now
+    });
+
+    document.getElementById('sosModalContent').style.display = 'none';
+    document.getElementById('sosModalSuccess').style.display = 'block';
+  } catch (e) {
+    btn.disabled    = false;
+    btn.textContent = 'SOS 요청하기';
+    alert('전송 실패: ' + e.message);
+  }
+}
+
+// ── PDF Download (jsPDF 직접 그리기 — html2canvas/window.print 완전 제거) ──
+// 한국어 텍스트: 브라우저 내 canvas.fillText()로 렌더링 후 이미지로 삽입
+// → 화면 캡처 없이 모바일 포함 모든 환경에서 정상 동작
+async function downloadPDF() {
+  if (!currentUser) { alert('로그인한 회원만 다운로드 가능합니다.'); return; }
+  if (!frameData.length) { alert('분석 결과가 없습니다. 먼저 동작 분석을 완료해주세요.'); return; }
+
+  var btn = document.getElementById('pdfBtn');
+  btn.disabled = true; btn.textContent = '⏳ PDF 생성 중...';
+
+  // ── 데이터 수집 ──
+  var chapterId = parseInt(document.getElementById('chapterSelect').value);
+  var chapter   = CHAPTERS[chapterId] || { name: '동작', tech: '분석' };
+  var now = new Date();
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+                ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+  var maxRight = frameData.reduce(function(a,b){ return b.angles.rightKnee > a.angles.rightKnee ? b : a; });
+  var maxLeft  = frameData.reduce(function(a,b){ return b.angles.leftKnee  > a.angles.leftKnee  ? b : a; });
+  var maxHip   = frameData.reduce(function(a,b){ return b.angles.hipRot    > a.angles.hipRot    ? b : a; });
+  var feedbackContent = document.getElementById('feedbackText').textContent || '';
+
+  // ── 스크린샷: MediaPipe canvas + video 합성 (canvas.toDataURL만 사용) ──
+  var shotUrl = null, shotAR = 0.75;
+  var video = document.getElementById('videoPlayer');
+  var ovCanvas = document.getElementById('canvasOverlay');
+  try {
+    await new Promise(function(resolve, reject) {
+      var t = setTimeout(function(){ reject(); }, 3000);
+      video.addEventListener('seeked', function(){ clearTimeout(t); resolve(); }, { once: true });
+      video.currentTime = maxRight.time;
+    });
+    drawSkeleton(maxRight.landmarks);
+    var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+    shotAR = vh / vw;
+    var cap = document.createElement('canvas');
+    cap.width = Math.min(vw, 800); cap.height = Math.round(cap.width * shotAR);
+    var capCtx = cap.getContext('2d');
+    capCtx.drawImage(video, 0, 0, cap.width, cap.height);
+    capCtx.drawImage(ovCanvas, 0, 0, cap.width, cap.height);
+    shotUrl = cap.toDataURL('image/jpeg', 0.85);
+  } catch(e) { /* 스크린샷 없이 계속 */ }
+
+  // ── jsPDF A4 문서 초기화 ──
+  var jsPDFCtor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  var doc = new jsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
+  var PW = 210, PH = 297, ML = 14, MR = 14, MT = 14, MB = 14;
+  var CW = PW - ML - MR; // 182mm 유효 너비
+
+  // 캔버스 오버샘플 설정 (SC=2: 선명도↑, 파일 크기 적정)
+  var SC  = 2;
+  var MPP = 25.4 / 96 / SC; // mm per pixel (0.1323mm/px)
+
+  // ─ 단일 줄 텍스트를 canvas 이미지로 PDF에 삽입, 이미지 높이(mm) 반환 ─
+  function ti(text, x, y, opts) {
+    if (!text) return 0;
+    var pt  = (opts && opts.pt)  || 10;
+    var bld = (opts && opts.bld) || false;
+    var clr = (opts && opts.clr) || '#1d1d1f';
+    var fPx = Math.round(pt * (96 / 72) * SC);
+    var fs  = (bld ? '700 ' : '400 ') + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var c = document.createElement('canvas'), cx = c.getContext('2d');
+    cx.font = fs;
+    c.width  = Math.ceil(cx.measureText(text).width) + 6;
+    c.height = Math.ceil(fPx * 1.4) + 4;
+    cx.font = fs; cx.fillStyle = clr; cx.textBaseline = 'top';
+    cx.fillText(text, 3, 2);
+    var wm = c.width * MPP, hm = c.height * MPP;
+    doc.addImage(c.toDataURL('image/png'), 'PNG', x, y, wm, hm);
+    return hm;
+  }
+
+  // ─ 다줄 텍스트 블록: 자동 줄바꿈 + 페이지 넘김, 최종 y 반환 ─
+  function tb(text, x, startY, maxWmm, opts) {
+    if (!text) return startY;
+    var pt  = (opts && opts.pt)  || 10;
+    var bld = (opts && opts.bld) || false;
+    var clr = (opts && opts.clr) || '#1d1d1f';
+    var lhm = (opts && opts.lh)  || 1.65;
+    var fPx = Math.round(pt * (96 / 72) * SC);
+    var fs  = (bld ? '700 ' : '400 ') + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var mxPx = (maxWmm / 25.4) * 96 * SC;
+    var lhPx = Math.round(fPx * lhm);
+    var lhMM = lhPx * MPP;
+
+    // ① 전체 줄 목록 계산 (문단 단위 + 글자 단위 줄바꿈)
+    var lines = [];
+    var c0 = document.createElement('canvas'), cx0 = c0.getContext('2d');
+    cx0.font = fs;
+    text.split('\n').forEach(function(para) {
+      if (!para.trim()) { lines.push(''); return; }
+      var cur = '';
+      for (var ci = 0; ci < para.length; ci++) {
+        var test = cur + para[ci];
+        if (cx0.measureText(test).width > mxPx - 4 && cur !== '') {
+          lines.push(cur); cur = para[ci];
+        } else cur = test;
+      }
+      if (cur !== '') lines.push(cur);
+    });
+
+    // ② 페이지 단위로 묶어 한 장씩 렌더링 (addImage 횟수 최소화)
+    var pages = [], pgLines = [], curY = startY, pgStartY = startY;
+    lines.forEach(function(line) {
+      if (curY + lhMM > PH - MB) {
+        pages.push({ startY: pgStartY, lines: pgLines.slice() });
+        pgLines = []; pgStartY = MT; curY = MT;
+      }
+      pgLines.push(line); curY += lhMM;
+    });
+    if (pgLines.length) pages.push({ startY: pgStartY, lines: pgLines });
+
+    pages.forEach(function(pg, pi) {
+      if (pi > 0) doc.addPage();
+      var maxW = 0;
+      cx0.font = fs;
+      pg.lines.forEach(function(l) { if (l) maxW = Math.max(maxW, cx0.measureText(l).width); });
+      if (!maxW) return;
+      var bc = document.createElement('canvas'), bcx = bc.getContext('2d');
+      bc.width  = Math.ceil(maxW) + 6;
+      bc.height = pg.lines.length * lhPx + 4;
+      bcx.font = fs; bcx.fillStyle = clr; bcx.textBaseline = 'top';
+      pg.lines.forEach(function(l, i) { if (l) bcx.fillText(l, 3, i * lhPx + 2); });
+      doc.addImage(bc.toDataURL('image/png'), 'PNG', x, pg.startY, bc.width * MPP, bc.height * MPP);
+    });
+    return curY;
+  }
+
+  // ════════════════════ PDF 레이아웃 ════════════════════
+  var y = 0;
+
+  // ① 상단 빨간 바
+  doc.setFillColor(192, 57, 43);
+  doc.rect(0, 0, PW, 7, 'F');
+  y = 17;
+
+  // ② "THE STEPPER" — 영문, jsPDF 내장 Helvetica
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(192, 57, 43);
+  doc.text('THE STEPPER', PW / 2, y, { align: 'center' });
+  y += 7;
+
+  // ③ 부제 (한국어, 중앙 정렬)
+  (function() {
+    var fPx = Math.round(9 * (96 / 72) * SC);
+    var c0 = document.createElement('canvas'), cx0 = c0.getContext('2d');
+    cx0.font = '400 ' + fPx + 'px "Noto Sans KR",Arial,sans-serif';
+    var wm = cx0.measureText('동작 분석 리포트').width * MPP;
+    ti('동작 분석 리포트', PW / 2 - wm / 2, y, { pt: 9, clr: '#6e6e73' });
+  })();
+  y += 7;
+
+  // ④ 빨간 구분선
+  doc.setDrawColor(192, 57, 43); doc.setLineWidth(0.4);
+  doc.line(ML, y, PW - MR, y);
+  y += 7;
+
+  // ⑤ 메타 정보 3행
+  var C1 = ML, C2 = ML + 28, rowH = 6.5;
+
+  ti('분석 일시', C1, y, { pt: 10, clr: '#6e6e73' });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
+  doc.text(dateStr, C2, y + 4.5);
+  y += rowH;
+
+  ti('분석 장', C1, y, { pt: 10, clr: '#6e6e73' });
+  ti(chapter.name + ' — ' + chapter.tech, C2, y, { pt: 10, bld: true });
+  y += rowH;
+
+  ti('분석 회원', C1, y, { pt: 10, clr: '#6e6e73' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
+  doc.text(currentUser.email || '', C2, y + 4.5);
+  y += rowH + 4;
+
+  // ⑥ 스크린샷 (선택)
+  if (shotUrl) {
+    var shotW = CW, shotH = CW * shotAR;
+    if (shotH > 90) { shotW = 90 / shotAR; shotH = 90; }
+    if (y + shotH > PH - MB - 55) { doc.addPage(); y = MT; }
+    doc.addImage(shotUrl, 'JPEG', ML + (CW - shotW) / 2, y, shotW, shotH);
+    y += shotH + 6;
+  }
+
+  // ⑦ 각도 분석 표
+  if (y + 55 > PH - MB) { doc.addPage(); y = MT; }
+  doc.setFillColor(245, 245, 247);
+  doc.rect(ML, y, CW, 55, 'F');
+  y += 4;
+  ti('관절 각도 분석 결과 (최대값)', ML + 3, y, { pt: 11, bld: true, clr: '#C0392B' });
+  y += 9;
+
+  var TC = [ML + 3, ML + 58, ML + 110];
+  doc.setFillColor(226, 226, 228);
+  doc.rect(ML, y, CW, 7, 'F');
+  ti('항목', TC[0], y + 1, { pt: 9, bld: true });
+  ti('최대값', TC[1], y + 1, { pt: 9, bld: true });
+  ti('측정 시점', TC[2], y + 1, { pt: 9, bld: true });
+  y += 7;
+
+  [
+    { lbl: '오른쪽 무릎', val: String(maxRight.angles.rightKnee) + '°', ts: maxRight.time.toFixed(1) + '초', bg: false },
+    { lbl: '왼쪽 무릎',   val: String(maxLeft.angles.leftKnee)   + '°', ts: maxLeft.time.toFixed(1)  + '초', bg: true  },
+    { lbl: '골반 회전',   val: String(maxHip.angles.hipRot)       + '°', ts: maxHip.time.toFixed(1)   + '초', bg: false }
+  ].forEach(function(r) {
+    if (r.bg) { doc.setFillColor(250, 250, 250); doc.rect(ML, y, CW, 10, 'F'); }
+    ti(r.lbl, TC[0], y + 1.5, { pt: 9, clr: '#6e6e73' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(192, 57, 43);
+    doc.text(r.val, TC[1], y + 7.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(201, 168, 76);
+    doc.text(r.ts, TC[2], y + 7.5);
+    y += 10;
+  });
+  y += 6;
+
+  // ⑧ AI 코치 피드백
+  if (feedbackContent) {
+    if (y + 20 > PH - MB) { doc.addPage(); y = MT; }
+    doc.setFillColor(245, 245, 247);
+    doc.rect(ML, y, CW, 9, 'F');
+    y += 1.5;
+    ti('AI 코치 피드백', ML + 3, y, { pt: 11, bld: true });
+    y += 10.5;
+    y = tb(feedbackContent, ML + 3, y, CW - 6, { pt: 10, lh: 1.7 });
+    y += 4;
+  }
+
+  // ⑨ 모든 페이지 하단 처리
+  var totalPages = doc.internal.getNumberOfPages();
+  for (var pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(192, 57, 43);
+    doc.rect(0, PH - 6, PW, 6, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(170, 170, 170);
+    doc.text('THE STEPPER Motion Analysis Beta | For reference only', PW / 2, PH - 9, { align: 'center' });
+  }
+
+  // ⑩ 저장
+  doc.save('THE_STEPPER_동작분석_' + dateStr.slice(0, 10) + '.pdf');
+
+  btn.disabled = false;
+  btn.textContent = '📄 결과 PDF로 다운로드';
+}
+</script>
+</body>
+</html>

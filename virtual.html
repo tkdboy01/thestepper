@@ -579,11 +579,10 @@ footer {
   <a href="index.html#gallery" onclick="toggleMenu()">활동 갤러리</a>
   <a href="contact.html" onclick="toggleMenu()">회원 가입 문의</a>
   <a href="ai.html" onclick="toggleMenu()">AI 겨루기 코치</a>
-  <!-- [동작분석 메뉴 복구지점] 2026-07-19 회원 비공개 처리하며 제거.
-       다시 공개할 때 아래 한 줄의 주석을 해제하면 된다.
-       (motion.html 의 ADMIN_ONLY 도 false 로 함께 변경할 것)
-  <a href="motion.html" onclick="toggleMenu()">동작 분석 (베타)</a>
-  -->
+  <!-- 관리자 전용 메뉴 — 아래 admin-nav 스크립트가 표시를 제어한다.
+       전체 공개 전환 시: style="display:none" 을 지우고
+       motion.html 의 ADMIN_ONLY 를 false 로 바꾸면 된다. -->
+  <a href="motion.html" id="navMotionLink" onclick="toggleMenu()" style="display:none">동작 분석</a>
   <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
   <a href="virtual.html" onclick="toggleMenu()" style="color:var(--gold);font-weight:800">VR 버추얼 태권도</a>
   <a href="admin.html" onclick="toggleMenu()" style="font-size:11px;letter-spacing:2px;opacity:0.45;padding-top:8px;padding-bottom:8px">⚙ ADMIN</a>
@@ -904,6 +903,48 @@ document.addEventListener('click', function(e) {
     m.classList.remove('open'); b.classList.remove('open');
   }
 });
+</script>
+
+<!-- ── 관리자 전용 메뉴 표시 제어 ──────────────────────────────────
+     Firebase Auth 가 localStorage 에 저장한 세션을 읽어 관리자일 때만
+     동작분석 링크를 노출한다. Auth SDK 를 싣지 않은 페이지에서도 쓰려고
+     의존성 없이 가볍게 구현했다.
+
+     이건 "보이기/숨기기"일 뿐 접근 통제가 아니다. 실제 차단은
+     motion.html 안에서 Firebase Auth 로 검증한다(ADMIN_ONLY +
+     requireAdmin 가드). 따라서 이 스크립트를 우회해 링크를 띄워도
+     페이지 내용과 기능은 열리지 않는다.
+
+     전체 공개로 전환할 때는 위 <a> 의 style="display:none" 만 제거하면
+     되고, 이 스크립트는 그대로 두어도 무해하다.
+     ────────────────────────────────────────────────────────────── -->
+<script>
+(function () {
+  var ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
+  var STORAGE_KEY = 'firebase:authUser:AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4:[DEFAULT]';
+
+  function isAdmin() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      var u = JSON.parse(raw);
+      return !!u && u.email === ADMIN_EMAIL;
+    } catch (e) { return false; }
+  }
+
+  function apply() {
+    var el = document.getElementById('navMotionLink');
+    if (el) el.style.display = isAdmin() ? '' : 'none';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    apply();
+  }
+  // 다른 탭에서 로그인/로그아웃한 경우 반영
+  window.addEventListener('storage', apply);
+})();
 </script>
 </body>
 </html>

@@ -72,6 +72,26 @@
   #noteStatus { font-size: 0.85rem; margin-top: 10px; min-height: 18px; white-space: pre-wrap; }
   #noteSaved { display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px;
                padding: 12px; font-size: 0.83rem; line-height: 1.7; white-space: pre-wrap; margin-top: 10px; }
+
+  .ref-check { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 2px;
+               padding: 10px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; cursor: pointer; }
+  .ref-check input { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+  .ref-check strong { display: block; font-size: 0.85rem; color: #9a3412; }
+  .ref-check em { display: block; font-style: normal; font-size: 0.76rem; color: #b45309; margin-top: 2px; line-height: 1.6; }
+  .ref-check code { background: #ffedd5; padding: 1px 4px; border-radius: 3px; }
+
+  #savePanel { margin-top: 14px; border: 1px solid #ddd; border-radius: 4px; padding: 12px 14px; background: #fafafa; }
+  .save-title { font-size: 0.85rem; font-weight: bold; color: #444; margin-bottom: 10px; }
+  .save-step { display: grid; grid-template-columns: 20px 96px 1fr auto; gap: 8px; align-items: center;
+               font-size: 0.82rem; padding: 5px 0; }
+  .step-icon { text-align: center; }
+  .step-name { color: #555; font-weight: bold; }
+  .step-msg  { color: #666; word-break: break-all; }
+  .step-bar  { grid-column: 3 / 4; height: 5px; background: #e5e5e5; border-radius: 3px; overflow: hidden; display: none; }
+  .step-bar-fill { height: 100%; width: 0%; background: #2563eb; transition: width 0.2s; }
+  .step-retry { grid-column: 4 / 5; display: none; background: #92400e; padding: 4px 10px; font-size: 0.76rem; }
+  .save-step.ok   .step-msg { color: #060; }
+  .save-step.fail .step-msg { color: #c00; }
 </style>
 </head>
 <body>
@@ -159,6 +179,13 @@
       </select>
     </label>
   </div>
+  <label class="ref-check">
+    <input type="checkbox" id="pReference">
+    <span>
+      <strong>기준 동작 (정답지)</strong>
+      <em>체크하면 <code>is_reference: true</code> 로 저장됩니다. 시범/교본용 모범 동작에만 사용하세요.</em>
+    </span>
+  </label>
   <div id="profileWarning"></div>
 </div>
 
@@ -173,6 +200,33 @@
   <div id="retryRow" style="display:none;margin-top:10px;">
     <button id="retryBtn" onclick="retryAiFeedback()">🔄 AI 피드백 재요청</button>
     <span id="retryHint">AI 피드백만 다시 시도합니다 (영상 재분석 없음).</span>
+  </div>
+
+  <!-- 저장 단계별 상태 (문서 → 좌표 → 영상). 각 단계는 독립적으로 성공/실패한다 -->
+  <div id="savePanel" style="display:none;">
+    <div class="save-title">💾 데이터 저장</div>
+
+    <div class="save-step" id="step-doc">
+      <span class="step-icon">⏳</span>
+      <span class="step-name">Firestore 문서</span>
+      <span class="step-msg"></span>
+    </div>
+
+    <div class="save-step" id="step-landmarks">
+      <span class="step-icon">⏳</span>
+      <span class="step-name">관절 좌표</span>
+      <span class="step-msg"></span>
+      <div class="step-bar"><div class="step-bar-fill"></div></div>
+      <button class="step-retry" onclick="retryLandmarks()">재시도</button>
+    </div>
+
+    <div class="save-step" id="step-video">
+      <span class="step-icon">⏳</span>
+      <span class="step-name">원본 영상</span>
+      <span class="step-msg"></span>
+      <div class="step-bar"><div class="step-bar-fill"></div></div>
+      <button class="step-retry" onclick="retryVideo()">재시도</button>
+    </div>
   </div>
   <div id="saveStatus"></div>
 
@@ -215,6 +269,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <script>
 // ── Firebase 디버그 패널 갱신 ────────────────────────────────────
@@ -255,8 +310,9 @@ var MY_CONFIG = {
 };
 
 var fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(MY_CONFIG);
-var auth  = firebase.auth(fbApp);
-var db    = firebase.firestore(fbApp);
+var auth    = firebase.auth(fbApp);
+var db      = firebase.firestore(fbApp);
+var storage = firebase.storage(fbApp);
 
 // 초기화 직후 디버그 출력
 updateFbDebug('initializeApp 직후');
@@ -290,6 +346,7 @@ var COACH_TIMEOUT_MS = 40000;
 var lastAnalyzeData = null;
 var lastAiFeedback  = '';
 var lastDocId       = null;   // Firestore 문서 ID (재요청 시 갱신용)
+var lastVideoFile   = null;   // 재시도 시 다시 올릴 원본 영상
 
 var CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],
@@ -427,11 +484,13 @@ async function runPipeline() {
   document.getElementById('section-skeleton').style.display = 'none';
   landmarksData = [];
 
-  // PDF 버튼 / 재요청 버튼 / 학습 입력 초기화
+  // PDF 버튼 / 재요청 버튼 / 학습 입력 / 저장 패널 초기화
   lastAnalyzeData = null;
   lastAiFeedback  = '';
   lastDocId       = null;
+  lastVideoFile   = file;   // 업로드 재시도 대비로 붙잡아 둔다
   document.getElementById('retryRow').style.display = 'none';
+  document.getElementById('savePanel').style.display = 'none';
   document.getElementById('section-note').style.display = 'none';
   document.getElementById('adminNote').value = '';
   document.getElementById('noteStatus').textContent = '';
@@ -476,7 +535,7 @@ async function runPipeline() {
   var aiResult = await requestAiFeedback(analyzeData);
 
   // ── STEP 3: Firestore 저장 ──
-  setStatus('③ Firestore 저장 중...');
+  setStatus('③ 저장 중... (문서 → 관절 좌표 → 원본 영상)');
   await saveToFirestore(analyzeData, aiResult.text);
 
   // ── PDF 리포트 버튼 활성화 (AI 피드백 실패해도 활성화) ──
@@ -854,10 +913,93 @@ async function downloadReport() {
 }
 
 // ── Firestore 저장 ──────────────────────────────────────────────
+// 단계별 UI 헬퍼 ────────────────────────────────────────────────
+function stepSet(id, state, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('ok', 'fail');
+  var icon = { wait: '⏳', run: '⏳', ok: '✅', fail: '❌', skip: '➖' }[state] || '⏳';
+  if (state === 'ok')   el.classList.add('ok');
+  if (state === 'fail') el.classList.add('fail');
+  el.querySelector('.step-icon').textContent = icon;
+  el.querySelector('.step-msg').textContent  = msg || '';
+  var retry = el.querySelector('.step-retry');
+  if (retry) retry.style.display = (state === 'fail') ? 'inline-block' : 'none';
+  var bar = el.querySelector('.step-bar');
+  if (bar && (state === 'ok' || state === 'fail' || state === 'skip')) bar.style.display = 'none';
+}
+
+function stepProgress(id, pct) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var bar = el.querySelector('.step-bar');
+  if (!bar) return;
+  bar.style.display = 'block';
+  bar.querySelector('.step-bar-fill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+}
+
+function fmtBytes(n) {
+  if (!n && n !== 0) return '-';
+  if (n < 1024) return n + 'B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
+  return (n / 1024 / 1024).toFixed(2) + 'MB';
+}
+
+// Storage 업로드 (진행률 콜백 포함) ──────────────────────────────
+function uploadToStorage(path, blob, metadata, onPct) {
+  return new Promise(function (resolve, reject) {
+    var task = storage.ref(path).put(blob, metadata || {});
+    task.on('state_changed',
+      function (snap) {
+        if (snap.totalBytes > 0) onPct(snap.bytesTransferred / snap.totalBytes * 100);
+      },
+      reject,
+      function () {
+        task.snapshot.ref.getDownloadURL().then(function (url) {
+          resolve({ url: url, bytes: task.snapshot.totalBytes });
+        }).catch(reject);
+      }
+    );
+  });
+}
+
+// 관절 좌표 JSON 생성 (가능하면 gzip 압축) ──────────────────────
+async function buildLandmarksBlob(frames) {
+  var json = JSON.stringify({
+    version: 1,
+    saved_at: new Date().toISOString(),
+    frame_count: frames.length,
+    landmarks_by_frame: frames
+  });
+  var raw = new Blob([json], { type: 'application/json' });
+
+  // CompressionStream 이 있으면 gzip (보통 8~15배 축소)
+  if (typeof CompressionStream === 'function') {
+    try {
+      var cs = new CompressionStream('gzip');
+      var stream = raw.stream().pipeThrough(cs);
+      var gz = await new Response(stream).blob();
+      return {
+        blob: new Blob([gz], { type: 'application/gzip' }),
+        compressed: true,
+        rawBytes: raw.size
+      };
+    } catch (e) { /* 실패 시 무압축으로 진행 */ }
+  }
+  return { blob: raw, compressed: false, rawBytes: raw.size };
+}
+
+// ── 1단계: Firestore 문서 생성 ──────────────────────────────────
 async function saveToFirestore(analysisData, aiFeedbackText) {
   if (!requireAdmin()) return;
-  var saveEl  = document.getElementById('saveStatus');
+
+  document.getElementById('savePanel').style.display = 'block';
+  stepSet('step-doc', 'run', '생성 중...');
+  stepSet('step-landmarks', 'wait', '문서 생성 대기 중');
+  stepSet('step-video', 'wait', '문서 생성 대기 중');
+
   var profile = getProfile();
+  var isRef   = document.getElementById('pReference').checked;
 
   var doc = {
     name:    profile.name,
@@ -868,6 +1010,9 @@ async function saveToFirestore(analysisData, aiFeedbackText) {
     belt:    profile.belt,
     chapter: profile.chapter,
 
+    // 기준(정답지) 여부 — 항상 boolean 으로 기록해 쿼리 가능하게 한다
+    is_reference: !!isRef,
+
     max_angles:            analysisData.max_angles            || null,
     frame_count:           analysisData.frame_count           || 0,
     duration_sec:          analysisData.duration_sec          || 0,
@@ -876,18 +1021,152 @@ async function saveToFirestore(analysisData, aiFeedbackText) {
     video_fps:             analysisData.video_fps             || 0,
 
     ai_feedback: aiFeedbackText || '',
+
+    // 저장 구조 버전 — 2 부터 좌표/영상 참조를 포함한다 (구 문서는 필드 자체가 없음)
+    schema_version: 2,
+    landmarks_status: 'pending',
+    video_status:     'pending',
+
     created_at:  firebase.firestore.FieldValue.serverTimestamp()
   };
 
   try {
     var ref = await db.collection('movement_data').add(doc);
     lastDocId = ref.id;
-    saveEl.textContent = '💾 저장 완료 — 문서 ID: ' + ref.id;
-    saveEl.style.color = '#060';
+    stepSet('step-doc', 'ok', ref.id + (isRef ? '  [기준 동작]' : ''));
   } catch (e) {
-    saveEl.textContent = '❌ 저장 실패: ' + e.message;
-    saveEl.style.color = '#c00';
+    lastDocId = null;
+    stepSet('step-doc', 'fail', e.message);
+    stepSet('step-landmarks', 'skip', '문서가 없어 업로드 불가');
+    stepSet('step-video', 'skip', '문서가 없어 업로드 불가');
+    return;
   }
+
+  // 문서가 생겼으면 좌표·영상을 각각 독립적으로 올린다.
+  // 하나가 실패해도 다른 하나와 이후 단계는 계속 진행된다.
+  await uploadLandmarks();
+  await uploadVideo();
+}
+
+// ── 2단계: 관절 좌표 업로드 ─────────────────────────────────────
+async function uploadLandmarks() {
+  if (!requireAdmin()) return;
+  if (!lastDocId) { stepSet('step-landmarks', 'fail', '문서 ID가 없습니다'); return; }
+
+  if (!landmarksData || !landmarksData.length) {
+    stepSet('step-landmarks', 'skip', '좌표 데이터 없음 (분석 서버가 반환하지 않음)');
+    try {
+      await db.collection('movement_data').doc(lastDocId).update({ landmarks_status: 'none' });
+    } catch (e) {}
+    return;
+  }
+
+  stepSet('step-landmarks', 'run', '압축 중...');
+  try {
+    var built = await buildLandmarksBlob(landmarksData);
+    var path  = 'movement_landmarks/' + lastDocId + '.json' + (built.compressed ? '.gz' : '');
+
+    stepSet('step-landmarks', 'run', '업로드 중...');
+    var res = await uploadToStorage(
+      path,
+      built.blob,
+      {
+        contentType: built.compressed ? 'application/gzip' : 'application/json',
+        customMetadata: {
+          docId: lastDocId,
+          frameCount: String(landmarksData.length),
+          compressed: String(built.compressed)
+        }
+      },
+      function (pct) { stepProgress('step-landmarks', pct); }
+    );
+
+    await db.collection('movement_data').doc(lastDocId).update({
+      landmarks_path:       path,
+      landmarks_url:        res.url,
+      landmarks_compressed: built.compressed,
+      landmarks_frames:     landmarksData.length,
+      landmarks_bytes:      res.bytes,
+      landmarks_status:     'ok'
+    });
+
+    var ratio = built.rawBytes > 0 ? (res.bytes / built.rawBytes * 100).toFixed(0) : '-';
+    stepSet('step-landmarks', 'ok',
+      landmarksData.length + '프레임 · ' + fmtBytes(res.bytes) +
+      (built.compressed ? ' (원본 ' + fmtBytes(built.rawBytes) + ' → ' + ratio + '%)' : ' (무압축)'));
+
+  } catch (e) {
+    stepSet('step-landmarks', 'fail', e.message);
+    try {
+      await db.collection('movement_data').doc(lastDocId)
+        .update({ landmarks_status: 'failed', landmarks_error: String(e.message).slice(0, 300) });
+    } catch (e2) {}
+  }
+}
+
+// ── 3단계: 원본 영상 업로드 ─────────────────────────────────────
+async function uploadVideo() {
+  if (!requireAdmin()) return;
+  if (!lastDocId) { stepSet('step-video', 'fail', '문서 ID가 없습니다'); return; }
+
+  var file = lastVideoFile || (document.getElementById('videoFile').files[0]);
+  if (!file) {
+    stepSet('step-video', 'skip', '영상 파일 없음');
+    try {
+      await db.collection('movement_data').doc(lastDocId).update({ video_status: 'none' });
+    } catch (e) {}
+    return;
+  }
+
+  // 원본을 그대로 보관해야 하므로 확장자를 바꾸지 않는다
+  var m   = (file.name || '').match(/\.[a-z0-9]+$/i);
+  var ext = m ? m[0].toLowerCase() : '.mp4';
+  var path = 'movement_videos/' + lastDocId + ext;
+
+  stepSet('step-video', 'run', '업로드 중... (' + fmtBytes(file.size) + ')');
+  try {
+    var res = await uploadToStorage(
+      path,
+      file,
+      {
+        contentType: file.type || 'video/mp4',
+        customMetadata: { docId: lastDocId, originalName: file.name || '' }
+      },
+      function (pct) { stepProgress('step-video', pct); }
+    );
+
+    await db.collection('movement_data').doc(lastDocId).update({
+      video_path:          path,
+      video_url:           res.url,
+      video_bytes:         res.bytes,
+      video_original_name: file.name || '',
+      video_status:        'ok'
+    });
+
+    stepSet('step-video', 'ok', path + ' · ' + fmtBytes(res.bytes));
+
+  } catch (e) {
+    stepSet('step-video', 'fail', e.message);
+    try {
+      await db.collection('movement_data').doc(lastDocId)
+        .update({ video_status: 'failed', video_error: String(e.message).slice(0, 300) });
+    } catch (e2) {}
+  }
+}
+
+// 실패한 항목만 개별 재시도 ──────────────────────────────────────
+async function retryLandmarks() {
+  var btn = document.querySelector('#step-landmarks .step-retry');
+  if (btn) btn.disabled = true;
+  await uploadLandmarks();
+  if (btn) btn.disabled = false;
+}
+
+async function retryVideo() {
+  var btn = document.querySelector('#step-video .step-retry');
+  if (btn) btn.disabled = true;
+  await uploadVideo();
+  if (btn) btn.disabled = false;
 }
 
 // ── 스켈레톤 플레이어 ────────────────────────────────────────────

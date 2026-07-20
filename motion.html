@@ -73,6 +73,20 @@
   #noteSaved { display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px;
                padding: 12px; font-size: 0.83rem; line-height: 1.7; white-space: pre-wrap; margin-top: 10px; }
 
+  .protocol { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px;
+              padding: 12px 14px; margin-bottom: 12px; }
+  .protocol strong { display: block; font-size: 0.85rem; color: #1e40af; margin-bottom: 6px; }
+  .protocol p { margin: 0; font-size: 0.83rem; color: #1e3a5f; line-height: 1.7; }
+  .protocol p.why { margin-top: 6px; font-size: 0.76rem; color: #64748b; }
+
+  #baselineBox { display: none; border-radius: 4px; padding: 12px 14px;
+                 margin: 12px 0; font-size: 0.84rem; line-height: 1.7; }
+  #baselineBox .bl-head { font-weight: bold; margin-bottom: 4px; }
+  #baselineBox .bl-detail { font-size: 0.78rem; opacity: 0.85; }
+  #baselineBox.ok    { background: #f0fdf4; border: 1px solid #86efac; color: #14532d; }
+  #baselineBox.warn  { background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; }
+  #baselineBox.bad   { background: #fef2f2; border: 1px solid #fca5a5; color: #7f1d1d; }
+
   .ref-check { display: flex; gap: 8px; align-items: flex-start; margin: 4px 0 2px;
                padding: 10px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; cursor: pointer; }
   .ref-check input { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
@@ -192,9 +206,21 @@
 <!-- ── 섹션 2: 영상 업로드 & 분석 + AI 피드백 ───────────────── -->
 <div class="section" id="section-analyze">
   <h3>2. 영상 업로드 → 분석 → AI 피드백</h3>
+  <div class="protocol">
+    <strong>📹 촬영 프로토콜</strong>
+    <p>
+      카메라 정면을 보고 <b>차렷 자세로 1.5~2초 정지</b>한 뒤 준비 자세를 취하고 동작을 시작하세요.
+      <b>준비 자세에서 오래 멈추지 마세요.</b>
+    </p>
+    <p class="why">
+      맨 앞 정지 구간을 개인 체형 기준선으로 삼아 회전 각도를 보정합니다.
+      준비 자세에서 오래 멈추면 그 구간이 기준선으로 잡혀 보정이 어긋납니다.
+    </p>
+  </div>
   <input type="file" id="videoFile" accept=".mp4,.mov,.avi,.webm" onchange="checkProfile()">
   <button id="uploadBtn" onclick="runPipeline()" disabled>업로드 &amp; 분석 시작</button>
   <p id="status">신체 프로필을 먼저 입력해주세요.</p>
+  <div id="baselineBox"></div>
   <pre id="result"></pre>
   <div id="aiFeedback"></div>
   <div id="retryRow" style="display:none;margin-top:10px;">
@@ -491,6 +517,7 @@ async function runPipeline() {
   lastVideoFile   = file;   // 업로드 재시도 대비로 붙잡아 둔다
   document.getElementById('retryRow').style.display = 'none';
   document.getElementById('savePanel').style.display = 'none';
+  document.getElementById('baselineBox').style.display = 'none';
   document.getElementById('section-note').style.display = 'none';
   document.getElementById('adminNote').value = '';
   document.getElementById('noteStatus').textContent = '';
@@ -521,6 +548,9 @@ async function runPipeline() {
       display.landmarks_by_frame = '[' + landmarksData.length + '개 프레임 — 스켈레톤 섹션 참고]';
     }
     document.getElementById('result').textContent = JSON.stringify(display, null, 2);
+
+    // 기준선 상태를 분석 직후 바로 띄운다 (촬영 실패면 즉시 재촬영 판단)
+    renderBaseline(analyzeData);
 
     if (landmarksData.length) setupSkeletonPlayer(file);
 
@@ -676,6 +706,62 @@ function renderSavedNote(refined, summary, technique, knowledgeId) {
   lines.push(refined || '');
   box.textContent = lines.join('\n');
   box.style.display = 'block';
+}
+
+// ── 기준선 상태 표시 ─────────────────────────────────────────────
+// 촬영이 잘못됐으면 그 자리에서 바로 알아채고 다시 찍을 수 있어야 한다.
+function renderBaseline(analyzeData) {
+  var box = document.getElementById('baselineBox');
+  var bl  = (analyzeData && analyzeData.rotation && analyzeData.rotation.baseline) || null;
+
+  if (!bl) {
+    // 구 서버 응답 — 기준선 개념 자체가 없음
+    box.style.display = 'none';
+    return;
+  }
+
+  var cls, head, detail;
+
+  if (bl.found && bl.method === 'fixed_first_second') {
+    cls  = 'ok';
+    head = '✅ 기준선 정상 — 촬영 프로토콜대로 잡혔습니다';
+    detail = '영상 시작 ' + fmtSec(bl.start) + '~' + fmtSec(bl.end) + '초 정지 구간 기준. '
+           + '회전 값에 개인 체형 보정이 적용됩니다.';
+
+  } else if (bl.found && bl.method === 'auto_search') {
+    cls  = 'warn';
+    head = '⚠ 기준선을 자동 탐색으로 잡았습니다 — 재촬영 권장';
+    detail = (bl.reason || '') + ' 적용 구간: '
+           + fmtSec(bl.start) + '~' + fmtSec(bl.end) + '초.';
+
+  } else {
+    cls  = 'bad';
+    head = '❌ 기준선 없음 — 다시 촬영해주세요';
+    detail = (bl.reason || '정지 구간을 찾지 못했습니다.')
+           + ' 회전 값은 보정 없이 원값으로 표시됩니다.';
+  }
+
+  // 임계값 조정 판단을 위해 실측 이동량을 함께 보여준다
+  if (isCleanNum(bl.motion)) {
+    detail += '  (실측 이동량 ' + bl.motion
+           + (isCleanNum(bl.threshold) ? ' / 정지 기준 ' + bl.threshold : '') + ')';
+  }
+
+  box.className = cls;
+  box.innerHTML = '';
+  var h = document.createElement('div');
+  h.className = 'bl-head';
+  h.textContent = head;
+  var d = document.createElement('div');
+  d.className = 'bl-detail';
+  d.textContent = detail;
+  box.appendChild(h);
+  box.appendChild(d);
+  box.style.display = 'block';
+}
+
+function fmtSec(v) {
+  return isCleanNum(v) ? v : '?';
 }
 
 // ── AI 코치에게 보낼 수치 블록 구성 ──────────────────────────────

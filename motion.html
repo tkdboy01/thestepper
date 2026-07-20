@@ -678,6 +678,91 @@ function renderSavedNote(refined, summary, technique, knowledgeId) {
   box.style.display = 'block';
 }
 
+// ── AI 코치에게 보낼 수치 블록 구성 ──────────────────────────────
+// 모든 값을 isCleanNum 으로 거른다. NaN/Infinity/undefined 는 아예
+// 문장에 넣지 않아 AI 가 잘못된 수치를 근거로 삼는 일을 막는다.
+function buildMetricsBlock(d, profile) {
+  function deg(v, t) {
+    if (!isCleanNum(v)) return null;
+    return v + '°' + (isCleanNum(t) ? ' (' + t + '초)' : '');
+  }
+
+  var lines = [];
+  var ma = d.max_angles || {};
+  var ks = d.knee_stats || null;
+
+  // 무릎 — 최솟값(접힘 깊이)을 먼저 쓴다. 커리큘럼상 이쪽이 핵심.
+  lines.push('▶ 무릎 각도');
+  [['오른쪽', 'right_knee'], ['왼쪽', 'left_knee']].forEach(function (p) {
+    var label = p[0], key = p[1];
+    var st = ks ? ks[key] : null;
+    if (st) {
+      var mn = st.min || {}, mx = st.max || {};
+      var parts = [];
+      var a = deg(mn.angle, mn.time); if (a) parts.push('최소(가장 깊게 접힘) ' + a);
+      var b = deg(mx.angle, mx.time); if (b) parts.push('최대(가장 폄) ' + b);
+      if (isCleanNum(st.amplitude)) parts.push('진폭 ' + st.amplitude + '°');
+      if (parts.length) lines.push('· ' + label + ' 무릎: ' + parts.join(' / '));
+    } else {
+      // 구 서버 응답 호환 (최대값만 존재)
+      var old = ma[key] || {};
+      var o = deg(old.angle, old.time);
+      if (o) lines.push('· ' + label + ' 무릎 최대: ' + o);
+    }
+  });
+
+  // 회전 — 두 값의 의미가 다르므로 이름을 분명히 적는다.
+  var rot = d.rotation || null;
+  if (rot) {
+    var rl = [];
+    var tw = rot.torso_twist || {};
+    var yw = rot.pelvis_yaw  || {};
+    var twv = isCleanNum(tw.corrected) ? tw.corrected : tw.angle;
+    var ywv = isCleanNum(yw.corrected) ? yw.corrected : yw.angle;
+    var DIR = { right: '오른쪽', left: '왼쪽' };
+
+    if (isCleanNum(twv)) {
+      rl.push('· 몸통 비틀림(어깨 대비 골반): ' + twv + '°'
+        + (isCleanNum(tw.corrected) ? ' (개인 기준선 보정값)' : ' (보정 전)')
+        + (DIR[tw.direction] ? ' · ' + DIR[tw.direction] : ''));
+    }
+    if (isCleanNum(ywv)) {
+      rl.push('· 골반 절대 회전: ' + ywv + '°'
+        + (isCleanNum(yw.corrected) ? ' (개인 기준선 보정값)' : ' (보정 전)')
+        + (DIR[yw.direction] ? ' · ' + DIR[yw.direction] + ' 방향' : ''));
+    }
+    if (rl.length) {
+      lines.push('');
+      lines.push('▶ 회전');
+      lines = lines.concat(rl);
+      lines.push('  ※ 몸통 비틀림은 골반 절대 회전이 아니라 어깨 대비 상대값입니다.');
+      lines.push('  ※ 골반 절대 회전은 단안 카메라 깊이 추정 기반이라 절대값보다 상대 비교용입니다.');
+    }
+  } else if (isCleanNum((ma.hip_rot || {}).angle)) {
+    lines.push('');
+    lines.push('▶ 회전');
+    lines.push('· 골반 회전(구 산식): ' + ma.hip_rot.angle + '°');
+  }
+
+  // 동시성 — 커리큘럼상 의미가 있는 제6장에만 넣는다.
+  // 다른 기술에 넣으면 AI 가 무관한 수치를 근거로 지적할 수 있다.
+  var ss = d.strike_sync || null;
+  if (ss && /붙여차기/.test(profile.chapter || '')) {
+    lines.push('');
+    lines.push('▶ 붙여차기 동시성 (제6장 핵심 지표)');
+    if (isCleanNum(ss.delta_sec)) {
+      lines.push('· 뒷발 착지와 앞발 타격의 시간차: ' + ss.delta_sec + '초'
+        + (ss.delta_sec > 0 ? ' (타격이 늦음)' : ss.delta_sec < 0 ? ' (타격이 이름)' : ''));
+      lines.push('  ※ 0에 가까울수록 좋습니다.');
+    } else {
+      lines.push('· 측정 실패 — 뒷발이 바닥에서 떨어진 구간을 찾지 못했습니다.');
+      lines.push('  ※ 이 값이 없다는 이유로 동작을 지적하지 마세요.');
+    }
+  }
+
+  return lines.join('\n') + '\n\n';
+}
+
 // ── AI 코치 피드백 요청 (타임아웃 + 재사용 가능) ─────────────────
 // 반환: { ok: boolean, text: string }
 async function requestAiFeedback(analyzeData) {
@@ -722,10 +807,7 @@ async function requestAiFeedback(analyzeData) {
       '▶ 신체 프로필\n' +
       '· 이름: '  + profile.name   + ' / 나이: ' + profile.age    + '세 / 성별: ' + profile.gender + '\n' +
       '· 키: '    + profile.height + 'cm / 몸무게: ' + profile.weight + 'kg / 띠: ' + profile.belt + '\n\n' +
-      '▶ 분석 결과 (최대값)\n' +
-      '· 오른쪽 무릎: ' + rk.angle + '° (' + rk.time + '초)\n' +
-      '· 왼쪽 무릎: '   + lk.angle + '° (' + lk.time + '초)\n' +
-      '· 골반 회전: '   + hr.angle + '° (' + hr.time + '초)\n\n' +
+      buildMetricsBlock(analyzeData, profile) +
       '총 ' + analyzeData.detected_frames + '프레임 분석 / 영상 ' + analyzeData.duration_sec + '초\n\n' +
       '위 분석 수치와 신체 프로필을 참고하여 이 학생의 동작 특이점과 개선 포인트를 구체적으로 알려주세요. ' +
       '수치에 기반한 개인화 피드백을 한국어로 작성해주세요.';
@@ -858,6 +940,12 @@ async function downloadReport() {
     total_frames_in_video: lastAnalyzeData.total_frames_in_video || 0,
     detected_frames:       lastAnalyzeData.detected_frames       || 0,
     video_fps:             lastAnalyzeData.video_fps             || 0,
+
+    // schema_version 3 신규 지표 (구 서버 응답이면 null 로 전달되고
+    // 서버가 "—" 로 렌더하므로 하위 호환에 문제없다)
+    knee_stats:  lastAnalyzeData.knee_stats  || null,
+    rotation:    lastAnalyzeData.rotation    || null,
+    strike_sync: lastAnalyzeData.strike_sync || null,
 
     ai_feedback: lastAiFeedback || ''
   };
@@ -1014,6 +1102,14 @@ async function saveToFirestore(analysisData, aiFeedbackText) {
     is_reference: !!isRef,
 
     max_angles:            analysisData.max_angles            || null,
+
+    // schema_version 3 신규 지표
+    // hip_rot(구) 과 rotation.torso_twist 는 산식이 같지만,
+    // rotation 쪽에 기준선 보정값·방향이 함께 들어 의미가 더 정확하다.
+    knee_stats:            analysisData.knee_stats             || null,
+    rotation:              analysisData.rotation               || null,
+    strike_sync:           analysisData.strike_sync            || null,
+
     frame_count:           analysisData.frame_count           || 0,
     duration_sec:          analysisData.duration_sec          || 0,
     total_frames_in_video: analysisData.total_frames_in_video || 0,
@@ -1023,7 +1119,7 @@ async function saveToFirestore(analysisData, aiFeedbackText) {
     ai_feedback: aiFeedbackText || '',
 
     // 저장 구조 버전 — 2 부터 좌표/영상 참조를 포함한다 (구 문서는 필드 자체가 없음)
-    schema_version: 2,
+    schema_version: 3,
     landmarks_status: 'pending',
     video_status:     'pending',
 

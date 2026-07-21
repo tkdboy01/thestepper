@@ -207,6 +207,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
+    <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
   </div>
 
   <!-- ===== 세미나 일정 탭 ===== -->
@@ -528,15 +529,63 @@ select.form-control{cursor:pointer}
         <div id="coachingDoneList"></div>
       </div>
 
-      <!-- 코칭 지식 라이브러리 -->
-      <div style="margin-top:28px;border-top:2px solid #e5e5e7;padding-top:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:14px;font-weight:700">📚 코칭 지식 라이브러리 <span id="knowledgeCount" style="font-size:13px;font-weight:400;color:#888"></span></div>
-          <button onclick="loadKnowledgeLibrary()" style="background:transparent;border:1px solid var(--border);color:#888;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">새로고침</button>
-        </div>
-        <div id="knowledgeLibraryList"><div class="loading-msg">로딩 중...</div></div>
+      <!-- 코칭 지식은 판정·출처·이력 관리가 필요해 별도 탭으로 옮겼다 -->
+      <div style="margin-top:28px;border-top:2px solid #e5e5e7;padding-top:16px;font-size:12px;color:#888">
+        📚 코칭 지식 목록·확정·수정·폐기는 <b style="color:var(--red)">🧠 코칭 지식</b> 탭에서 관리합니다.
       </div>
     </div>
+  </div>
+
+  <!-- ===== 코칭 지식 관리 탭 ===== -->
+  <div id="tab-knowledge" class="tab-content" style="display:none">
+    <div class="section-title">🧠 코칭 지식 관리</div>
+
+    <!-- 구 문서(판정·출처·측정버전 없음) 백필 안내 -->
+    <div class="migrate-box" id="knowledgeMigrateBox" style="display:none">
+      <div class="migrate-text" id="knowledgeMigrateText"></div>
+      <button class="btn-migrate" id="knowledgeMigrateBtn" onclick="migrateKnowledgeLegacy()">구 문서 백필하기</button>
+    </div>
+
+    <!-- 통계 -->
+    <div id="knowledgeStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+
+    <!-- 필터 -->
+    <div class="form-card" style="padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="min-width:120px">
+          <label class="form-label">상태</label>
+          <select class="form-control" id="kfStatus" onchange="applyKnowledgeFilters()">
+            <option value="">전체</option>
+            <option value="draft">draft (초안)</option>
+            <option value="confirmed">confirmed (확정)</option>
+            <option value="superseded">superseded (폐기됨)</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:160px">
+          <label class="form-label">출처</label>
+          <select class="form-control" id="kfSource" onchange="applyKnowledgeFilters()">
+            <option value="">전체</option>
+            <option value="curriculum">커리큘럼 원문</option>
+            <option value="tacit">지도자 경험 지식</option>
+            <option value="ai_verified">AI 추론 검증</option>
+            <option value="unclassified">미분류</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;min-width:140px">
+          <label class="form-label">기술 검색</label>
+          <input class="form-control" id="kfTechnique" placeholder="예) 돌려차기" oninput="applyKnowledgeFilters()">
+        </div>
+        <div class="form-group" style="min-width:150px">
+          <label class="form-label" style="visibility:hidden">.</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:10px 0">
+            <input type="checkbox" id="kfReviewOnly" onchange="applyKnowledgeFilters()"> 재검토 필요만
+          </label>
+        </div>
+        <button class="btn-secondary" onclick="loadKnowledgeMgmt()">↻ 새로고침</button>
+      </div>
+    </div>
+
+    <div id="knowledgeList"><div class="loading-msg">로딩 중...</div></div>
   </div>
 </div>
 
@@ -608,6 +657,9 @@ window.switchTab = (tab) => {
   if (tab === 'locations' && !locLoaded) { locLoaded = true; loadLocations(); }
   if (tab === 'members' && !membersLoaded) { membersLoaded = true; loadMembers(); }
   if (tab === 'coaching' && !coachingLoaded) { coachingLoaded = true; initCoachingTab(); }
+  // 지식 관리 탭은 매번 새로 불러온다 — 다른 흐름(Track1/2/3, 코칭 확정)에서
+  // 계속 문서가 쌓이므로 캐시가 쉽게 낡는다. 데이터 규모가 작아 비용도 적다.
+  if (tab === 'knowledge') { loadKnowledgeMgmt(); }
 };
 
 /* ---- SCHEDULE CRUD ---- */
@@ -1493,49 +1545,265 @@ window.confirmCoaching = async () => {
   }
 };
 
-/* ---- KNOWLEDGE LIBRARY ---- */
-async function loadKnowledgeLibrary() {
-  const listEl = document.getElementById('knowledgeLibraryList');
-  if (!listEl) return;
+/* ---- KNOWLEDGE MANAGEMENT ---- */
+// 검증 없이 지식이 굳는 것을 막기 위한 관리 화면.
+// draft(초안)/confirmed(확정)/superseded(폐기됨) 상태와 출처·판정·측정 산식
+// 버전을 함께 보여주고, 확정·수정(새 문서 생성)·폐기를 서버 API 로 처리한다.
+// 클라이언트에서 coaching_knowledge 를 직접 add/update 하지 않는다 —
+// manage-knowledge.js 가 상태 전이 규칙(예: 출처 없으면 확정 불가)을 강제한다.
+const MANAGE_KNOWLEDGE_URL = 'https://thestepper-api.vercel.app/api/manage-knowledge';
+
+const KNOWLEDGE_STATUS_LABEL = { draft: '초안', confirmed: '확정', superseded: '폐기됨' };
+const KNOWLEDGE_STATUS_COLOR = {
+  draft:      { bg: '#fff7e6', fg: '#8a5b00' },
+  confirmed:  { bg: '#e8f7ec', fg: '#0a7a34' },
+  superseded: { bg: '#f0f0f0', fg: '#888' },
+};
+const KNOWLEDGE_SOURCE_LABEL = {
+  curriculum:   '커리큘럼 원문',
+  tacit:        '지도자 경험 지식',
+  ai_verified:  'AI 추론 검증',
+  unclassified: '미분류',
+};
+const KNOWLEDGE_VERDICT_LABEL = {
+  accurate:   '판정: 정확함',
+  partial:    '판정: 일부 부정확',
+  inaccurate: '판정: 부정확(오답 기록)',
+};
+
+let knowledgeItemsCache = [];
+let knowledgeEditingId = null;
+
+async function knowledgeAuthToken() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('로그인이 필요합니다.');
+  return user.getIdToken();
+}
+
+async function knowledgeApi(body) {
+  const token = await knowledgeAuthToken();
+  const res = await fetch(MANAGE_KNOWLEDGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+// 기존 3개 흐름(Track1 학습, 코칭 확정, 코칭탭 최초 진입)에서 부르던 이름을
+// 그대로 유지한다. 지식 관리 탭이 열려 있든 아니든 새로고침은 저렴하다.
+async function loadKnowledgeLibrary() { return loadKnowledgeMgmt(); }
+
+async function loadKnowledgeMgmt() {
+  const listEl = document.getElementById('knowledgeList');
+  if (!listEl) return; // 탭 DOM 이 아직 없는 초기 로드 시점 등
   listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+
   try {
-    const snap = await getDocs(query(collection(db, 'coaching_knowledge'), orderBy('savedAt', 'desc')));
-    document.getElementById('knowledgeCount').textContent = snap.empty ? '' : `(${snap.size}건)`;
-    if (snap.empty) {
-      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">아직 축적된 코칭 지식이 없습니다.<br><small style="color:#aaa">코칭을 확정하면 자동으로 여기에 저장됩니다.</small></div>';
-      return;
+    const body = {
+      mode: 'list',
+      status:          document.getElementById('kfStatus') ? document.getElementById('kfStatus').value : '',
+      knowledgeSource: document.getElementById('kfSource') ? document.getElementById('kfSource').value : '',
+      technique:       document.getElementById('kfTechnique') ? document.getElementById('kfTechnique').value.trim() : '',
+      reviewOnly:      document.getElementById('kfReviewOnly') ? document.getElementById('kfReviewOnly').checked : false,
+    };
+    const data = await knowledgeApi(body);
+    knowledgeItemsCache = data.items;
+
+    KNOWLEDGE_CURRENT_VERSION_HINT = data.currentMeasurementVersion;
+    renderKnowledgeStats(data.stats, data.currentMeasurementVersion);
+
+    const badge = document.getElementById('knowledgeBadge');
+    const need = (data.stats.draft || 0) + (data.stats.needsReview || 0);
+    if (need > 0) { badge.style.display = 'flex'; badge.textContent = need > 99 ? '99+' : need; }
+    else { badge.style.display = 'none'; }
+
+    const migrateBox = document.getElementById('knowledgeMigrateBox');
+    if (data.stats.legacy > 0) {
+      migrateBox.style.display = 'flex';
+      document.getElementById('knowledgeMigrateText').textContent =
+        `판정·출처·측정버전 정보가 없는 구 문서 ${data.stats.legacy}건이 있습니다. ` +
+        `백필하면 상태는 draft(초안), 출처는 미분류로 채워지고, 확정 전에 출처를 직접 지정해야 합니다.`;
+    } else {
+      migrateBox.style.display = 'none';
     }
-    listEl.innerHTML = '';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const savedAt = d.savedAt?.toDate
-        ? d.savedAt.toDate().toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'})
-        : '';
-      const item = document.createElement('div');
-      item.style.cssText = 'border:1px solid #e5e5e7;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:13px;background:#fafafa';
-      item.innerHTML =
-        `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">` +
-        `<span style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700">${esc(d.technique || '기타')}</span>` +
-        `<span style="font-size:11px;color:#aaa;margin-left:auto">${savedAt}</span>` +
-        `<button onclick="deleteKnowledgeItem('${docSnap.id}')" class="btn-danger" style="padding:3px 10px;font-size:11px">삭제</button>` +
-        `</div>` +
-        `<div style="font-size:12px;color:#555;margin-bottom:4px;font-weight:600">Q: ${esc(d.questionSummary || '')}</div>` +
-        `<div style="font-size:12px;color:#333;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(d.correctedFeedback || '')}</div>`;
-      listEl.appendChild(item);
-    });
-  } catch(e) {
-    const isPermError = e.code === 'permission-denied';
-    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}${isPermError ? '<br><small>Firestore 보안 규칙을 확인하세요.</small>' : ''}</div>`;
+
+    renderKnowledgeList(data.items);
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
   }
 }
 
-window.deleteKnowledgeItem = async (id) => {
-  if (!confirm('이 지식 항목을 삭제하시겠습니까?')) return;
+function renderKnowledgeStats(stats, currentVersion) {
+  const el = document.getElementById('knowledgeStats');
+  if (!el) return;
+  const chip = (label, n, bg, fg) =>
+    `<span style="font-size:12px;font-weight:700;background:${bg};color:${fg};border-radius:8px;padding:5px 12px">${esc(label)} ${n}</span>`;
+  el.innerHTML =
+    chip('확정', stats.confirmed, '#e8f7ec', '#0a7a34') +
+    chip('초안', stats.draft, '#fff7e6', '#8a5b00') +
+    chip('폐기됨', stats.superseded, '#f0f0f0', '#888') +
+    chip('미분류(구문서)', stats.legacy, '#f0f0f0', '#888') +
+    chip('⚠ 재검토 필요', stats.needsReview, '#fdeaea', '#c8102e') +
+    chip('오답 기록', stats.negative, '#fdeaea', '#c8102e') +
+    `<span style="font-size:11px;color:#aaa;align-self:center;margin-left:4px">현재 측정 산식 v${currentVersion}</span>`;
+}
+
+function renderKnowledgeList(items) {
+  const listEl = document.getElementById('knowledgeList');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">조건에 맞는 지식이 없습니다.</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(knowledgeCardHtml).join('');
+}
+
+function knowledgeCardHtml(item) {
+  if (knowledgeEditingId === item.id) return knowledgeEditFormHtml(item);
+
+  const sc = KNOWLEDGE_STATUS_COLOR[item.status] || { bg: '#f0f0f0', fg: '#888' };
+  const statusLabel = item.status ? KNOWLEDGE_STATUS_LABEL[item.status] : '미분류';
+  const sourceLabel = item.knowledgeSource ? KNOWLEDGE_SOURCE_LABEL[item.knowledgeSource] : '미분류';
+  const savedAt = item.savedAt ? new Date(item.savedAt).toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'}) : '';
+  const isSuperseded = item.status === 'superseded';
+
+  const badges = [
+    `<span style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700">${esc(item.technique || '기타')}</span>`,
+    `<span style="font-size:11px;background:${sc.bg};color:${sc.fg};border-radius:5px;padding:2px 8px;font-weight:700">${esc(statusLabel)}</span>`,
+    `<span style="font-size:11px;background:#f5f5f5;color:#555;border-radius:5px;padding:2px 8px">${esc(sourceLabel)}</span>`,
+    item.revision > 1 ? `<span style="font-size:11px;color:#aaa">rev.${item.revision}</span>` : '',
+    item.isNegativeExample ? `<span style="font-size:11px;background:#fdeaea;color:#c8102e;border-radius:5px;padding:2px 8px;font-weight:700">⚠ 오답 기록</span>` : '',
+    item.needsReview ? `<span style="font-size:11px;background:#fdeaea;color:#c8102e;border-radius:5px;padding:2px 8px;font-weight:700">⚠ 재검토 필요 (v${esc(item.measurementSchemaVersion)}→v${KNOWLEDGE_CURRENT_VERSION_HINT})</span>` : '',
+  ].filter(Boolean).join(' ');
+
+  const verdictLine = item.verdict
+    ? `<div style="font-size:12px;color:#888;margin-bottom:4px">${esc(KNOWLEDGE_VERDICT_LABEL[item.verdict] || item.verdict)}${item.verdictNote ? ' — ' + esc(item.verdictNote) : ''}</div>`
+    : '';
+
+  const lineageLine = [
+    item.supersedes   ? `이전 버전 대체: ${esc(item.supersedes)}` : '',
+    item.supersededBy ? `→ 새 버전으로 대체됨: ${esc(item.supersededBy)}` : '',
+  ].filter(Boolean).join(' · ');
+
+  const actions = isSuperseded ? '' : [
+    `<button class="btn-edit" onclick="startReviseKnowledgeItem('${item.id}')">수정</button>`,
+    item.status === 'draft'
+      ? `<button class="btn-primary" style="padding:6px 12px;font-size:12px" ${!item.knowledgeSource || item.knowledgeSource === 'unclassified' ? 'disabled title="출처를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)"' : ''} onclick="confirmKnowledgeItem('${item.id}')">확정</button>`
+      : '',
+    `<button class="btn-danger" onclick="discardKnowledgeItem('${item.id}')">폐기</button>`,
+  ].filter(Boolean).join('');
+
+  return `
+    <div style="border:1px solid #e5e5e7;border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;background:${isSuperseded ? '#fafafa' : '#fff'};opacity:${isSuperseded ? '0.7' : '1'}">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${badges}
+        <span style="font-size:11px;color:#aaa;margin-left:auto">${esc(savedAt)}</span>
+      </div>
+      ${verdictLine}
+      <div class="kw-body" style="font-size:12.5px;color:#333;line-height:1.7;white-space:pre-wrap;overflow:hidden;max-height:4.8em" id="kwBody-${esc(item.id)}">${esc(item.correctedFeedback || '')}</div>
+      <button onclick="toggleKnowledgeExpand('${item.id}')" style="background:none;border:none;color:#0055b3;font-size:11px;cursor:pointer;padding:4px 0">펼치기/접기</button>
+      ${lineageLine ? `<div style="font-size:11px;color:#aaa;margin-top:4px">${lineageLine}</div>` : ''}
+      ${actions ? `<div class="row-actions" style="justify-content:flex-start;margin-top:8px">${actions}</div>` : ''}
+    </div>`;
+}
+
+function knowledgeEditFormHtml(item) {
+  return `
+    <div style="border:2px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fffafa">
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">기술</label>
+        <input class="form-control" id="kwEditTechnique-${esc(item.id)}" value="${esc(item.technique || '')}">
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">출처</label>
+        <select class="form-control" id="kwEditSource-${esc(item.id)}">
+          <option value="curriculum" ${item.knowledgeSource === 'curriculum' ? 'selected' : ''}>커리큘럼 원문</option>
+          <option value="tacit" ${item.knowledgeSource === 'tacit' ? 'selected' : ''}>지도자 경험 지식</option>
+          <option value="ai_verified" ${item.knowledgeSource === 'ai_verified' ? 'selected' : ''}>AI 추론 검증</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">지식 내용</label>
+        <textarea class="form-control" id="kwEditBody-${esc(item.id)}" rows="6" style="font-family:inherit;resize:vertical">${esc(item.correctedFeedback || '')}</textarea>
+      </div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:10px">
+        저장하면 이 문서는 폐기(superseded)되고 새 문서가 생성되어 연결됩니다. 새 문서는 다시 초안(draft) 상태로 시작합니다.
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveReviseKnowledgeItem('${item.id}')">저장 (새 버전 생성)</button>
+        <button class="btn-secondary" onclick="cancelReviseKnowledgeItem()">취소</button>
+      </div>
+    </div>`;
+}
+
+// 카드 렌더 시점에 참고할 "현재 산식 버전" — loadKnowledgeMgmt 가 세팅한다.
+let KNOWLEDGE_CURRENT_VERSION_HINT = '?';
+
+window.toggleKnowledgeExpand = (id) => {
+  const el = document.getElementById('kwBody-' + id);
+  if (!el) return;
+  el.style.maxHeight = el.style.maxHeight === 'none' ? '4.8em' : 'none';
+};
+
+window.applyKnowledgeFilters = () => { loadKnowledgeMgmt(); };
+
+window.confirmKnowledgeItem = async (id) => {
   try {
-    await deleteDoc(doc(db, 'coaching_knowledge', id));
-    showToast('삭제되었습니다.');
-    loadKnowledgeLibrary();
-  } catch(e) { showToast('삭제 실패: ' + e.message, 'error'); }
+    await knowledgeApi({ mode: 'confirm', docId: id });
+    showToast('확정되었습니다. AI 코치가 이제부터 참조합니다.');
+    loadKnowledgeMgmt();
+  } catch (e) { showToast('확정 실패: ' + e.message, 'error'); }
+};
+
+window.discardKnowledgeItem = async (id) => {
+  const reason = prompt('폐기 사유(선택, 비워도 됩니다):', '');
+  if (reason === null) return;
+  if (!confirm('이 지식을 폐기하시겠습니까? 문서는 삭제되지 않고 superseded 상태로 남아 이력을 추적할 수 있습니다.')) return;
+  try {
+    await knowledgeApi({ mode: 'discard', docId: id, reason: reason || '' });
+    showToast('폐기 처리되었습니다.');
+    loadKnowledgeMgmt();
+  } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
+};
+
+window.startReviseKnowledgeItem = (id) => {
+  knowledgeEditingId = id;
+  renderKnowledgeList(knowledgeItemsCache);
+};
+
+window.cancelReviseKnowledgeItem = () => {
+  knowledgeEditingId = null;
+  renderKnowledgeList(knowledgeItemsCache);
+};
+
+window.saveReviseKnowledgeItem = async (id) => {
+  const technique = document.getElementById('kwEditTechnique-' + id).value.trim();
+  const source    = document.getElementById('kwEditSource-' + id).value;
+  const body      = document.getElementById('kwEditBody-' + id).value.trim();
+  if (!body) { showToast('지식 내용을 입력해주세요.', 'error'); return; }
+  try {
+    await knowledgeApi({ mode: 'revise', docId: id, correctedFeedback: body, knowledgeSource: source, technique });
+    showToast('새 버전으로 저장되었습니다. (초안 상태 — 확정이 필요합니다)');
+    knowledgeEditingId = null;
+    loadKnowledgeMgmt();
+  } catch (e) { showToast('저장 실패: ' + e.message, 'error'); }
+};
+
+window.migrateKnowledgeLegacy = async () => {
+  if (!confirm('구 문서를 백필하시겠습니까?\n상태는 초안(draft), 출처는 미분류로 채워집니다.\n확정하려면 문서마다 출처를 직접 지정해야 합니다.')) return;
+  const btn = document.getElementById('knowledgeMigrateBtn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  try {
+    const data = await knowledgeApi({ mode: 'migrate' });
+    showToast(`${data.migrated}건 백필 완료. 출처를 지정한 뒤 확정해주세요.`);
+    loadKnowledgeMgmt();
+  } catch (e) {
+    showToast('백필 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '구 문서 백필하기';
+  }
 };
 
 /* ---- AI INTERVIEW ---- */

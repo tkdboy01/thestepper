@@ -168,7 +168,8 @@ select.form-control{cursor:pointer}
   <!-- 관리자 전용 메뉴 — 아래 admin-nav 스크립트가 표시를 제어한다.
        전체 공개 전환 시: style="display:none" 을 지우고
        motion.html 의 ADMIN_ONLY 를 false 로 바꾸면 된다. -->
-  <a href="motion.html" id="navMotionLink" onclick="toggleMenu()" style="display:none">동작 분석</a>
+  <a href="motion.html" id="navMotionLink" class="admin-only-nav" onclick="toggleMenu()" style="display:none">동작 분석</a>
+  <a href="voice.html" id="navVoiceLink" class="admin-only-nav" onclick="toggleMenu()" style="display:none">🎙 음성 답변</a>
   <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
   <a href="virtual.html" onclick="toggleMenu()">VR 버추얼 태권도</a>
   <a href="admin.html" onclick="toggleMenu()" style="font-size:11px;letter-spacing:2px;opacity:0.8;padding-top:8px;padding-bottom:8px;color:var(--gold);font-weight:800">⚙ ADMIN</a>
@@ -529,6 +530,18 @@ select.form-control{cursor:pointer}
         <div id="coachingDoneList"></div>
       </div>
 
+      <!-- 음성 답변 초안 (voice.html 에서 저장한 것) -->
+      <div style="margin-top:28px;border-top:2px solid #e5e5e7;padding-top:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">🎙 음성 답변 초안 <span id="voiceDraftCount" style="font-size:13px;font-weight:400;color:#888"></span></div>
+          <button onclick="loadVoiceDrafts()" style="background:transparent;border:1px solid var(--border);color:#888;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">새로고침</button>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px">
+          voice.html(운전 중 음성 답변 페이지)에서 "초안 저장"으로만 남기고 아직 전송하지 않은 답변입니다.
+        </div>
+        <div id="voiceDraftList"><div class="loading-msg">로딩 중...</div></div>
+      </div>
+
       <!-- 코칭 지식은 판정·출처·이력 관리가 필요해 별도 탭으로 옮겼다 -->
       <div style="margin-top:28px;border-top:2px solid #e5e5e7;padding-top:16px;font-size:12px;color:#888">
         📚 코칭 지식 목록·확정·수정·폐기는 <b style="color:var(--red)">🧠 코칭 지식</b> 탭에서 관리합니다.
@@ -594,7 +607,7 @@ select.form-control{cursor:pointer}
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, orderBy, query, onSnapshot, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, orderBy, query, onSnapshot, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /* ---- FIREBASE SETUP ---- */
@@ -1294,6 +1307,7 @@ function initCoachingTab() {
   loadKnowledgeLibrary();
   loadInterviewCard();
   loadSosCard();
+  loadVoiceDrafts();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1916,6 +1930,125 @@ window.generateInterviewQuestion = async () => {
     loading.style.display = 'none';
     empty.style.display = 'block';
     showToast('질문 생성 오류: ' + e.message, 'error');
+  }
+};
+
+/* ---- VOICE DRAFTS (voice.html 에서 저장한 음성 답변 초안) ---- */
+// voice.html 은 관리자 본인만 쓰는 페이지라 클라이언트에서 voice_drafts 를
+// 직접 읽고 쓴다(모션 데이터와 동일하게 Firestore 규칙의 isAdmin() 으로 막는다).
+// 전송(확정)만은 admin.html 의 기존 코칭 흐름과 동일하게 서버 API
+// (/api/process-interview) 를 거쳐 AI 학습까지 함께 처리한다.
+let voiceDraftEditingId = null;
+
+async function loadVoiceDrafts() {
+  const listEl = document.getElementById('voiceDraftList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'voice_drafts'), where('status', '==', 'draft')));
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
+
+    document.getElementById('voiceDraftCount').textContent = items.length ? `(${items.length}건)` : '';
+
+    if (!items.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">저장된 음성 답변 초안이 없습니다.</div>';
+      return;
+    }
+    renderVoiceDraftList(items);
+  } catch (e) {
+    const isPermError = e.code === 'permission-denied';
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}${isPermError ? '<br><small>Firestore 보안 규칙을 확인하세요.</small>' : ''}</div>`;
+  }
+}
+
+window._voiceDraftCache = [];
+
+function renderVoiceDraftList(items) {
+  window._voiceDraftCache = items;
+  const listEl = document.getElementById('voiceDraftList');
+  listEl.innerHTML = items.map(voiceDraftCardHtml).join('');
+}
+
+function voiceDraftCardHtml(item) {
+  if (voiceDraftEditingId === item.id) return voiceDraftEditFormHtml(item);
+
+  const updatedAt = item.updatedAt?.toDate
+    ? item.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
+    : '';
+
+  return `
+    <div style="border:1px solid #e5e5e7;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:13px;background:#fafafa">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <span style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700">${esc(item.chapter || '기타')}</span>
+        <span style="font-size:11px;color:#aaa;margin-left:auto">${esc(updatedAt)}</span>
+      </div>
+      <div style="font-size:12px;color:#555;margin-bottom:4px;font-weight:600">Q: ${esc(item.questionText || '')}</div>
+      <div style="font-size:12px;color:#333;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:8px">${esc(item.draftAnswer || '')}</div>
+      <div class="row-actions" style="justify-content:flex-start">
+        <button class="btn-edit" onclick="startEditVoiceDraft('${item.id}')">열기</button>
+      </div>
+    </div>`;
+}
+
+function voiceDraftEditFormHtml(item) {
+  return `
+    <div style="border:2px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fffafa">
+      <div style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700;display:inline-block;margin-bottom:8px">${esc(item.chapter || '기타')}</div>
+      <div style="font-size:13px;color:#333;font-weight:600;margin-bottom:10px;line-height:1.6">${esc(item.questionText || '')}</div>
+      <textarea class="form-control" id="voiceDraftEditBody-${esc(item.id)}" rows="6" style="font-family:inherit;resize:vertical">${esc(item.draftAnswer || '')}</textarea>
+      <div id="voiceDraftEditErr-${esc(item.id)}" style="font-size:12px;color:var(--red);margin-top:6px;min-height:16px"></div>
+      <div class="form-actions" style="margin-top:8px">
+        <button class="btn-primary" onclick="submitVoiceDraft('${item.id}')">✅ 확정 전송</button>
+        <button class="btn-secondary" onclick="cancelEditVoiceDraft()">취소</button>
+      </div>
+    </div>`;
+}
+
+window.startEditVoiceDraft = (id) => {
+  voiceDraftEditingId = id;
+  renderVoiceDraftList(window._voiceDraftCache);
+};
+
+window.cancelEditVoiceDraft = () => {
+  voiceDraftEditingId = null;
+  renderVoiceDraftList(window._voiceDraftCache);
+};
+
+window.submitVoiceDraft = async (id) => {
+  const item = window._voiceDraftCache.find(d => d.id === id);
+  const errEl = document.getElementById('voiceDraftEditErr-' + id);
+  const text = document.getElementById('voiceDraftEditBody-' + id).value.trim();
+  if (!text) { errEl.textContent = '답변 내용을 입력해주세요.'; return; }
+  if (!item) { errEl.textContent = '초안 정보를 찾을 수 없습니다. 새로고침해주세요.'; return; }
+
+  errEl.textContent = '';
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('로그인이 필요합니다.');
+    const token = await user.getIdToken();
+
+    // voice.html 과 동일한 API·파라미터 형식 — questionId 가 곧
+    // ai_interview 문서 ID 다(voice_drafts 문서 ID 로도 재사용했다).
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'answer', docId: item.questionId || id, adminAnswer: text })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+
+    // 삭제하지 않고 상태만 갱신 — 이 코드베이스 전체가 "지우지 않고
+    // 상태 전이로 이력을 남기는" 방식을 일관되게 쓰고 있어 그에 맞춘다.
+    await updateDoc(doc(db, 'voice_drafts', id), { status: 'submitted', updatedAt: serverTimestamp() });
+
+    showToast('전송 완료! AI 학습에 반영되었습니다.');
+    voiceDraftEditingId = null;
+    await loadVoiceDrafts();
+    loadKnowledgeLibrary();
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
   }
 };
 

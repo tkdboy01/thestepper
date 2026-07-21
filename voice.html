@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<!-- ══════════════════════════════════════════════════════════════════
+     음성 답변 (관리자 전용) — Track 1(ai_interview, trackType:'scenario')
+     대기중 질문에 운전 중에도 음성으로 답변할 수 있게 만든 모바일 페이지.
+
+     admin.html 의 "AI 수석 코치의 질문" 카드와 동일한 데이터/API 를 쓴다:
+       - 질문 조회: ai_interview 컬렉션, status:'대기중', trackType:'scenario'
+       - 답변 전송: POST /api/process-interview { mode:'answer', docId, adminAnswer }
+     motion.html 과 동일한 방식으로 관리자 전용 게이트를 건다
+     (ADMIN_ONLY + requireAdmin, 화면 숨김과 별개로 기능 자체도 차단).
+     ══════════════════════════════════════════════════════════════════ -->
+<link rel="manifest" href="voice-manifest.json">
+<meta name="theme-color" content="#C8102E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="음성답변">
+<link rel="apple-touch-icon" href="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media">
+<link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/assets%2Flogo.png?alt=media" type="image/png">
+<title>음성 답변 | THE STEPPER ADMIN</title>
+<style>
+  :root { --red:#C8102E; --gold:#C9A84C; --bg:#0f1115; --surface:#181b22; --border:#2a2e38; --text:#f2f2f4; --sub:#9a9fac; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+               font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+               min-height: 100vh; min-height: 100dvh; }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  /* ── 접근 거부 화면 ─────────────────────────────────────────── */
+  #adminGate { max-width: 420px; margin: 0 auto; padding: 100px 24px; text-align: center; }
+  #adminGate .lock { font-size: 44px; margin-bottom: 18px; }
+  #adminGate .msg  { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  #adminGate .sub  { font-size: 13px; color: var(--sub); line-height: 1.7; }
+  #adminGate a     { color: var(--gold); }
+
+  #pageBody { display: none; max-width: 480px; margin: 0 auto; padding: 0 16px 40px; }
+
+  /* ── 상단 바 ────────────────────────────────────────────────── */
+  .topbar { display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 4px 10px; border-bottom: 2px solid var(--red); margin-bottom: 18px; }
+  .topbar-title { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+  .topbar-title small { display: block; font-size: 10px; color: var(--sub); font-weight: 500; letter-spacing: 1px; margin-top: 2px; }
+  .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--sub);
+                border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; }
+
+  /* ── TTS 토글 ───────────────────────────────────────────────── */
+  .tts-row { display: flex; align-items: center; justify-content: space-between;
+             background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+             padding: 12px 16px; margin-bottom: 16px; }
+  .tts-row .label { font-size: 13px; font-weight: 600; }
+  .tts-row .label small { display: block; font-size: 11px; color: var(--sub); font-weight: 400; margin-top: 2px; }
+  .switch { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position: absolute; inset: 0; background: #3a3f4b; border-radius: 999px; cursor: pointer; transition: background 0.2s; }
+  .switch .thumb { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: #fff;
+                    border-radius: 50%; transition: transform 0.2s; }
+  .switch input:checked + .track { background: var(--red); }
+  .switch input:checked + .track .thumb { transform: translateX(20px); }
+
+  /* ── 질문 카드 ──────────────────────────────────────────────── */
+  .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+            padding: 22px 20px; margin-bottom: 18px; }
+  .q-chapter { display: inline-block; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.4);
+               color: var(--gold); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; margin-bottom: 14px; }
+  .q-text { font-size: 21px; font-weight: 700; line-height: 1.55; }
+
+  /* ── 빈 상태 ────────────────────────────────────────────────── */
+  #emptyState { display: none; text-align: center; padding: 90px 20px; }
+  #emptyState .icon { font-size: 40px; margin-bottom: 14px; }
+  #emptyState .msg  { font-size: 16px; font-weight: 700; color: var(--sub); }
+
+  /* ── 답변 영역 ──────────────────────────────────────────────── */
+  #answerArea { display: none; }
+
+  .mic-wrap { display: flex; flex-direction: column; align-items: center; margin: 22px 0; }
+  #micBtn { width: 88px; height: 88px; border-radius: 50%; border: none; cursor: pointer;
+            background: var(--red); color: #fff; font-size: 34px; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 4px 20px rgba(200,16,46,0.4); transition: transform 0.15s, background 0.2s; }
+  #micBtn:active { transform: scale(0.94); }
+  #micBtn.recording { background: #ff3b3b; animation: micPulse 1.2s infinite; }
+  @keyframes micPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,59,59,0.55); }
+    70%  { box-shadow: 0 0 0 22px rgba(255,59,59,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,59,59,0); }
+  }
+  .mic-hint { font-size: 12px; color: var(--sub); margin-top: 10px; text-align: center; }
+  .mic-unsupported { background: #2a1f1f; border: 1px solid #5a2c2c; color: #ffb4b4;
+                      border-radius: 10px; padding: 12px 14px; font-size: 12.5px; line-height: 1.7; margin: 16px 0; }
+
+  #answerText { width: 100%; min-height: 130px; background: var(--surface); border: 1px solid var(--border);
+                border-radius: 12px; padding: 14px; color: var(--text); font-size: 16px; line-height: 1.7;
+                font-family: inherit; resize: vertical; }
+  #answerText:focus { outline: none; border-color: var(--gold); }
+
+  .btn-row { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .btn-big { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 15px;
+             font-weight: 800; cursor: pointer; font-family: inherit; }
+  .btn-big:disabled { opacity: 0.5; cursor: not-allowed; }
+  #saveDraftBtn  { background: transparent; border: 1.5px solid var(--gold); color: var(--gold); }
+  #submitBtn     { background: var(--red); color: #fff; }
+
+  #voiceStatus { font-size: 12.5px; color: var(--sub); margin-top: 12px; min-height: 18px; text-align: center; line-height: 1.6; white-space: pre-wrap; }
+  #voiceStatus.error { color: #ff8080; }
+  #voiceStatus.ok    { color: #7ee787; }
+</style>
+</head>
+<body>
+
+<!-- 접근 거부 화면 (기본 노출 — 관리자 인증 통과 시 숨김) -->
+<div id="adminGate">
+  <div class="lock">🔒</div>
+  <div class="msg">접근 권한이 없습니다</div>
+  <div class="sub">
+    이 페이지는 관리자 전용입니다.<br>
+    <a href="admin.html">관리자 로그인으로 이동</a>
+  </div>
+</div>
+
+<!-- 페이지 본문 (기본 숨김 — 관리자 인증 통과 시 노출) -->
+<div id="pageBody">
+
+  <div class="topbar">
+    <div class="topbar-title">🎙 음성 답변<small>ADMIN · TRACK 1</small></div>
+    <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+  </div>
+
+  <div class="tts-row">
+    <div class="label">질문 자동 읽어주기<small>운전 중에는 켜두면 화면을 안 봐도 됩니다</small></div>
+    <label class="switch">
+      <input type="checkbox" id="ttsToggle" onchange="onTtsToggleChange()">
+      <span class="track"><span class="thumb"></span></span>
+    </label>
+  </div>
+
+  <!-- 대기중인 질문이 없을 때 -->
+  <div id="emptyState">
+    <div class="icon">✅</div>
+    <div class="msg">대기중인 질문이 없습니다</div>
+  </div>
+
+  <!-- 질문 + 답변 입력 -->
+  <div id="answerArea">
+    <div class="q-card">
+      <span class="q-chapter" id="qChapter"></span>
+      <div class="q-text" id="qText"></div>
+    </div>
+
+    <div class="mic-wrap">
+      <button id="micBtn" onclick="toggleRecording()" aria-label="음성 인식 시작/중지">🎤</button>
+      <div class="mic-hint" id="micHint">눌러서 말하기</div>
+    </div>
+
+    <div class="mic-unsupported" id="micUnsupported" style="display:none">
+      이 브라우저는 음성 인식을 지원하지 않습니다. 키보드의 마이크 아이콘을 사용해주세요.
+    </div>
+
+    <textarea id="answerText" placeholder="답변이 여기에 표시됩니다. 직접 입력하거나 수정할 수 있습니다." oninput="onAnswerInput()"></textarea>
+
+    <div class="btn-row">
+      <button class="btn-big" id="saveDraftBtn" onclick="saveDraft()">💾 초안 저장</button>
+      <button class="btn-big" id="submitBtn" onclick="submitAndLearn()">📤 전송 및 학습</button>
+    </div>
+
+    <div id="voiceStatus"></div>
+  </div>
+
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+// ── Firebase 초기화 (방어적 패턴: 이미 앱이 있으면 재사용) ──────
+var MY_CONFIG = {
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+};
+
+var fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(MY_CONFIG);
+var auth   = firebase.auth(fbApp);
+var db     = firebase.firestore(fbApp);
+
+// ── 관리자 전용 접근 제어 (motion.html 과 동일 패턴) ─────────────
+var ADMIN_ONLY  = true;
+var ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
+var isAdminUser = false;
+
+function requireAdmin() {
+  if (!ADMIN_ONLY) return true;
+  if (isAdminUser) return true;
+  alert('관리자 전용 기능입니다.');
+  return false;
+}
+
+var PROCESS_INTERVIEW_URL = 'https://thestepper-api.vercel.app/api/process-interview';
+
+var currentQuestionId = null;
+var currentQuestionText = '';
+var currentChapter = '';
+var currentDraftExists = false;   // 이번 질문에 이미 초안 문서가 있는지
+
+auth.onAuthStateChanged(function (user) {
+  isAdminUser = !!(user && user.email === ADMIN_EMAIL);
+  var allowed = !ADMIN_ONLY || isAdminUser;
+
+  document.getElementById('adminGate').style.display = allowed ? 'none'  : 'block';
+  document.getElementById('pageBody').style.display  = allowed ? 'block' : 'none';
+  if (!allowed) return;
+
+  initTtsToggle();
+  initSpeechRecognition();
+  loadPendingQuestion();
+});
+
+function doLogout() {
+  speechSynthesis.cancel();
+  auth.signOut().then(function () { window.location.href = 'admin.html'; });
+}
+
+// ── 질문 자동 읽기 토글 (로컬 저장) ───────────────────────────────
+var TTS_KEY = 'voiceTtsEnabled';
+
+function initTtsToggle() {
+  var saved = localStorage.getItem(TTS_KEY);
+  var enabled = saved === null ? true : saved === '1';   // 기본값: 켜짐 (운전 중 사용 목적)
+  document.getElementById('ttsToggle').checked = enabled;
+}
+
+function isTtsEnabled() {
+  return document.getElementById('ttsToggle').checked;
+}
+
+function onTtsToggleChange() {
+  localStorage.setItem(TTS_KEY, isTtsEnabled() ? '1' : '0');
+  if (!isTtsEnabled()) speechSynthesis.cancel();
+}
+
+function speakQuestion(text) {
+  if (!isTtsEnabled() || !text) return;
+  if (!('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1.0;
+    speechSynthesis.speak(u);
+  } catch (e) {
+    // 일부 브라우저는 첫 사용자 제스처 전에는 재생을 막는다 — 조용히 무시.
+    // 화면에 질문 텍스트는 항상 표시되므로 기능 자체는 지장 없다.
+  }
+}
+
+// ── 대기중 질문 조회 (admin.html 의 Track1 카드와 동일 데이터) ──
+async function loadPendingQuestion() {
+  var empty  = document.getElementById('emptyState');
+  var answer = document.getElementById('answerArea');
+  empty.style.display  = 'none';
+  answer.style.display = 'none';
+
+  try {
+    var snap = await db.collection('ai_interview').get();
+    var pending = [];
+    snap.forEach(function (docSnap) {
+      var d = docSnap.data();
+      if (d.status === '대기중' && d.trackType === 'scenario') {
+        pending.push(Object.assign({ id: docSnap.id }, d));
+      }
+    });
+    pending.sort(function (a, b) {
+      return (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0)
+           - (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0);
+    });
+
+    if (!pending.length) {
+      currentQuestionId = null;
+      empty.style.display = 'block';
+      return;
+    }
+
+    setCurrentQuestion(pending[0].id, pending[0].question || '', pending[0].chapter || '기타');
+    await loadExistingDraft();
+
+  } catch (e) {
+    setStatus('❌ 질문을 불러오지 못했습니다: ' + e.message, 'error');
+    empty.style.display = 'block';
+  }
+}
+
+function setCurrentQuestion(id, question, chapter) {
+  currentQuestionId   = id;
+  currentQuestionText = question;
+  currentChapter      = chapter;
+  currentDraftExists  = false;
+
+  document.getElementById('qChapter').textContent = chapter;
+  document.getElementById('qText').textContent    = question;
+  document.getElementById('answerText').value     = '';
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('answerArea').style.display  = 'block';
+  setStatus('', '');
+
+  speakQuestion(question);
+}
+
+// 같은 질문에 대해 이미 저장해둔 초안이 있으면 불러온다 (문서 ID = 질문 ID)
+async function loadExistingDraft() {
+  if (!currentQuestionId) return;
+  try {
+    var snap = await db.collection('voice_drafts').doc(currentQuestionId).get();
+    if (snap.exists && snap.data().status === 'draft') {
+      document.getElementById('answerText').value = snap.data().draftAnswer || '';
+      currentDraftExists = true;
+      setStatus('저장된 초안을 불러왔습니다. 이어서 수정할 수 있습니다.', 'ok');
+    }
+  } catch (e) {
+    // 초안 조회 실패는 치명적이지 않다 — 빈 답변으로 계속 진행
+    console.error('[loadExistingDraft]', e);
+  }
+}
+
+function onAnswerInput() {
+  setStatus('', '');
+}
+
+function setStatus(msg, cls) {
+  var el = document.getElementById('voiceStatus');
+  el.textContent = msg || '';
+  el.className = cls || '';
+}
+
+// ── 음성 인식 (webkitSpeechRecognition / SpeechRecognition) ─────
+var recognition = null;
+var recognizing = false;
+var finalTranscript = '';   // 확정된 인식 결과 누적 (편집 중인 텍스트와 별개로 추적)
+
+function initSpeechRecognition() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var micBtn = document.getElementById('micBtn');
+  var unsupported = document.getElementById('micUnsupported');
+
+  if (!SR) {
+    micBtn.style.display = 'none';
+    document.getElementById('micHint').style.display = 'none';
+    unsupported.style.display = 'block';
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = function () {
+    recognizing = true;
+    micBtn.classList.add('recording');
+    document.getElementById('micHint').textContent = '듣고 있어요… 다시 누르면 멈춰요';
+    // 이번 녹음 세션 시작 시점의 텍스트를 기준으로 이어붙인다
+    finalTranscript = document.getElementById('answerText').value;
+    if (finalTranscript && !/\s$/.test(finalTranscript)) finalTranscript += ' ';
+  };
+
+  recognition.onresult = function (event) {
+    var interim = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      var chunk = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += chunk + ' ';
+      } else {
+        interim += chunk;
+      }
+    }
+    document.getElementById('answerText').value = finalTranscript + interim;
+  };
+
+  recognition.onerror = function (event) {
+    setStatus('❌ 음성 인식 오류: ' + event.error, 'error');
+  };
+
+  recognition.onend = function () {
+    recognizing = false;
+    micBtn.classList.remove('recording');
+    document.getElementById('micHint').textContent = '눌러서 말하기';
+  };
+}
+
+window.toggleRecording = function () {
+  if (!recognition) return;
+  if (recognizing) {
+    recognition.stop();
+  } else {
+    speechSynthesis.cancel();   // 듣는 중엔 TTS 와 겹치지 않게 정지
+    try { recognition.start(); } catch (e) { /* 이미 시작된 경우 등은 무시 */ }
+  }
+};
+
+// ── 초안 저장 (voice_drafts, 문서 ID = 질문 ID → 재저장 시 업데이트) ──
+window.saveDraft = async function () {
+  if (!requireAdmin()) return;
+  if (!currentQuestionId) { setStatus('❌ 저장할 질문이 없습니다.', 'error'); return; }
+
+  var text = document.getElementById('answerText').value.trim();
+  if (!text) { setStatus('❌ 답변 내용을 입력해주세요.', 'error'); return; }
+
+  var btn = document.getElementById('saveDraftBtn');
+  btn.disabled = true;
+  setStatus('⏳ 초안 저장 중...', '');
+
+  try {
+    await db.collection('voice_drafts').doc(currentQuestionId).set({
+      questionId:   currentQuestionId,
+      questionText: currentQuestionText,
+      chapter:      currentChapter,
+      draftAnswer:  text,
+      status:       'draft',
+      createdAt:    currentDraftExists ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    currentDraftExists = true;
+    setStatus('✅ 초안이 저장되었습니다. 계속 수정할 수 있습니다.', 'ok');
+  } catch (e) {
+    setStatus('❌ 초안 저장 실패: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+};
+
+// ── 전송 및 학습 (admin.html 과 동일한 /api/process-interview 호출) ──
+window.submitAndLearn = async function () {
+  if (!requireAdmin()) return;
+  if (!currentQuestionId) { setStatus('❌ 전송할 질문이 없습니다.', 'error'); return; }
+  if (!auth.currentUser) { setStatus('❌ 로그인이 필요합니다.', 'error'); return; }
+
+  var text = document.getElementById('answerText').value.trim();
+  if (!text) { setStatus('❌ 답변 내용을 입력해주세요.', 'error'); return; }
+
+  var submitBtn = document.getElementById('submitBtn');
+  var draftBtn  = document.getElementById('saveDraftBtn');
+  submitBtn.disabled = true;
+  draftBtn.disabled  = true;
+  setStatus('⏳ 전송 및 AI 학습 처리 중...', '');
+
+  var submittedQuestionId = currentQuestionId;
+
+  try {
+    var idToken = await auth.currentUser.getIdToken();
+    var res = await fetch(PROCESS_INTERVIEW_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body:    JSON.stringify({ mode: 'answer', docId: submittedQuestionId, adminAnswer: text })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || '서버 오류');
+
+    // 초안 문서가 있었다면 삭제 대신 상태만 갱신한다 — 이 앱 전체가
+    // "지우지 않고 상태로 이력을 남기는" 방식을 쓰고 있어 그에 맞춘다
+    // (movement_data/coaching_knowledge 의 status 전이 패턴과 동일).
+    try {
+      var draftRef = db.collection('voice_drafts').doc(submittedQuestionId);
+      var draftSnap = await draftRef.get();
+      if (draftSnap.exists) {
+        await draftRef.update({ status: 'submitted', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+    } catch (e2) {
+      console.error('[voice_drafts 상태 갱신 실패, 무시]', e2);
+    }
+
+    setStatus('✅ 전송 완료! 다음 질문을 불러옵니다.', 'ok');
+
+    if (data.next) {
+      setCurrentQuestion(data.next.id, data.next.question, data.next.chapter);
+    } else {
+      await loadPendingQuestion();
+    }
+  } catch (e) {
+    setStatus('❌ 전송 실패: ' + e.message, 'error');
+  }
+
+  submitBtn.disabled = false;
+  draftBtn.disabled  = false;
+};
+
+// 페이지를 벗어날 때 음성 관련 활동 정리
+window.addEventListener('beforeunload', function () {
+  speechSynthesis.cancel();
+  if (recognition && recognizing) recognition.stop();
+});
+</script>
+
+</body>
+</html>

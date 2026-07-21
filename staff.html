@@ -183,7 +183,8 @@ footer{background:#ffffff;border-top:1px solid #1a1a1a;padding:36px 24px;text-al
   <!-- 관리자 전용 메뉴 — 아래 admin-nav 스크립트가 표시를 제어한다.
        전체 공개 전환 시: style="display:none" 을 지우고
        motion.html 의 ADMIN_ONLY 를 false 로 바꾸면 된다. -->
-  <a href="motion.html" id="navMotionLink" onclick="toggleMenu()" style="display:none">동작 분석</a>
+  <a href="motion.html" id="navMotionLink" class="admin-only-nav" onclick="toggleMenu()" style="display:none">동작 분석</a>
+  <a href="voice.html" id="navVoiceLink" class="admin-only-nav" onclick="toggleMenu()" style="display:none">🎙 음성 답변</a>
   <a href="board.html" onclick="toggleMenu()">1:1 문의</a>
   <a href="virtual.html" onclick="toggleMenu()">VR 버추얼 태권도</a>
   <a href="admin.html" onclick="toggleMenu()" style="font-size:11px;letter-spacing:2px;opacity:0.45;padding-top:8px;padding-bottom:8px">⚙ ADMIN</a>

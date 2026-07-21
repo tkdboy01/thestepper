@@ -1,7 +1,9 @@
 /* ══════════════════════════════════════════════════════════════════
    관리자 전용 메뉴 표시 제어 (모든 페이지 공용)
 
-   #navMotionLink 링크를 관리자에게만 노출한다.
+   class="admin-only-nav" 가 붙은 링크를 관리자에게만 노출한다.
+   (motion.html 용 navMotionLink, voice.html 용 navVoiceLink 등 여러 개를
+   한 번에 처리한다 — 페이지마다 스크립트를 따로 두지 않으려고 일반화했다)
 
    2단 구조:
      1) 즉시 판정 — localStorage 의 firebase:authUser:* 키를 "전부 훑어"
@@ -13,11 +15,11 @@
         이쪽 결과가 언제나 1)을 덮어쓴다.
 
    주의: 이건 "보이기/숨기기"일 뿐 접근 통제가 아니다.
-   실제 차단은 motion.html 의 ADMIN_ONLY + requireAdmin 가드가
-   Firebase Auth 로 수행한다. 이 파일을 우회해 링크를 띄워도
+   실제 차단은 motion.html / voice.html 의 ADMIN_ONLY + requireAdmin
+   가드가 Firebase Auth 로 수행한다. 이 파일을 우회해 링크를 띄워도
    페이지 내용과 기능은 열리지 않는다.
 
-   전체 공개 전환 시: 각 페이지 <a id="navMotionLink"> 의
+   전체 공개 전환 시: 해당 <a class="admin-only-nav"> 의
    style="display:none" 만 지우면 되고 이 파일은 그대로 둬도 무해하다.
    ══════════════════════════════════════════════════════════════════ */
 (function () {
@@ -35,10 +37,12 @@
     appId: "1:787224576231:web:04d4003f42ecace9016242"
   };
 
-  // ── 표시 토글 ────────────────────────────────────────────────
+  // ── 표시 토글 (class="admin-only-nav" 전부) ───────────────────
   function setVisible(show) {
-    var el = document.getElementById('navMotionLink');
-    if (el) el.style.display = show ? '' : 'none';
+    var els = document.querySelectorAll('.admin-only-nav');
+    for (var i = 0; i < els.length; i++) {
+      els[i].style.display = show ? '' : 'none';
+    }
   }
 
   function whenReady(fn) {

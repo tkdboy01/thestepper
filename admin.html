@@ -1716,6 +1716,7 @@ function knowledgeCardHtml(item) {
         <span style="font-size:11px;color:#aaa;margin-left:auto">${esc(savedAt)}</span>
       </div>
       ${verdictLine}
+      ${item.originalQuestion ? `<div class="kw-question" style="font-size:12.5px;color:#555;font-weight:700;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed #e5e5e7;white-space:pre-wrap">Q. ${esc(item.originalQuestion)}</div>` : ''}
       <div class="kw-body" style="font-size:12.5px;color:#333;line-height:1.7;white-space:pre-wrap;overflow:hidden;max-height:4.8em" id="kwBody-${esc(item.id)}">${esc(item.correctedFeedback || '')}</div>
       <button onclick="toggleKnowledgeExpand('${item.id}')" style="background:none;border:none;color:#0055b3;font-size:11px;cursor:pointer;padding:4px 0">펼치기/접기</button>
       ${lineageLine ? `<div style="font-size:11px;color:#aaa;margin-top:4px">${lineageLine}</div>` : ''}

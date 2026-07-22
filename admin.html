@@ -584,6 +584,15 @@ select.form-control{cursor:pointer}
             <option value="unclassified">미분류</option>
           </select>
         </div>
+        <div class="form-group" style="min-width:150px">
+          <label class="form-label">규칙 체계</label>
+          <select class="form-control" id="kfRuleContext" onchange="applyKnowledgeFilters()">
+            <option value="">전체</option>
+            <option value="traditional">전통 인파이팅</option>
+            <option value="electronic_hogu">전자호구 규칙</option>
+            <option value="both">공통</option>
+          </select>
+        </div>
         <div class="form-group" style="flex:1;min-width:140px">
           <label class="form-label">기술 검색</label>
           <input class="form-control" id="kfTechnique" placeholder="예) 돌려차기" oninput="applyKnowledgeFilters()">
@@ -1584,6 +1593,16 @@ const KNOWLEDGE_VERDICT_LABEL = {
   partial:    '판정: 일부 부정확',
   inaccurate: '판정: 부정확(오답 기록)',
 };
+const KNOWLEDGE_RULE_CONTEXT_LABEL = {
+  traditional:      '전통 인파이팅',
+  electronic_hogu:  '전자호구 규칙',
+  both:             '공통',
+};
+const KNOWLEDGE_RULE_CONTEXT_COLOR = {
+  traditional:     { bg: '#f3e8dc', fg: '#8a5a1e' },
+  electronic_hogu: { bg: '#e6f0ff', fg: '#0055b3' },
+  both:            { bg: '#f0f0f0', fg: '#555' },
+};
 
 let knowledgeItemsCache = [];
 let knowledgeEditingId = null;
@@ -1620,6 +1639,7 @@ async function loadKnowledgeMgmt() {
       mode: 'list',
       status:          document.getElementById('kfStatus') ? document.getElementById('kfStatus').value : '',
       knowledgeSource: document.getElementById('kfSource') ? document.getElementById('kfSource').value : '',
+      ruleContext:     document.getElementById('kfRuleContext') ? document.getElementById('kfRuleContext').value : '',
       technique:       document.getElementById('kfTechnique') ? document.getElementById('kfTechnique').value.trim() : '',
       reviewOnly:      document.getElementById('kfReviewOnly') ? document.getElementById('kfReviewOnly').checked : false,
     };
@@ -1680,6 +1700,8 @@ function knowledgeCardHtml(item) {
   const sc = KNOWLEDGE_STATUS_COLOR[item.status] || { bg: '#f0f0f0', fg: '#888' };
   const statusLabel = item.status ? KNOWLEDGE_STATUS_LABEL[item.status] : '미분류';
   const sourceLabel = item.knowledgeSource ? KNOWLEDGE_SOURCE_LABEL[item.knowledgeSource] : '미분류';
+  const rc = KNOWLEDGE_RULE_CONTEXT_COLOR[item.ruleContext] || { bg: '#f5f5f5', fg: '#888' };
+  const ruleContextLabel = item.ruleContext ? KNOWLEDGE_RULE_CONTEXT_LABEL[item.ruleContext] : '규칙체계 미분류';
   const savedAt = item.savedAt ? new Date(item.savedAt).toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'}) : '';
   const isSuperseded = item.status === 'superseded';
 
@@ -1687,6 +1709,7 @@ function knowledgeCardHtml(item) {
     `<span style="font-size:11px;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px;font-weight:700">${esc(item.technique || '기타')}</span>`,
     `<span style="font-size:11px;background:${sc.bg};color:${sc.fg};border-radius:5px;padding:2px 8px;font-weight:700">${esc(statusLabel)}</span>`,
     `<span style="font-size:11px;background:#f5f5f5;color:#555;border-radius:5px;padding:2px 8px">${esc(sourceLabel)}</span>`,
+    `<span style="font-size:11px;background:${rc.bg};color:${rc.fg};border-radius:5px;padding:2px 8px">${esc(ruleContextLabel)}</span>`,
     item.revision > 1 ? `<span style="font-size:11px;color:#aaa">rev.${item.revision}</span>` : '',
     item.isNegativeExample ? `<span style="font-size:11px;background:#fdeaea;color:#c8102e;border-radius:5px;padding:2px 8px;font-weight:700">⚠ 오답 기록</span>` : '',
     item.needsReview ? `<span style="font-size:11px;background:#fdeaea;color:#c8102e;border-radius:5px;padding:2px 8px;font-weight:700">⚠ 재검토 필요 (v${esc(item.measurementSchemaVersion)}→v${KNOWLEDGE_CURRENT_VERSION_HINT})</span>` : '',
@@ -1704,7 +1727,17 @@ function knowledgeCardHtml(item) {
   const actions = isSuperseded ? '' : [
     `<button class="btn-edit" onclick="startReviseKnowledgeItem('${item.id}')">수정</button>`,
     item.status === 'draft'
-      ? `<button class="btn-primary" style="padding:6px 12px;font-size:12px" ${!item.knowledgeSource || item.knowledgeSource === 'unclassified' ? 'disabled title="출처를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)"' : ''} onclick="confirmKnowledgeItem('${item.id}')">확정</button>`
+      ? (() => {
+          const missingSource = !item.knowledgeSource || item.knowledgeSource === 'unclassified';
+          const missingRuleContext = !item.ruleContext;
+          const disabled = missingSource || missingRuleContext;
+          const reason = missingSource && missingRuleContext
+            ? '출처와 규칙 체계를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)'
+            : missingSource
+              ? '출처를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)'
+              : '규칙 체계를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)';
+          return `<button class="btn-primary" style="padding:6px 12px;font-size:12px" ${disabled ? `disabled title="${reason}"` : ''} onclick="confirmKnowledgeItem('${item.id}')">확정</button>`;
+        })()
       : '',
     `<button class="btn-danger" onclick="discardKnowledgeItem('${item.id}')">폐기</button>`,
   ].filter(Boolean).join('');
@@ -1737,6 +1770,14 @@ function knowledgeEditFormHtml(item) {
           <option value="curriculum" ${item.knowledgeSource === 'curriculum' ? 'selected' : ''}>커리큘럼 원문</option>
           <option value="tacit" ${item.knowledgeSource === 'tacit' ? 'selected' : ''}>지도자 경험 지식</option>
           <option value="ai_verified" ${item.knowledgeSource === 'ai_verified' ? 'selected' : ''}>AI 추론 검증</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">규칙 체계</label>
+        <select class="form-control" id="kwEditRuleContext-${esc(item.id)}">
+          <option value="traditional" ${item.ruleContext === 'traditional' ? 'selected' : ''}>전통 인파이팅 전술</option>
+          <option value="electronic_hogu" ${item.ruleContext === 'electronic_hogu' ? 'selected' : ''}>전자호구 규칙 전술</option>
+          <option value="both" ${item.ruleContext === 'both' ? 'selected' : ''}>공통 원리</option>
         </select>
       </div>
       <div class="form-group" style="margin-bottom:10px">
@@ -1794,12 +1835,13 @@ window.cancelReviseKnowledgeItem = () => {
 };
 
 window.saveReviseKnowledgeItem = async (id) => {
-  const technique = document.getElementById('kwEditTechnique-' + id).value.trim();
-  const source    = document.getElementById('kwEditSource-' + id).value;
-  const body      = document.getElementById('kwEditBody-' + id).value.trim();
+  const technique   = document.getElementById('kwEditTechnique-' + id).value.trim();
+  const source      = document.getElementById('kwEditSource-' + id).value;
+  const ruleContext = document.getElementById('kwEditRuleContext-' + id).value;
+  const body        = document.getElementById('kwEditBody-' + id).value.trim();
   if (!body) { showToast('지식 내용을 입력해주세요.', 'error'); return; }
   try {
-    await knowledgeApi({ mode: 'revise', docId: id, correctedFeedback: body, knowledgeSource: source, technique });
+    await knowledgeApi({ mode: 'revise', docId: id, correctedFeedback: body, knowledgeSource: source, ruleContext, technique });
     showToast('새 버전으로 저장되었습니다. (초안 상태 — 확정이 필요합니다)');
     knowledgeEditingId = null;
     loadKnowledgeMgmt();

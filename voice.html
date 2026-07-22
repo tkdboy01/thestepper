@@ -5,13 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <!-- ══════════════════════════════════════════════════════════════════
-     음성 답변 (관리자 전용) — Track 1(ai_interview, trackType:'scenario')
-     대기중 질문에 운전 중에도 음성으로 답변할 수 있게 만든 모바일 페이지.
+     음성 답변 (관리자 전용). 탭 두 개:
 
-     admin.html 의 "AI 수석 코치의 질문" 카드와 동일한 데이터/API 를 쓴다:
-       - 질문 조회: ai_interview 컬렉션, status:'대기중', trackType:'scenario'
-       - 답변 전송: POST /api/process-interview { mode:'answer', docId, adminAnswer }
-     motion.html 과 동일한 방식으로 관리자 전용 게이트를 건다
+     ① 질문 답변 — Track 1(ai_interview, trackType:'scenario') 대기중
+        질문에 운전 중에도 음성으로 답변할 수 있게 만든 기존 기능.
+        admin.html 의 "AI 수석 코치의 질문" 카드와 동일한 데이터/API:
+          - 질문 조회: ai_interview 컬렉션, status:'대기중', trackType:'scenario'
+          - 답변 전송: POST /api/process-interview { mode:'answer', docId, adminAnswer }
+
+     ② 지식 입력·교정 — Track1 질문 답변과 별개로, 대표가 떠오르는
+        지식을 자유롭게 입력하거나 AI 코치의 오답을 교정해 coaching_knowledge
+        에 바로 저장한다. POST /api/manual-knowledge 호출.
+
+     두 탭 모두 motion.html 과 동일한 방식으로 관리자 전용 게이트를 건다
      (ADMIN_ONLY + requireAdmin, 화면 숨김과 별개로 기능 자체도 차단).
      ══════════════════════════════════════════════════════════════════ -->
 <link rel="manifest" href="voice-manifest.json">
@@ -46,6 +52,40 @@
   .topbar-title small { display: block; font-size: 10px; color: var(--sub); font-weight: 500; letter-spacing: 1px; margin-top: 2px; }
   .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--sub);
                 border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; }
+
+  /* ── 페이지 탭 (① 질문 답변 / ② 지식 입력·교정) ───────────────── */
+  .page-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .page-tab-btn { flex: 1; padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border);
+                  background: var(--surface); color: var(--sub); font-size: 13px; font-weight: 700;
+                  cursor: pointer; font-family: inherit; }
+  .page-tab-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+  /* ── 지식 입력 모드 토글 (신규 입력 / AI 답변 교정) ───────────── */
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 20px; }
+  .mode-btn { flex: 1; padding: 11px 8px; border-radius: 10px; border: 1px solid var(--border);
+              background: transparent; color: var(--sub); font-size: 13px; font-weight: 700;
+              cursor: pointer; font-family: inherit; }
+  .mode-btn.active { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold); }
+
+  /* ── 지식 입력 폼 필드 ─────────────────────────────────────────── */
+  .k-label { display: block; font-size: 13px; font-weight: 700; margin: 18px 0 6px; }
+  .k-label .k-optional { font-weight: 400; color: var(--sub); font-size: 11px; }
+  .k-label .k-required { font-weight: 700; color: var(--red); font-size: 11px; }
+  .k-hint { font-size: 11.5px; color: var(--sub); line-height: 1.6; margin-bottom: 8px; }
+  .k-input, .k-select, .k-textarea {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 15px; font-family: inherit;
+  }
+  .k-textarea { min-height: 110px; line-height: 1.7; resize: vertical; }
+  .k-input:focus, .k-select:focus, .k-textarea:focus { outline: none; border-color: var(--gold); }
+  select.k-select { appearance: none; -webkit-appearance: none; }
+
+  .mic-wrap-sm { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .mic-btn-sm { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+                background: var(--red); color: #fff; font-size: 16px; flex-shrink: 0;
+                display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+  .mic-btn-sm.recording { background: #ff3b3b; animation: micPulse 1.2s infinite; }
+  .mic-hint-sm { font-size: 11.5px; color: var(--sub); }
 
   /* ── TTS 토글 ───────────────────────────────────────────────── */
   .tts-row { display: flex; align-items: center; justify-content: space-between;
@@ -124,48 +164,106 @@
 <div id="pageBody">
 
   <div class="topbar">
-    <div class="topbar-title">🎙 음성 답변<small>ADMIN · TRACK 1</small></div>
+    <div class="topbar-title">🎙 음성 답변<small>ADMIN</small></div>
     <button class="logout-btn" onclick="doLogout()">로그아웃</button>
   </div>
 
-  <div class="tts-row">
-    <div class="label">질문 자동 읽어주기<small>운전 중에는 켜두면 화면을 안 봐도 됩니다</small></div>
-    <label class="switch">
-      <input type="checkbox" id="ttsToggle" onchange="onTtsToggleChange()">
-      <span class="track"><span class="thumb"></span></span>
-    </label>
+  <div class="page-tabs">
+    <button class="page-tab-btn active" id="pageTab1Btn" onclick="switchPageTab(1)">① 질문 답변</button>
+    <button class="page-tab-btn" id="pageTab2Btn" onclick="switchPageTab(2)">② 지식 입력·교정</button>
   </div>
 
-  <!-- 대기중인 질문이 없을 때 -->
-  <div id="emptyState">
-    <div class="icon">✅</div>
-    <div class="msg">대기중인 질문이 없습니다</div>
+  <!-- ===== 탭 1: Track1 질문 답변 (기존 기능, 그대로 유지) ===== -->
+  <div id="tab1">
+    <div class="tts-row">
+      <div class="label">질문 자동 읽어주기<small>운전 중에는 켜두면 화면을 안 봐도 됩니다</small></div>
+      <label class="switch">
+        <input type="checkbox" id="ttsToggle" onchange="onTtsToggleChange()">
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
+
+    <!-- 대기중인 질문이 없을 때 -->
+    <div id="emptyState">
+      <div class="icon">✅</div>
+      <div class="msg">대기중인 질문이 없습니다</div>
+    </div>
+
+    <!-- 질문 + 답변 입력 -->
+    <div id="answerArea">
+      <div class="q-card">
+        <span class="q-chapter" id="qChapter"></span>
+        <div class="q-text" id="qText"></div>
+      </div>
+
+      <div class="mic-wrap">
+        <button id="micBtn" onclick="toggleRecording()" aria-label="음성 인식 시작/중지">🎤</button>
+        <div class="mic-hint" id="micHint">눌러서 말하기</div>
+      </div>
+
+      <div class="mic-unsupported" id="micUnsupported" style="display:none">
+        이 브라우저는 음성 인식을 지원하지 않습니다. 키보드의 마이크 아이콘을 사용해주세요.
+      </div>
+
+      <textarea id="answerText" placeholder="답변이 여기에 표시됩니다. 직접 입력하거나 수정할 수 있습니다." oninput="onAnswerInput()"></textarea>
+
+      <div class="btn-row">
+        <button class="btn-big" id="saveDraftBtn" onclick="saveDraft()">💾 초안 저장</button>
+        <button class="btn-big" id="submitBtn" onclick="submitAndLearn()">📤 전송 및 학습</button>
+      </div>
+
+      <div id="voiceStatus"></div>
+    </div>
   </div>
 
-  <!-- 질문 + 답변 입력 -->
-  <div id="answerArea">
-    <div class="q-card">
-      <span class="q-chapter" id="qChapter"></span>
-      <div class="q-text" id="qText"></div>
+  <!-- ===== 탭 2: 지식 입력·교정 (신규) ===== -->
+  <div id="tab2" style="display:none">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeManualBtn" onclick="switchKnowledgeMode('manual_entry')">📝 신규 지식 입력</button>
+      <button class="mode-btn" id="modeCorrectionBtn" onclick="switchKnowledgeMode('ai_correction')">🛠 AI 답변 교정</button>
     </div>
 
-    <div class="mic-wrap">
-      <button id="micBtn" onclick="toggleRecording()" aria-label="음성 인식 시작/중지">🎤</button>
-      <div class="mic-hint" id="micHint">눌러서 말하기</div>
+    <!-- AI 답변 교정 모드에서만 노출 -->
+    <div id="kCorrectionOnly" style="display:none">
+      <label class="k-label">AI 코치가 낸 답변 <span class="k-optional">(선택 · 참고용, 검색에는 쓰이지 않음)</span></label>
+      <div class="mic-wrap-sm">
+        <button class="mic-btn-sm" id="acMicBtn" onclick="toggleFieldRecording('acWrongAnswer','acMicBtn','acMicHint','kStatus')" aria-label="음성 인식 시작/중지">🎤</button>
+        <div class="mic-hint-sm" id="acMicHint">눌러서 말하기</div>
+      </div>
+      <textarea class="k-textarea" id="acWrongAnswer" placeholder="AI가 실제로 낸 답변을 입력하거나 붙여넣으세요. 왜 틀렸는지 맥락 보존용입니다."></textarea>
     </div>
 
-    <div class="mic-unsupported" id="micUnsupported" style="display:none">
-      이 브라우저는 음성 인식을 지원하지 않습니다. 키보드의 마이크 아이콘을 사용해주세요.
-    </div>
+    <label class="k-label">기술명 / 상황 요약</label>
+    <div class="k-hint">검색용 라벨입니다. "무릎", "골반" 같은 공통 단어나 수치는 넣지 마세요. (예: "제28장 첫발 공격 타이밍")</div>
+    <input class="k-input" id="kSummary" placeholder="예) 제28장 첫발 공격 타이밍">
 
-    <textarea id="answerText" placeholder="답변이 여기에 표시됩니다. 직접 입력하거나 수정할 수 있습니다." oninput="onAnswerInput()"></textarea>
+    <label class="k-label" id="kContentLabel">지식 내용</label>
+    <div class="mic-wrap-sm">
+      <button class="mic-btn-sm" id="kMicBtn" onclick="toggleFieldRecording('kContent','kMicBtn','kMicHint','kStatus')" aria-label="음성 인식 시작/중지">🎤</button>
+      <div class="mic-hint-sm" id="kMicHint">눌러서 말하기</div>
+    </div>
+    <textarea class="k-textarea" id="kContent" placeholder="전달할 코칭 지식을 입력하세요. 직접 입력하거나 마이크로 받아쓴 뒤 수정할 수 있습니다."></textarea>
+
+    <label class="k-label">출처</label>
+    <select class="k-select" id="kSource">
+      <option value="tacit" selected>지도자 경험 지식</option>
+      <option value="curriculum">커리큘럼 원문</option>
+      <option value="ai_verified">AI 추론 검증</option>
+    </select>
+
+    <label class="k-label">규칙 체계 <span class="k-required">*필수</span></label>
+    <select class="k-select" id="kRuleContext">
+      <option value="" selected disabled>선택하세요</option>
+      <option value="traditional">전통 인파이팅 전술</option>
+      <option value="electronic_hogu">전자호구 규칙 전술</option>
+      <option value="both">공통 원리</option>
+    </select>
 
     <div class="btn-row">
-      <button class="btn-big" id="saveDraftBtn" onclick="saveDraft()">💾 초안 저장</button>
-      <button class="btn-big" id="submitBtn" onclick="submitAndLearn()">📤 전송 및 학습</button>
+      <button class="btn-big" id="kSaveBtn" onclick="saveManualKnowledge()">💾 저장</button>
     </div>
 
-    <div id="voiceStatus"></div>
+    <div id="kStatus"></div>
   </div>
 
 </div>
@@ -202,7 +300,8 @@ function requireAdmin() {
   return false;
 }
 
-var PROCESS_INTERVIEW_URL = 'https://thestepper-api.vercel.app/api/process-interview';
+var PROCESS_INTERVIEW_URL  = 'https://thestepper-api.vercel.app/api/process-interview';
+var MANUAL_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/manual-knowledge';
 
 var currentQuestionId = null;
 var currentQuestionText = '';
@@ -220,11 +319,22 @@ auth.onAuthStateChanged(function (user) {
   initTtsToggle();
   initSpeechRecognition();
   loadPendingQuestion();
+  switchKnowledgeMode('manual_entry');
 });
 
 function doLogout() {
   speechSynthesis.cancel();
   auth.signOut().then(function () { window.location.href = 'admin.html'; });
+}
+
+// ── 페이지 탭 (① 질문 답변 / ② 지식 입력·교정) ───────────────────
+function switchPageTab(tab) {
+  document.getElementById('tab1').style.display = tab === 1 ? 'block' : 'none';
+  document.getElementById('tab2').style.display = tab === 2 ? 'block' : 'none';
+  document.getElementById('pageTab1Btn').classList.toggle('active', tab === 1);
+  document.getElementById('pageTab2Btn').classList.toggle('active', tab === 2);
+  // 탭을 벗어나면 녹음 중이던 마이크는 정리한다
+  if (recognition && recognizing) recognition.stop();
 }
 
 // ── 질문 자동 읽기 토글 (로컬 저장) ───────────────────────────────
@@ -332,26 +442,38 @@ function onAnswerInput() {
   setStatus('', '');
 }
 
-function setStatus(msg, cls) {
-  var el = document.getElementById('voiceStatus');
+function setStatus(msg, cls) { setStatusEl('voiceStatus', msg, cls); }
+
+// ── 음성 인식 (webkitSpeechRecognition / SpeechRecognition) ─────
+// 탭1(답변 1개) + 탭2(지식 내용 / AI 오답 / 올바른 지식, 최대 2개
+// 동시 노출)까지 여러 입력란에서 재사용해야 해서, 인스턴스 하나를
+// "현재 대상 필드(activeField)" 기준으로 돌려쓴다.
+var recognition = null;
+var recognizing = false;
+var finalTranscript = '';   // 확정된 인식 결과 누적 (편집 중인 텍스트와 별개로 추적)
+var activeField = { textId: 'answerText', micId: 'micBtn', hintId: 'micHint', statusId: 'voiceStatus' };
+
+function setStatusEl(id, msg, cls) {
+  var el = document.getElementById(id);
+  if (!el) return;
   el.textContent = msg || '';
   el.className = cls || '';
 }
 
-// ── 음성 인식 (webkitSpeechRecognition / SpeechRecognition) ─────
-var recognition = null;
-var recognizing = false;
-var finalTranscript = '';   // 확정된 인식 결과 누적 (편집 중인 텍스트와 별개로 추적)
-
 function initSpeechRecognition() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var micBtn = document.getElementById('micBtn');
-  var unsupported = document.getElementById('micUnsupported');
 
   if (!SR) {
-    micBtn.style.display = 'none';
+    ['micBtn', 'kMicBtn', 'acMicBtn'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
     document.getElementById('micHint').style.display = 'none';
-    unsupported.style.display = 'block';
+    document.getElementById('micUnsupported').style.display = 'block';
+    ['kMicHint', 'acMicHint'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = '음성 인식 미지원 — 직접 입력하세요';
+    });
     return;
   }
 
@@ -362,10 +484,13 @@ function initSpeechRecognition() {
 
   recognition.onstart = function () {
     recognizing = true;
-    micBtn.classList.add('recording');
-    document.getElementById('micHint').textContent = '듣고 있어요… 다시 누르면 멈춰요';
+    var micBtn = document.getElementById(activeField.micId);
+    if (micBtn) micBtn.classList.add('recording');
+    var hintEl = document.getElementById(activeField.hintId);
+    if (hintEl) hintEl.textContent = '듣고 있어요… 다시 누르면 멈춰요';
     // 이번 녹음 세션 시작 시점의 텍스트를 기준으로 이어붙인다
-    finalTranscript = document.getElementById('answerText').value;
+    var ta = document.getElementById(activeField.textId);
+    finalTranscript = ta ? ta.value : '';
     if (finalTranscript && !/\s$/.test(finalTranscript)) finalTranscript += ' ';
   };
 
@@ -379,28 +504,38 @@ function initSpeechRecognition() {
         interim += chunk;
       }
     }
-    document.getElementById('answerText').value = finalTranscript + interim;
+    var ta = document.getElementById(activeField.textId);
+    if (ta) ta.value = finalTranscript + interim;
   };
 
   recognition.onerror = function (event) {
-    setStatus('❌ 음성 인식 오류: ' + event.error, 'error');
+    setStatusEl(activeField.statusId, '❌ 음성 인식 오류: ' + event.error, 'error');
   };
 
   recognition.onend = function () {
     recognizing = false;
-    micBtn.classList.remove('recording');
-    document.getElementById('micHint').textContent = '눌러서 말하기';
+    var micBtn = document.getElementById(activeField.micId);
+    if (micBtn) micBtn.classList.remove('recording');
+    var hintEl = document.getElementById(activeField.hintId);
+    if (hintEl) hintEl.textContent = '눌러서 말하기';
   };
 }
 
-window.toggleRecording = function () {
+// textId/micId/hintId/statusId 로 원하는 입력란에 음성 인식을 붙여 쓴다.
+window.toggleFieldRecording = function (textId, micId, hintId, statusId) {
   if (!recognition) return;
   if (recognizing) {
     recognition.stop();
-  } else {
-    speechSynthesis.cancel();   // 듣는 중엔 TTS 와 겹치지 않게 정지
-    try { recognition.start(); } catch (e) { /* 이미 시작된 경우 등은 무시 */ }
+    return;
   }
+  activeField = { textId: textId, micId: micId, hintId: hintId, statusId: statusId };
+  speechSynthesis.cancel();   // 듣는 중엔 TTS 와 겹치지 않게 정지
+  try { recognition.start(); } catch (e) { /* 이미 시작된 경우 등은 무시 */ }
+};
+
+// 기존 Track1 마이크 버튼 호출부와의 호환
+window.toggleRecording = function () {
+  toggleFieldRecording('answerText', 'micBtn', 'micHint', 'voiceStatus');
 };
 
 // ── 초안 저장 (voice_drafts, 문서 ID = 질문 ID → 재저장 시 업데이트) ──
@@ -488,6 +623,72 @@ window.submitAndLearn = async function () {
 
   submitBtn.disabled = false;
   draftBtn.disabled  = false;
+};
+
+// ── 지식 입력·교정 (voice.html 탭2, /api/manual-knowledge 호출) ──
+// Track1 질문 답변과 달리 대표 본인이 직접 검증해 쓰는 지식이라
+// draft 단계 없이 바로 confirmed 로 저장된다 (서버가 최종 검증).
+var knowledgeMode = 'manual_entry';
+
+function setKStatus(msg, cls) { setStatusEl('kStatus', msg, cls); }
+
+window.switchKnowledgeMode = function (mode) {
+  knowledgeMode = mode === 'ai_correction' ? 'ai_correction' : 'manual_entry';
+  var isCorrection = knowledgeMode === 'ai_correction';
+
+  document.getElementById('modeManualBtn').classList.toggle('active', !isCorrection);
+  document.getElementById('modeCorrectionBtn').classList.toggle('active', isCorrection);
+  document.getElementById('kCorrectionOnly').style.display = isCorrection ? 'block' : 'none';
+  document.getElementById('kContentLabel').textContent = isCorrection ? '올바른 지식' : '지식 내용';
+  setKStatus('', '');
+};
+
+window.saveManualKnowledge = async function () {
+  if (!requireAdmin()) return;
+  if (!auth.currentUser) { setKStatus('❌ 로그인이 필요합니다.', 'error'); return; }
+
+  var summary     = document.getElementById('kSummary').value.trim();
+  var content     = document.getElementById('kContent').value.trim();
+  var source      = document.getElementById('kSource').value;
+  var ruleContext = document.getElementById('kRuleContext').value;
+  var isCorrection = knowledgeMode === 'ai_correction';
+  var wrongAnswer  = isCorrection ? document.getElementById('acWrongAnswer').value.trim() : '';
+
+  if (!summary)     { setKStatus('❌ 기술명/상황 요약을 입력해주세요.', 'error'); return; }
+  if (!content)     { setKStatus('❌ 지식 내용을 입력해주세요.', 'error'); return; }
+  if (!ruleContext) { setKStatus('❌ 규칙 체계를 선택해주세요.', 'error'); return; }
+
+  var btn = document.getElementById('kSaveBtn');
+  btn.disabled = true;
+  setKStatus('⏳ 저장 중...', '');
+
+  try {
+    var idToken = await auth.currentUser.getIdToken();
+    var res = await fetch(MANUAL_KNOWLEDGE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body:    JSON.stringify({
+        knowledgeOrigin:   knowledgeMode,
+        questionSummary:   summary,
+        correctedFeedback: content,
+        knowledgeSource:   source,
+        ruleContext:       ruleContext,
+        incorrectAiAnswer: wrongAnswer
+      })
+    });
+    var data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+
+    setKStatus('✅ 저장되었습니다. AI 코치가 바로 참조합니다.', 'ok');
+    document.getElementById('kSummary').value = '';
+    document.getElementById('kContent').value = '';
+    document.getElementById('kRuleContext').value = '';
+    if (isCorrection) document.getElementById('acWrongAnswer').value = '';
+  } catch (e) {
+    setKStatus('❌ 저장 실패: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
 };
 
 // 페이지를 벗어날 때 음성 관련 활동 정리

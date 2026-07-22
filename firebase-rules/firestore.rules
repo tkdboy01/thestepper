@@ -2,130 +2,88 @@ rules_version = '2';
 
 // ══════════════════════════════════════════════════════════════════
 //  THE STEPPER — Firestore 보안 규칙 (전체본)
-//
-//  ⚠ 콘솔에 통째로 교체하기 전에 반드시 확인하세요.
-//     저장소 코드에서 실제로 쓰이는 컬렉션을 근거로 작성했습니다.
-//     콘솔의 현재 규칙을 직접 읽을 수 없으므로, 여기에 없는 컬렉션을
-//     쓰고 계셨다면 그 부분이 빠질 수 있습니다. 교체 전 비교해 주세요.
-//
-//  이번 개편으로 실제 변경이 필요한 부분은 movement_data 하나뿐입니다.
-//  (관리자만 읽고 쓰며, is_reference 로 기준 데이터를 따로 조회)
-//  나머지는 기존 동작을 유지하도록 옮겨 적은 것입니다.
-//
-//  서버(Firebase Admin SDK)는 규칙을 우회하므로
-//  /api/coach, /api/motion-note, /api/process-interview 등의
-//  쓰기 동작은 아래 규칙과 무관하게 정상 동작합니다.
+//  2026-07-21 콘솔에서 직접 받아온 실제 배포본과 동기화함.
+//  (repo 루트의 firestore.rules 가 firebase.json 이 참조하는 실제
+//   배포 소스이며, 이 파일은 그것과 동일하게 유지하는 문서용 사본이다)
 // ══════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ── 공통 헬퍼 ──────────────────────────────────────────────
-    function isSignedIn() {
-      return request.auth != null;
+    match /visitors/{doc=**} {
+      allow read, write: if true;
     }
-
-    function isAdmin() {
-      return isSignedIn()
-        && request.auth.token.email == 'tkdboykms0007@gmail.com'
-        && request.auth.token.email_verified == true;
+    match /stats/{doc=**} {
+      allow read, write: if true;
     }
-
-    function isVerified() {
-      return isSignedIn() && request.auth.token.email_verified == true;
+    match /movement_data/{doc=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    match /schedules/{doc=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
-
-    // ── [이번 개편 대상] 동작분석 데이터 ───────────────────────
-    // 학습용 데이터셋이므로 관리자 전용.
-    // 기준 데이터만 뽑을 때:  where('is_reference', '==', true)
-    match /movement_data/{docId} {
-      allow read, write: if isAdmin();
-    }
-
-    // ── AI 코치 학습 지식 ──────────────────────────────────────
-    // 클라이언트는 읽기만(코치 API 는 Admin SDK 로 접근하므로 무관)
-    match /coaching_knowledge/{docId} {
-      allow read:  if isAdmin();
-      allow write: if isAdmin();
-    }
-
-    // ── 회원 정보 ──────────────────────────────────────────────
-    match /users/{userId} {
-      allow read:   if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // ── AI 인터뷰 (시나리오 + SOS) ─────────────────────────────
-    // 회원은 본인 SOS 요청만 생성. 조회/수정은 관리자.
-    match /ai_interview/{docId} {
-      allow read:   if isAdmin();
-      allow create: if isVerified() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-
-    // ── 전문가 코칭 질문 ───────────────────────────────────────
-    match /ai_coaching/{docId} {
-      allow read:   if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isVerified() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-
-    // ── 회원에게 발송된 답변 ───────────────────────────────────
-    // 본인 것만 읽고, 열람 표시(viewed)만 갱신 가능
-    match /user_messages/{docId} {
-      allow read:   if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if isAdmin();
-    }
-
-    // ── 사용량 카운터 ──────────────────────────────────────────
-    // 본인 문서만. 서버에서도 갱신하므로 Admin SDK 는 우회.
-    match /aiUsage/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-    match /expertUsage/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    // ── 게시판 / 1:1 문의 ──────────────────────────────────────
-    match /posts/{docId} {
-      allow read:   if true;
-      allow create: if isVerified();
-      allow update, delete: if isAdmin();
+    match /locations/{doc=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
     match /inquiries/{docId} {
-      allow read:   if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
-
-    // ── 공개 콘텐츠 (지점/시간표) ──────────────────────────────
-    match /locations/{docId} {
-      allow read:  if true;
-      allow write: if isAdmin();
+    match /users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.uid == uid
+            || request.auth.token.email == 'tkdboykms0007@gmail.com');
+      allow create, update: if request.auth != null && request.auth.uid == uid;
     }
-    match /schedules/{docId} {
-      allow read:  if true;
-      allow write: if isAdmin();
+    match /aiUsage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if false;
     }
-
-    // ── 방문자 카운터 ──────────────────────────────────────────
-    // index.html 이 비로그인 상태에서 increment 하므로 공개 쓰기가 필요하다
-    match /stats/{docId} {
-      allow read:  if true;
-      allow write: if true;
+    match /ai_coaching/{docId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        request.auth.token.email == 'tkdboykms0007@gmail.com'
+      );
+      allow update: if request.auth != null && (
+        request.auth.token.email == 'tkdboykms0007@gmail.com' ||
+        (resource.data.userId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']))
+      );
     }
-
-    // ── 그 외 모든 경로: 기본 차단 ─────────────────────────────
-    match /{document=**} {
-      allow read, write: if false;
+    match /expertUsage/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /coaching_knowledge/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /ai_interview/{doc=**} {
+      allow read: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /voice_drafts/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /user_messages/{docId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']);
+      allow create, delete: if false;
     }
   }
 }

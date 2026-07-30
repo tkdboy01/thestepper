@@ -71,6 +71,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null
         && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
+    // admin.html "⚖️ 품질 비교" 탭(항목 10) — 관리자가 브라우저에서 직접
+    // Firestore 클라이언트 SDK로 읽고 쓴다 (서버 API 를 거치지 않음).
+    match /comparison_questions/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /comparison_results/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
     match /user_messages/{docId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow update: if request.auth != null && resource.data.userId == request.auth.uid

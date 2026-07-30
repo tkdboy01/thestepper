@@ -209,6 +209,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
+    <button class="tab-btn" id="tab-compare-btn" onclick="switchTab('compare')">⚖️ 품질 비교</button>
   </div>
 
   <!-- ===== 세미나 일정 탭 ===== -->
@@ -454,6 +455,24 @@ select.form-control{cursor:pointer}
 
     </div>
 
+    <!-- 시범 운영 주제 관리 (항목 8) — Track1 인터뷰 질문 생성을 20~30개 주제로 한정 -->
+    <div class="form-card">
+      <div class="form-card-title">🎯 시범 운영 주제
+        <span id="pilotTopicCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:12px;line-height:1.6">
+        여기 등록한 주제가 1개라도 활성화돼 있으면, AI 코치 질문 생성(voice.html Track1)이
+        전체 커리큘럼이 아니라 이 목록에서만 무작위로 골라 진행됩니다. 목록이 비어 있으면
+        기존처럼 전체 커리큘럼에서 생성합니다. 최대 30개까지 활성화할 수 있습니다.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input class="form-control" id="pilotTopicInput" placeholder="예) 제28장 첫발 공격 타이밍 — 근접 클린치 상황" style="flex:1">
+        <button class="btn-primary" onclick="addPilotTopic()" style="white-space:nowrap;padding:0 18px">추가</button>
+      </div>
+      <div id="pilotTopicErr" style="font-size:12px;color:#C8102E;margin-bottom:8px;min-height:16px"></div>
+      <div id="pilotTopicList"><div class="loading-msg">로딩 중...</div></div>
+    </div>
+
     <div class="form-card">
       <div class="form-card-title">📋 AI 코칭 피드백 관리
         <span id="coachingPendingCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
@@ -609,6 +628,69 @@ select.form-control{cursor:pointer}
 
     <div id="knowledgeList"><div class="loading-msg">로딩 중...</div></div>
   </div>
+
+  <!-- ===== 품질 비교 탭 (항목 10 — 화면 골격만, 실제 답변 자동 생성 연결은 다음 단계) ===== -->
+  <div id="tab-compare" class="tab-content" style="display:none">
+    <div class="section-title">⚖️ 품질 비교 (블라인드 A/B)</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
+      지금은 화면 골격만입니다. "기존 데이터 기반 답변"과 "새 인터뷰 데이터 기반 답변"을
+      자동으로 생성해 채워주는 연결은 다음 단계에서 진행합니다. 지금은 두 답변을 직접
+      붙여넣어 블라인드로 비교·채점하고 결과를 저장하는 것까지만 동작합니다.
+    </div>
+
+    <!-- 비교 질문 등록 -->
+    <div class="form-card" style="margin-bottom:16px">
+      <div class="form-card-title">비교용 질문 목록 (10~15개 권장)</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input class="form-control" id="compareQuestionInput" placeholder="비교에 쓸 질문을 입력하세요" style="flex:1">
+        <button class="btn-primary" onclick="addCompareQuestion()" style="white-space:nowrap;padding:0 18px">추가</button>
+      </div>
+      <div id="compareQuestionList"><div class="loading-msg">로딩 중...</div></div>
+    </div>
+
+    <!-- 블라인드 비교 -->
+    <div class="form-card">
+      <div class="form-card-title">블라인드 비교 채점</div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">비교할 질문 선택</label>
+        <select class="form-control" id="compareQuestionSelect" onchange="onCompareQuestionSelect()">
+          <option value="">질문을 먼저 등록·선택하세요</option>
+        </select>
+      </div>
+
+      <div id="compareBlindArea" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div>
+            <div class="form-label" style="margin-bottom:6px">답변 A</div>
+            <textarea class="form-control" id="compareAnswerA" rows="8" placeholder="답변 A를 붙여넣으세요 (어느 쪽이 기존/신규인지 표시하지 않습니다)" style="font-family:inherit;resize:vertical"></textarea>
+          </div>
+          <div>
+            <div class="form-label" style="margin-bottom:6px">답변 B</div>
+            <textarea class="form-control" id="compareAnswerB" rows="8" placeholder="답변 B를 붙여넣으세요" style="font-family:inherit;resize:vertical"></textarea>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px">
+          A/B 순서는 매 채점마다 무작위로 배치되어 실제 어느 쪽이 기존·신규 데이터 기반인지 저장 전까지 알 수 없습니다.
+        </div>
+
+        <label class="form-label" style="margin-bottom:8px;display:block">상대 평가</label>
+        <div class="row-actions" style="justify-content:flex-start;margin-bottom:14px">
+          <button class="btn-secondary" onclick="setCompareVerdict('A')" id="verdictBtnA">A가 낫다</button>
+          <button class="btn-secondary" onclick="setCompareVerdict('tie')" id="verdictBtnTie">비슷하다</button>
+          <button class="btn-secondary" onclick="setCompareVerdict('B')" id="verdictBtnB">B가 낫다</button>
+        </div>
+
+        <div id="compareSaveErr" style="font-size:12px;color:#C8102E;margin-bottom:8px;min-height:16px"></div>
+        <button class="btn-primary" onclick="saveCompareResult()" style="width:100%">결과 저장</button>
+      </div>
+    </div>
+
+    <!-- 저장된 결과 -->
+    <div class="form-card" style="margin-top:16px">
+      <div class="form-card-title">저장된 채점 결과</div>
+      <div id="compareResultList"><div class="empty-msg" style="font-size:13px;padding:16px 0">아직 저장된 결과가 없습니다.</div></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -671,6 +753,7 @@ window.doLogout = async () => { await signOut(auth); };
 let locLoaded = false;
 let membersLoaded = false;
 let coachingLoaded = false;
+let compareLoaded = false;
 window.switchTab = (tab) => {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
@@ -682,6 +765,7 @@ window.switchTab = (tab) => {
   // 지식 관리 탭은 매번 새로 불러온다 — 다른 흐름(Track1/2/3, 코칭 확정)에서
   // 계속 문서가 쌓이므로 캐시가 쉽게 낡는다. 데이터 규모가 작아 비용도 적다.
   if (tab === 'knowledge') { loadKnowledgeMgmt(); }
+  if (tab === 'compare' && !compareLoaded) { compareLoaded = true; initCompareTab(); }
 };
 
 /* ---- SCHEDULE CRUD ---- */
@@ -1309,6 +1393,7 @@ let activeCoachingDocId = null;
 let reviewPanelData = { docId: null, question: '', original: '', corrected: '', finalResponse: '' };
 
 const CONFIRM_COACHING_URL = 'https://thestepper-api.vercel.app/api/confirm-coaching';
+const PILOT_TOPICS_URL = 'https://thestepper-api.vercel.app/api/pilot-topics';
 
 function initCoachingTab() {
   const pendingList = document.getElementById('coachingPendingList');
@@ -1317,6 +1402,7 @@ function initCoachingTab() {
   loadInterviewCard();
   loadSosCard();
   loadVoiceDrafts();
+  loadPilotTopics();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -2094,6 +2180,226 @@ window.submitVoiceDraft = async (id) => {
     errEl.textContent = '오류: ' + e.message;
   }
 };
+
+/* ---- 시범 운영 주제 (항목 8) ---- */
+async function pilotTopicsApi(body) {
+  const token = await knowledgeAuthToken();
+  const res = await fetch(PILOT_TOPICS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+let pilotTopicsCache = [];
+
+async function loadPilotTopics() {
+  const listEl = document.getElementById('pilotTopicList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const data = await pilotTopicsApi({ mode: 'list' });
+    pilotTopicsCache = data.items;
+    document.getElementById('pilotTopicCount').textContent =
+      `(활성 ${data.activeCount}/${data.maxTopics})`;
+
+    if (!data.items.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">등록된 시범 운영 주제가 없습니다. 전체 커리큘럼에서 질문이 생성됩니다.</div>';
+      return;
+    }
+    listEl.innerHTML = data.items.map(pilotTopicCardHtml).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
+
+function pilotTopicCardHtml(item) {
+  return `
+    <div style="display:flex;align-items:center;gap:10px;border:1px solid #e5e5e7;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;background:${item.active ? '#fff' : '#fafafa'};opacity:${item.active ? '1' : '0.6'}">
+      <span style="flex:1;color:#1d1d1f">${esc(item.topic)}</span>
+      <span style="font-size:11px;font-weight:700;color:${item.active ? '#0a7a34' : '#888'}">${item.active ? '활성' : '비활성'}</span>
+      <button class="btn-edit" onclick="togglePilotTopic('${item.id}')">${item.active ? '비활성화' : '활성화'}</button>
+      <button class="btn-danger" onclick="removePilotTopic('${item.id}')">삭제</button>
+    </div>`;
+}
+
+window.addPilotTopic = async () => {
+  const input = document.getElementById('pilotTopicInput');
+  const errEl = document.getElementById('pilotTopicErr');
+  const topic = input.value.trim();
+  errEl.textContent = '';
+  if (!topic) { errEl.textContent = '주제를 입력해주세요.'; return; }
+  try {
+    await pilotTopicsApi({ mode: 'add', topic });
+    input.value = '';
+    await loadPilotTopics();
+  } catch (e) {
+    errEl.textContent = '추가 실패: ' + e.message;
+  }
+};
+
+window.togglePilotTopic = async (docId) => {
+  const errEl = document.getElementById('pilotTopicErr');
+  errEl.textContent = '';
+  try {
+    await pilotTopicsApi({ mode: 'toggle', docId });
+    await loadPilotTopics();
+  } catch (e) {
+    errEl.textContent = '변경 실패: ' + e.message;
+  }
+};
+
+window.removePilotTopic = async (docId) => {
+  if (!confirm('이 시범 운영 주제를 삭제하시겠습니까?')) return;
+  const errEl = document.getElementById('pilotTopicErr');
+  errEl.textContent = '';
+  try {
+    await pilotTopicsApi({ mode: 'remove', docId });
+    await loadPilotTopics();
+  } catch (e) {
+    errEl.textContent = '삭제 실패: ' + e.message;
+  }
+};
+
+/* ---- 품질 비교 (항목 10 — 화면 골격만, 답변 자동 생성 연결은 다음 단계) ---- */
+let compareQuestions = [];
+let compareSelectedQuestionId = null;
+let compareVerdict = null; // 'A' | 'tie' | 'B'
+let compareOrderSwapped = false; // 화면상 A/B 를 무작위로 뒤집어 배치했는지
+
+function initCompareTab() {
+  loadCompareQuestions();
+  loadCompareResults();
+}
+
+async function loadCompareQuestions() {
+  const listEl = document.getElementById('compareQuestionList');
+  const selectEl = document.getElementById('compareQuestionSelect');
+  try {
+    const snap = await getDocs(query(collection(db, 'comparison_questions'), orderBy('createdAt', 'desc')));
+    compareQuestions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!compareQuestions.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:12px 0">등록된 비교 질문이 없습니다.</div>';
+    } else {
+      listEl.innerHTML = compareQuestions.map(q => `
+        <div style="display:flex;align-items:center;gap:10px;border:1px solid #e5e5e7;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px">
+          <span style="flex:1;color:#1d1d1f">${esc(q.question)}</span>
+          <button class="btn-danger" onclick="removeCompareQuestion('${q.id}')">삭제</button>
+        </div>`).join('');
+    }
+
+    selectEl.innerHTML = '<option value="">질문을 선택하세요</option>' +
+      compareQuestions.map(q => `<option value="${esc(q.id)}">${esc(q.question)}</option>`).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
+
+window.addCompareQuestion = async () => {
+  const input = document.getElementById('compareQuestionInput');
+  const question = input.value.trim();
+  if (!question) return;
+  try {
+    await addDoc(collection(db, 'comparison_questions'), { question, createdAt: serverTimestamp() });
+    input.value = '';
+    await loadCompareQuestions();
+  } catch (e) {
+    showToast('추가 실패: ' + e.message, 'error');
+  }
+};
+
+window.removeCompareQuestion = async (id) => {
+  if (!confirm('이 비교 질문을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'comparison_questions', id));
+    await loadCompareQuestions();
+  } catch (e) {
+    showToast('삭제 실패: ' + e.message, 'error');
+  }
+};
+
+window.onCompareQuestionSelect = () => {
+  compareSelectedQuestionId = document.getElementById('compareQuestionSelect').value;
+  document.getElementById('compareBlindArea').style.display = compareSelectedQuestionId ? 'block' : 'none';
+  document.getElementById('compareAnswerA').value = '';
+  document.getElementById('compareAnswerB').value = '';
+  compareVerdict = null;
+  compareOrderSwapped = Math.random() < 0.5; // 실제 자동 생성 연결 시 이 값으로 어느 패널에 무엇을 넣을지 무작위 배치한다
+  updateVerdictButtons();
+};
+
+window.setCompareVerdict = (v) => {
+  compareVerdict = v;
+  updateVerdictButtons();
+};
+
+function updateVerdictButtons() {
+  ['A', 'tie', 'B'].forEach(v => {
+    const id = v === 'A' ? 'verdictBtnA' : v === 'B' ? 'verdictBtnB' : 'verdictBtnTie';
+    const btn = document.getElementById(id);
+    btn.className = compareVerdict === v ? 'btn-primary' : 'btn-secondary';
+  });
+}
+
+window.saveCompareResult = async () => {
+  const errEl = document.getElementById('compareSaveErr');
+  errEl.textContent = '';
+  const answerA = document.getElementById('compareAnswerA').value.trim();
+  const answerB = document.getElementById('compareAnswerB').value.trim();
+  if (!compareSelectedQuestionId) { errEl.textContent = '비교할 질문을 먼저 선택해주세요.'; return; }
+  if (!answerA || !answerB) { errEl.textContent = '답변 A, B를 모두 입력해주세요.'; return; }
+  if (!compareVerdict) { errEl.textContent = '상대 평가(A가 낫다/비슷하다/B가 낫다)를 선택해주세요.'; return; }
+
+  const question = compareQuestions.find(q => q.id === compareSelectedQuestionId);
+  try {
+    await addDoc(collection(db, 'comparison_results'), {
+      questionId: compareSelectedQuestionId,
+      question: question ? question.question : '',
+      answerA, answerB,
+      verdict: compareVerdict,       // 'A' | 'tie' | 'B' — 화면 표시 순서 기준 (절대점수 아님)
+      orderSwapped: compareOrderSwapped,
+      createdAt: serverTimestamp()
+    });
+    showToast('채점 결과가 저장되었습니다.');
+    document.getElementById('compareAnswerA').value = '';
+    document.getElementById('compareAnswerB').value = '';
+    compareVerdict = null;
+    updateVerdictButtons();
+    await loadCompareResults();
+  } catch (e) {
+    errEl.textContent = '저장 실패: ' + e.message;
+  }
+};
+
+async function loadCompareResults() {
+  const listEl = document.getElementById('compareResultList');
+  try {
+    const snap = await getDocs(query(collection(db, 'comparison_results'), orderBy('createdAt', 'desc')));
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!items.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">아직 저장된 결과가 없습니다.</div>';
+      return;
+    }
+    const verdictLabel = { A: 'A가 낫다', tie: '비슷하다', B: 'B가 낫다' };
+    listEl.innerHTML = items.map(r => {
+      const when = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+      return `
+        <div style="border:1px solid #e5e5e7;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+            <span style="font-weight:700;color:#1d1d1f">${esc(r.question || '')}</span>
+            <span style="margin-left:auto;font-size:11px;color:#aaa">${esc(when)}</span>
+          </div>
+          <span style="font-size:11px;font-weight:700;background:#f0f4ff;color:#0055b3;border-radius:5px;padding:2px 8px">${esc(verdictLabel[r.verdict] || r.verdict)}</span>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
 
 /* ---- SOS TRACK 2 ---- */
 let currentSosDocId = null;

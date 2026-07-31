@@ -1812,6 +1812,9 @@ function knowledgeCardHtml(item) {
 
   const actions = isSuperseded ? '' : [
     `<button class="btn-edit" onclick="startReviseKnowledgeItem('${item.id}')">수정</button>`,
+    (item.status === 'draft' && item.source === 'interview')
+      ? `<button class="btn-secondary" title="원본 인터뷰 대화로 knowledgeSummary 를 처음부터 다시 생성합니다 (max_tokens 절단 등으로 내용이 잘렸을 때 사용)" onclick="regenerateKnowledgeSummary('${item.id}')">🔄 요약 재생성</button>`
+      : '',
     item.status === 'draft'
       ? (() => {
           const missingSource = !item.knowledgeSource || item.knowledgeSource === 'unclassified';
@@ -1897,6 +1900,27 @@ window.confirmKnowledgeItem = async (id) => {
     showToast('확정되었습니다. AI 코치가 이제부터 참조합니다.');
     loadKnowledgeMgmt();
   } catch (e) { showToast('확정 실패: ' + e.message, 'error'); }
+};
+
+// max_tokens 절단 등으로 knowledgeSummary 가 손상된 인터뷰 초안을, 원본
+// 대화(ai_interview.turns)로 처음부터 다시 생성한다. process-interview.js
+// 에 있는 모드라 manage-knowledge.js 용 knowledgeApi 가 아니라 별도 호출.
+window.regenerateKnowledgeSummary = async (id) => {
+  if (!confirm('원본 인터뷰 대화를 근거로 지식 요약을 처음부터 다시 생성하시겠습니까?\n현재 내용은 change_log 에 보관되고 덮어써집니다.')) return;
+  try {
+    const token = await knowledgeAuthToken();
+    const res = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'regenerateSummary', draftDocId: id })
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+    showToast('지식 요약이 재생성되었습니다.');
+    loadKnowledgeMgmt();
+  } catch (e) {
+    showToast('재생성 실패: ' + e.message, 'error');
+  }
 };
 
 window.discardKnowledgeItem = async (id) => {

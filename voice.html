@@ -591,7 +591,7 @@ function setStatus(msg, cls) { setStatusEl('voiceStatus', msg, cls); }
 // "현재 대상 필드(activeField)" 기준으로 돌려쓴다.
 var recognition = null;
 var recognizing = false;
-var finalTranscript = '';   // 확정된 인식 결과 누적 (편집 중인 텍스트와 별개로 추적)
+var sessionBaseText = '';   // 이번 녹음 세션을 시작하기 전까지 입력란에 있던 텍스트
 var activeField = { textId: 'answerText', micId: 'micBtn', hintId: 'micHint', statusId: 'voiceStatus' };
 
 function setStatusEl(id, msg, cls) {
@@ -631,22 +631,32 @@ function initSpeechRecognition() {
     if (hintEl) hintEl.textContent = '듣고 있어요… 다시 누르면 멈춰요';
     // 이번 녹음 세션 시작 시점의 텍스트를 기준으로 이어붙인다
     var ta = document.getElementById(activeField.textId);
-    finalTranscript = ta ? ta.value : '';
-    if (finalTranscript && !/\s$/.test(finalTranscript)) finalTranscript += ' ';
+    sessionBaseText = ta ? ta.value : '';
+    if (sessionBaseText && !/\s$/.test(sessionBaseText)) sessionBaseText += ' ';
   };
 
   recognition.onresult = function (event) {
+    // event.results 는 이번 녹음 세션 전체의 결과 목록이다(끊겼다 이어져도
+    // 세션이 끝나기 전까진 계속 같은 배열에 쌓인다). resultIndex 부터
+    // 증분으로 finalTranscript 에 누적하던 예전 방식은, 브라우저가 발화
+    // 사이 정지 후 내부적으로 구간을 다시 나누면서 이미 isFinal 로 확정
+    // 했던 구간을 다시 한 번 isFinal 로 재전송하는 경우 그대로 중복
+    // 누적돼버렸다(천천히 끊어 말할수록 앞 단어가 반복되는 원인).
+    // → 매 이벤트마다 0번 인덱스부터 전체를 다시 훑어 "지금 시점의 확정
+    //   텍스트"를 처음부터 재조립하면, 같은 구간이 몇 번 재전송되어도
+    //   결과가 항상 동일하게 계산되어 중복이 생길 수 없다.
+    var finalText = '';
     var interim = '';
-    for (var i = event.resultIndex; i < event.results.length; i++) {
+    for (var i = 0; i < event.results.length; i++) {
       var chunk = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalTranscript += chunk + ' ';
+        finalText += chunk + ' ';
       } else {
         interim += chunk;
       }
     }
     var ta = document.getElementById(activeField.textId);
-    if (ta) ta.value = finalTranscript + interim;
+    if (ta) ta.value = sessionBaseText + finalText + interim;
   };
 
   recognition.onerror = function (event) {

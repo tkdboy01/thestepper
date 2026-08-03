@@ -572,6 +572,26 @@ select.form-control{cursor:pointer}
   <div id="tab-knowledge" class="tab-content" style="display:none">
     <div class="section-title">🧠 코칭 지식 관리</div>
 
+    <!-- 완료된 인터뷰 카운터 (필터와 무관하게 항상 전체 기준) -->
+    <div id="knowledgeCounterBar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px">
+      <div style="background:#f7f7f9;border:1px solid #e5e5e7;border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;margin-bottom:4px">전체</div>
+        <div id="counterTotal" style="font-size:26px;font-weight:800;color:#1d1d1f">-</div>
+      </div>
+      <div style="background:#e8f7ec;border:1px solid rgba(10,122,52,0.25);border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#0a7a34;letter-spacing:0.5px;margin-bottom:4px">확정(승인 완료)</div>
+        <div id="counterConfirmed" style="font-size:26px;font-weight:800;color:#0a7a34">-</div>
+      </div>
+      <div style="background:#fff7e6;border:1px solid rgba(138,91,0,0.25);border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#8a5b00;letter-spacing:0.5px;margin-bottom:4px">초안(승인 대기)</div>
+        <div id="counterDraft" style="font-size:26px;font-weight:800;color:#8a5b00">-</div>
+      </div>
+      <div style="background:#f0f4ff;border:1px solid rgba(0,85,179,0.25);border-radius:12px;padding:14px 16px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#0055b3;letter-spacing:0.5px;margin-bottom:4px">시범 운영 주제 진행</div>
+        <div id="counterPilotProgress" style="font-size:26px;font-weight:800;color:#0055b3">-</div>
+      </div>
+    </div>
+
     <!-- 구 문서(판정·출처·측정버전 없음) 백필 안내 -->
     <div class="migrate-box" id="knowledgeMigrateBox" style="display:none">
       <div class="migrate-text" id="knowledgeMigrateText"></div>
@@ -1734,6 +1754,7 @@ async function loadKnowledgeMgmt() {
 
     KNOWLEDGE_CURRENT_VERSION_HINT = data.currentMeasurementVersion;
     renderKnowledgeStats(data.stats, data.currentMeasurementVersion);
+    renderKnowledgeCounterBar(data.total, data.stats, data.pilotProgress);
 
     const badge = document.getElementById('knowledgeBadge');
     const need = (data.stats.draft || 0) + (data.stats.needsReview || 0);
@@ -1769,6 +1790,25 @@ function renderKnowledgeStats(stats, currentVersion) {
     chip('⚠ 재검토 필요', stats.needsReview, '#fdeaea', '#c8102e') +
     chip('오답 기록', stats.negative, '#fdeaea', '#c8102e') +
     `<span style="font-size:11px;color:#aaa;align-self:center;margin-left:4px">현재 측정 산식 v${currentVersion}</span>`;
+}
+
+// 완료된 인터뷰(coaching_knowledge 문서) 카운터. 목록 필터와 무관하게
+// 항상 전체 기준 수치(data.total/data.stats/data.pilotProgress)를 쓴다 —
+// knowledgeItemsCache 는 필터가 걸리면 일부만 담기므로 여기서 쓰면 안 된다.
+function renderKnowledgeCounterBar(total, stats, pilotProgress) {
+  const totalEl = document.getElementById('counterTotal');
+  if (!totalEl) return;
+  totalEl.textContent = total ?? 0;
+  document.getElementById('counterConfirmed').textContent = stats?.confirmed ?? 0;
+  document.getElementById('counterDraft').textContent = stats?.draft ?? 0;
+
+  const pilotEl = document.getElementById('counterPilotProgress');
+  if (pilotProgress && pilotProgress.total > 0) {
+    pilotEl.textContent = `${pilotProgress.completed}/${pilotProgress.total}개 진행`;
+  } else {
+    pilotEl.textContent = '미설정';
+    pilotEl.title = '관리자 화면의 "🎯 시범 운영 주제"에 주제를 등록하면 진행률이 표시됩니다.';
+  }
 }
 
 function renderKnowledgeList(items) {

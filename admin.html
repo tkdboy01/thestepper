@@ -643,7 +643,10 @@ select.form-control{cursor:pointer}
           </label>
         </div>
         <button class="btn-secondary" onclick="loadKnowledgeMgmt()">↻ 새로고침</button>
+        <button class="btn-secondary" id="exportKnowledgeJsonBtn" onclick="exportKnowledgeData('json')">⬇ JSON 내보내기</button>
+        <button class="btn-secondary" id="exportKnowledgeJsonlBtn" onclick="exportKnowledgeData('jsonl')">⬇ JSONL 내보내기</button>
       </div>
+      <div style="font-size:11px;color:#888;margin-top:8px">coaching_knowledge · ai_interview 전체를 원본(raw_interview_transcript, turns 포함) 그대로 내려받습니다. 화면 필터와 무관하게 항상 전체를 내보냅니다.</div>
     </div>
 
     <div id="knowledgeList"><div class="loading-msg">로딩 중...</div></div>
@@ -1681,6 +1684,7 @@ window.confirmCoaching = async () => {
 // 클라이언트에서 coaching_knowledge 를 직접 add/update 하지 않는다 —
 // manage-knowledge.js 가 상태 전이 규칙(예: 출처 없으면 확정 불가)을 강제한다.
 const MANAGE_KNOWLEDGE_URL = 'https://thestepper-api.vercel.app/api/manage-knowledge';
+const EXPORT_KNOWLEDGE_URL = 'https://thestepper-api.vercel.app/api/export-knowledge';
 
 const KNOWLEDGE_STATUS_LABEL = { draft: '초안', confirmed: '확정', superseded: '폐기됨' };
 const KNOWLEDGE_STATUS_COLOR = {
@@ -1734,6 +1738,43 @@ async function knowledgeApi(body) {
 // 기존 3개 흐름(Track1 학습, 코칭 확정, 코칭탭 최초 진입)에서 부르던 이름을
 // 그대로 유지한다. 지식 관리 탭이 열려 있든 아니든 새로고침은 저렴하다.
 async function loadKnowledgeLibrary() { return loadKnowledgeMgmt(); }
+
+// coaching_knowledge · ai_interview 전체를 원본 그대로 내려받는다.
+// THE STEPPER 데이터가 특정 AI 벤더에 종속되지 않고 언제든 다른
+// 곳으로 옮기거나 재분석할 수 있어야 한다는 원칙에 따른 기능이다.
+async function exportKnowledgeData(format) {
+  const btnId = format === 'jsonl' ? 'exportKnowledgeJsonlBtn' : 'exportKnowledgeJsonBtn';
+  const btn = document.getElementById(btnId);
+  const originalText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '내보내는 중...'; }
+  try {
+    const token = await knowledgeAuthToken();
+    const res = await fetch(EXPORT_KNOWLEDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ format })
+    });
+    if (!res.ok) {
+      let msg = '내보내기 실패';
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `thestepper-knowledge-export-${dateStr}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('내보내기 실패: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalText; }
+  }
+}
 
 async function loadKnowledgeMgmt() {
   const listEl = document.getElementById('knowledgeList');

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="THE STEPPER 태권도 겨루기 OX 퀴즈 — 초등학생을 위한 재미있는 겨루기 상식 퀴즈 게임">
+<title>OX 겨루기 퀴즈 — THE STEPPER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap');
+
+:root{
+  --red:#FF4757; --red-deep:#C8102E;
+  --blue:#3B82F6; --blue-deep:#1E56D9;
+  --gold:#FFC93C; --purple:#9B5DE5; --green:#22C55E;
+  --ink:#2B2140; --sub:#6B6284;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  min-height:100vh;
+  font-family:'Noto Sans KR',sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at 10% 8%, rgba(255,255,255,0.35), transparent 40%),
+    radial-gradient(circle at 90% 85%, rgba(255,255,255,0.25), transparent 45%),
+    linear-gradient(160deg, #7C3AED 0%, #A855F7 25%, #EC4899 50%, #FB923C 75%, #FFC93C 100%);
+  background-attachment:fixed;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:0 0 40px;
+}
+
+/* 배경 장식 도형 */
+.bg-shape{position:fixed;border-radius:50%;opacity:0.18;pointer-events:none;z-index:0}
+.bg-shape.s1{width:220px;height:220px;background:#fff;top:-60px;left:-60px}
+.bg-shape.s2{width:160px;height:160px;background:#fff;bottom:10%;right:-50px}
+.bg-shape.s3{width:120px;height:120px;background:#fff;top:40%;left:-40px}
+
+/* HOME LINK */
+.home-link{
+  position:fixed;top:14px;left:14px;z-index:50;
+  background:rgba(255,255,255,0.85);color:var(--purple);
+  font-weight:800;font-size:13px;text-decoration:none;
+  padding:8px 14px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.15);
+  display:flex;align-items:center;gap:5px;
+}
+
+.wrap{
+  position:relative;z-index:1;
+  width:100%;max-width:560px;
+  padding:70px 18px 20px;
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;
+}
+
+.logo-badge{
+  font-family:'Jua',sans-serif;
+  color:#fff;
+  font-size:15px;
+  letter-spacing:2px;
+  text-shadow:0 2px 8px rgba(0,0,0,0.25);
+  margin-bottom:6px;
+  opacity:0.9;
+}
+
+.screen{width:100%;display:none;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+
+/* ── 카드 공통 ── */
+.card{
+  background:#fff;
+  border-radius:28px;
+  box-shadow:0 16px 40px rgba(60,20,90,0.25);
+  width:100%;
+  padding:32px 24px;
+  text-align:center;
+}
+
+/* ── 시작 화면 ── */
+.title-emoji{font-size:64px;margin-bottom:6px;line-height:1}
+.title-main{
+  font-family:'Jua',sans-serif;
+  font-size:clamp(30px,8vw,42px);
+  color:var(--purple);
+  margin-bottom:10px;
+  text-shadow:2px 2px 0 rgba(155,93,229,0.15);
+}
+.title-sub{font-size:15px;color:var(--sub);font-weight:600;margin-bottom:26px;line-height:1.7}
+.btn-start{
+  font-family:'Jua',sans-serif;
+  font-size:24px;
+  color:#fff;
+  background:linear-gradient(135deg, var(--purple), var(--blue-deep));
+  border:none;border-radius:50px;
+  padding:18px 52px;
+  cursor:pointer;
+  box-shadow:0 10px 0 #6B3FA0, 0 16px 24px rgba(107,63,160,0.35);
+  transition:transform 0.12s, box-shadow 0.12s;
+  letter-spacing:1px;
+}
+.btn-start:active{transform:translateY(6px);box-shadow:0 4px 0 #6B3FA0, 0 8px 16px rgba(107,63,160,0.3)}
+.start-count{margin-top:16px;font-size:13px;color:var(--sub);font-weight:600}
+
+/* ── 로딩/빈 상태 ── */
+.state-emoji{font-size:56px;margin-bottom:14px}
+.state-text{font-size:16px;font-weight:700;color:var(--ink);line-height:1.7}
+.spinner{
+  width:44px;height:44px;border-radius:50%;
+  border:6px solid #eee;border-top-color:var(--purple);
+  animation:spin 0.8s linear infinite;margin:0 auto 16px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── 문제 화면 ── */
+.progress-row{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.progress-track{flex:1;height:14px;background:rgba(255,255,255,0.4);border-radius:10px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1)}
+.progress-fill{height:100%;background:linear-gradient(90deg, var(--gold), var(--red));border-radius:10px;transition:width 0.35s ease}
+.progress-label{
+  font-family:'Jua',sans-serif;color:#fff;font-size:16px;
+  text-shadow:0 2px 6px rgba(0,0,0,0.2);white-space:nowrap;
+}
+
+.q-card{position:relative;overflow:visible}
+.q-number{
+  display:inline-block;background:var(--gold);color:#7A5200;
+  font-weight:800;font-size:12px;border-radius:20px;padding:5px 14px;margin-bottom:14px;
+}
+.q-text{
+  font-size:clamp(19px,5.2vw,24px);
+  font-weight:800;
+  line-height:1.55;
+  color:var(--ink);
+  min-height:90px;
+  display:flex;align-items:center;justify-content:center;
+  padding:4px 4px 26px;
+}
+
+.ox-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+.ox-btn{
+  aspect-ratio:1/1;
+  border:none;border-radius:28px;
+  font-family:'Jua',sans-serif;
+  font-size:clamp(52px,14vw,80px);
+  color:#fff;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 0.1s, filter 0.15s;
+  position:relative;
+}
+.ox-btn:active:not(:disabled){transform:scale(0.94)}
+.ox-btn:disabled{cursor:default}
+.ox-btn.o-btn{background:linear-gradient(150deg,#4FC3F7,var(--blue-deep));box-shadow:0 8px 0 #1741A6, 0 14px 20px rgba(30,86,217,0.35)}
+.ox-btn.x-btn{background:linear-gradient(150deg,#FF8A80,var(--red-deep));box-shadow:0 8px 0 #9B0C22, 0 14px 20px rgba(200,16,46,0.35)}
+.ox-btn.dim{filter:grayscale(0.55) brightness(0.8);box-shadow:none;transform:none}
+.ox-btn.picked{filter:none;box-shadow:0 4px 0 rgba(0,0,0,0.2), 0 8px 14px rgba(0,0,0,0.25)}
+
+/* ── 피드백 ── */
+.feedback{
+  width:100%;margin-top:20px;border-radius:20px;padding:18px 20px;
+  text-align:left;
+  display:none;
+  animation:popIn 0.3s ease;
+}
+.feedback.show{display:block}
+@keyframes popIn{from{opacity:0;transform:translateY(10px) scale(0.98)}to{opacity:1;transform:none}}
+.feedback.correct{background:#E9F9EE;border:2px solid #7BD79A}
+.feedback.wrong{background:#FFF3E8;border:2px solid #FFC98A}
+.fb-head{font-family:'Jua',sans-serif;font-size:19px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.feedback.correct .fb-head{color:#0E8A3E}
+.feedback.wrong .fb-head{color:#B96A00}
+.fb-body{font-size:14.5px;line-height:1.7;color:var(--ink);font-weight:600}
+
+.btn-next{
+  margin-top:18px;
+  font-family:'Jua',sans-serif;font-size:18px;color:#fff;
+  background:linear-gradient(135deg, var(--purple), var(--blue-deep));
+  border:none;border-radius:40px;padding:13px 38px;cursor:pointer;
+  box-shadow:0 7px 0 #6B3FA0;
+  display:none;
+}
+.btn-next.show{display:inline-block;animation:popIn 0.25s ease}
+.btn-next:active{transform:translateY(4px);box-shadow:0 3px 0 #6B3FA0}
+
+/* ── 별 반짝임 ── */
+.stars-layer{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.star-pop{
+  position:absolute;font-size:28px;opacity:0;
+  animation:starPop 0.9s ease-out forwards;
+}
+@keyframes starPop{
+  0%{opacity:0;transform:translateY(0) scale(0.3) rotate(0deg)}
+  15%{opacity:1;transform:translateY(-10px) scale(1.2) rotate(20deg)}
+  100%{opacity:0;transform:translateY(-90px) scale(0.6) rotate(80deg)}
+}
+
+/* ── 결과 화면 ── */
+.result-emoji{font-size:74px;margin-bottom:8px}
+.result-title{font-family:'Jua',sans-serif;font-size:28px;color:var(--purple);margin-bottom:14px;line-height:1.5}
+.score-box{
+  background:linear-gradient(135deg,#FFF6DA,#FFE3EE);
+  border-radius:22px;padding:22px;margin-bottom:18px;
+}
+.score-num{font-family:'Jua',sans-serif;font-size:52px;color:var(--red-deep)}
+.score-total{font-size:18px;color:var(--sub);font-weight:700}
+.result-msg{font-size:15px;color:var(--ink);font-weight:700;line-height:1.7;margin-bottom:22px}
+.btn-retry{
+  font-family:'Jua',sans-serif;font-size:20px;color:#fff;
+  background:linear-gradient(135deg, var(--gold), #FF8A3D);
+  border:none;border-radius:50px;padding:15px 44px;cursor:pointer;
+  box-shadow:0 8px 0 #C9660A;
+}
+.btn-retry:active{transform:translateY(4px);box-shadow:0 4px 0 #C9660A}
+
+@media(max-width:380px){
+  .ox-btn{font-size:52px}
+  .wrap{padding-top:60px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-shape s1"></div>
+<div class="bg-shape s2"></div>
+<div class="bg-shape s3"></div>
+<div class="stars-layer" id="starsLayer"></div>
+
+<a href="index.html" class="home-link">🏠 홈으로</a>
+
+<div class="wrap">
+  <div class="logo-badge">THE STEPPER</div>
+
+  <!-- 로딩 -->
+  <div class="screen active" id="screenLoading">
+    <div class="card">
+      <div class="spinner"></div>
+      <div class="state-text">문제를 불러오는 중이에요...</div>
+    </div>
+  </div>
+
+  <!-- 문제가 하나도 없을 때 -->
+  <div class="screen" id="screenEmpty">
+    <div class="card">
+      <div class="state-emoji">🥋</div>
+      <div class="state-text">앗, 아직 준비된 문제가 없어요!<br>조금 뒤에 다시 와주세요.</div>
+    </div>
+  </div>
+
+  <!-- 시작 화면 -->
+  <div class="screen" id="screenStart">
+    <div class="card">
+      <div class="title-emoji">🥋⭐</div>
+      <div class="title-main">태권도 겨루기<br>OX 퀴즈</div>
+      <div class="title-sub">태권도 겨루기에 대해 얼마나 알고 있나요?<br>O 또는 X 버튼을 눌러서 맞혀보세요!</div>
+      <button class="btn-start" onclick="startQuiz()">시작하기!</button>
+      <div class="start-count" id="startCount"></div>
+    </div>
+  </div>
+
+  <!-- 문제 화면 -->
+  <div class="screen" id="screenQuestion">
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-label" id="progressLabel">1 / 10</div>
+    </div>
+
+    <div class="card q-card">
+      <div class="q-number" id="qNumber">문제 1</div>
+      <div class="q-text" id="qText">문제 내용이 여기 표시됩니다.</div>
+
+      <div class="ox-row">
+        <button class="ox-btn o-btn" id="btnO" onclick="answerQuiz(true)">O</button>
+        <button class="ox-btn x-btn" id="btnX" onclick="answerQuiz(false)">X</button>
+      </div>
+
+      <div class="feedback" id="feedback">
+        <div class="fb-head" id="fbHead"></div>
+        <div class="fb-body" id="fbBody"></div>
+      </div>
+
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()">다음 문제 →</button>
+    </div>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div class="screen" id="screenResult">
+    <div class="card">
+      <div class="result-emoji" id="resultEmoji">🏆</div>
+      <div class="result-title" id="resultTitle">참 잘했어요!</div>
+      <div class="score-box">
+        <span class="score-num" id="resultScore">0</span>
+        <span class="score-total" id="resultTotal">/ 10 개 맞혔어요</span>
+      </div>
+      <div class="result-msg" id="resultMsg"></div>
+      <button class="btn-retry" onclick="restartQuiz()">🔄 다시 도전하기</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
+  authDomain: "thestepper-c9bfb.firebaseapp.com",
+  projectId: "thestepper-c9bfb",
+  storageBucket: "thestepper-c9bfb.firebasestorage.app",
+  messagingSenderId: "787224576231",
+  appId: "1:787224576231:web:04d4003f42ecace9016242"
+};
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const SESSION_SIZE = 10;
+
+let allQuestions = [];   // confirmed 전체 (Firestore에서 1회 로드)
+let sessionQuestions = []; // 이번 판에 쓸 문제(최대 10개, 무작위)
+let currentIndex = 0;
+let score = 0;
+let answered = false;
+
+function $(id) { return document.getElementById(id); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ── 사운드 (외부 파일 없이 Web Audio API로 즉석 합성) ── */
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freqs, { dur = 0.22, gap = 0.16, volume = 0.2, type = 'sine' } = {}) {
+  try {
+    const ctx = getAudioCtx();
+    let t = ctx.currentTime;
+    freqs.forEach((f) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(volume, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+      t += gap;
+    });
+  } catch (e) { /* 오디오를 지원하지 않는 환경이면 조용히 무시 */ }
+}
+
+// 정답: 밝은 상승 아르페지오 (도-미-솔-높은도)
+function playCorrectSound() {
+  playTone([523.25, 659.25, 783.99, 1046.5], { dur: 0.18, gap: 0.11, volume: 0.22, type: 'triangle' });
+}
+// 오답: 부드러운 하강 2음 — 기죽지 않도록 낮은 볼륨의 잔잔한 톤
+function playGentleSound() {
+  playTone([349.23, 293.66], { dur: 0.4, gap: 0.3, volume: 0.12, type: 'sine' });
+}
+// 시작: 짧고 경쾌한 준비 신호음
+function playStartSound() {
+  playTone([440, 587.33], { dur: 0.18, gap: 0.14, volume: 0.18, type: 'triangle' });
+}
+
+/* ── 별 반짝임 애니메이션 ── */
+function popStars() {
+  const layer = $('starsLayer');
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight * 0.42;
+  const glyphs = ['⭐', '✨', '🌟'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'star-pop';
+    el.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 40 + Math.random() * 140;
+    el.style.left = (centerX + Math.cos(angle) * dist) + 'px';
+    el.style.top = (centerY + Math.sin(angle) * dist) + 'px';
+    el.style.fontSize = (18 + Math.random() * 22) + 'px';
+    el.style.animationDelay = (Math.random() * 0.15) + 's';
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+}
+
+/* ── 데이터 로딩 ── */
+async function loadQuestions() {
+  try {
+    const q = query(collection(db, 'quiz_questions'), where('status', '==', 'confirmed'));
+    const snap = await getDocs(q);
+    allQuestions = snap.docs
+      .map((d) => {
+        const v = d.data() || {};
+        return {
+          id: d.id,
+          question: v.question || '',
+          answer: v.answer === true,
+          explanation: v.explanation || '',
+        };
+      })
+      .filter((v) => v.question);
+
+    if (!allQuestions.length) {
+      showScreen('screenEmpty');
+      return;
+    }
+    $('startCount').textContent = `총 ${Math.min(SESSION_SIZE, allQuestions.length)}문제가 준비되어 있어요`;
+    showScreen('screenStart');
+  } catch (e) {
+    console.error('[quiz] 문제 로딩 실패:', e);
+    $('screenEmpty').querySelector('.state-text').textContent = '문제를 불러오지 못했어요. 잠시 후 다시 시도해주세요.';
+    showScreen('screenEmpty');
+  }
+}
+
+/* ── 게임 진행 ── */
+window.startQuiz = () => {
+  getAudioCtx(); // 사용자 제스처 시점에 오디오 컨텍스트를 미리 깨워둔다
+  playStartSound();
+  sessionQuestions = shuffle(allQuestions).slice(0, SESSION_SIZE);
+  currentIndex = 0;
+  score = 0;
+  showScreen('screenQuestion');
+  renderQuestion();
+};
+
+function renderQuestion() {
+  answered = false;
+  const total = sessionQuestions.length;
+  const q = sessionQuestions[currentIndex];
+
+  $('qNumber').textContent = `문제 ${currentIndex + 1}`;
+  $('qText').textContent = q.question;
+  $('progressLabel').textContent = `${currentIndex + 1} / ${total}`;
+  $('progressFill').style.width = `${(currentIndex / total) * 100}%`;
+
+  ['btnO', 'btnX'].forEach((id) => {
+    const b = $(id);
+    b.disabled = false;
+    b.classList.remove('dim', 'picked');
+  });
+  $('feedback').className = 'feedback';
+  $('btnNext').classList.remove('show');
+}
+
+window.answerQuiz = (picked) => {
+  if (answered) return;
+  answered = true;
+
+  const q = sessionQuestions[currentIndex];
+  const correct = picked === q.answer;
+  if (correct) score++;
+
+  const pickedBtn = $(picked ? 'btnO' : 'btnX');
+  const otherBtn = $(picked ? 'btnX' : 'btnO');
+  pickedBtn.classList.add('picked');
+  otherBtn.classList.add('dim');
+  $('btnO').disabled = true;
+  $('btnX').disabled = true;
+
+  const fb = $('feedback');
+  fb.classList.add('show', correct ? 'correct' : 'wrong');
+  $('fbHead').textContent = correct ? '🎉 정답이에요!' : '😊 아쉬워요, 정답은 ' + (q.answer ? 'O' : 'X') + '예요';
+  $('fbBody').textContent = q.explanation || '';
+
+  if (correct) {
+    playCorrectSound();
+    popStars();
+  } else {
+    playGentleSound();
+  }
+
+  $('btnNext').classList.add('show');
+  $('btnNext').textContent = (currentIndex + 1 >= sessionQuestions.length) ? '결과 보기 →' : '다음 문제 →';
+};
+
+window.nextQuestion = () => {
+  currentIndex++;
+  if (currentIndex >= sessionQuestions.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+};
+
+function showResult() {
+  $('progressFill').style.width = '100%';
+  const total = sessionQuestions.length;
+  $('resultScore').textContent = score;
+  $('resultTotal').textContent = `/ ${total} 개 맞혔어요`;
+
+  const ratio = score / total;
+  let emoji, title, msg;
+  if (ratio >= 0.9) {
+    emoji = '🏆'; title = '최고예요! 겨루기 박사님이시네요!';
+    msg = '완벽해요! 태권도 겨루기 지식이 정말 대단해요. 다음에도 이 실력 그대로 도전해봐요!';
+  } else if (ratio >= 0.7) {
+    emoji = '🥇'; title = '참 잘했어요!';
+    msg = '정말 잘 풀었어요! 조금만 더 연습하면 만점도 문제없겠어요. 다시 도전해볼까요?';
+  } else if (ratio >= 0.4) {
+    emoji = '👏'; title = '잘하고 있어요!';
+    msg = '좋은 시작이에요! 틀린 문제의 설명을 잘 기억해두면 다음엔 더 잘할 수 있어요.';
+  } else {
+    emoji = '💪'; title = '괜찮아요, 다시 도전해봐요!';
+    msg = '처음엔 누구나 어려워요. 설명을 잘 읽고 한 번 더 도전해보면 금방 늘 거예요!';
+  }
+  $('resultEmoji').textContent = emoji;
+  $('resultTitle').textContent = title;
+  $('resultMsg').textContent = msg;
+
+  showScreen('screenResult');
+  if (ratio >= 0.7) popStars();
+}
+
+window.restartQuiz = () => {
+  showScreen('screenStart');
+};
+
+loadQuestions();
+</script>
+</body>
+</html>

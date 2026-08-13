@@ -209,6 +209,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
+    <button class="tab-btn" id="tab-quiz-btn" onclick="switchTab('quiz')" style="position:relative">🎮 OX 퀴즈 관리<span id="quizBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-compare-btn" onclick="switchTab('compare')">⚖️ 품질 비교</button>
   </div>
 
@@ -652,6 +653,49 @@ select.form-control{cursor:pointer}
     <div id="knowledgeList"><div class="loading-msg">로딩 중...</div></div>
   </div>
 
+  <!-- ===== OX 퀴즈 관리 탭 ===== -->
+  <div id="tab-quiz" class="tab-content" style="display:none">
+    <div class="section-title">🎮 OX 퀴즈 관리</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
+      확정(confirmed)된 코칭 지식의 "예외 조건"·"실패 조건" 내용을 바탕으로 초등학생용 O/X 문제를 자동 생성합니다.
+      생성된 문제는 바로 게임에 노출되지 않고 초안(draft) 상태로 저장되며, 아래에서 직접 다듬은 뒤 승인해야
+      <b style="color:var(--red)">quiz.html</b> 게임에 노출됩니다.
+    </div>
+
+    <!-- 통계 -->
+    <div id="quizStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+
+    <!-- 자동 생성 -->
+    <div class="form-card" style="padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn-primary" id="quizGenerateBtn" onclick="generateQuizItems()">🪄 코칭 지식에서 문제 자동 생성</button>
+        <span id="quizGenerateResult" style="font-size:12px;color:#888"></span>
+      </div>
+      <div style="font-size:11px;color:#aaa;margin-top:8px">
+        한 번 누르면 최대 5건의 코칭 지식 문서를 처리합니다. 대상이 더 남아있으면 다시 눌러 이어서 생성할 수 있습니다.
+        예외 조건·실패 조건 내용이 없는 문서는 건너뜁니다.
+      </div>
+    </div>
+
+    <!-- 필터 -->
+    <div class="form-card" style="padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="min-width:140px">
+          <label class="form-label">상태</label>
+          <select class="form-control" id="qfStatus" onchange="applyQuizFilters()">
+            <option value="">전체</option>
+            <option value="draft">draft (승인 대기)</option>
+            <option value="confirmed">confirmed (게임 노출중)</option>
+            <option value="discarded">discarded (폐기됨)</option>
+          </select>
+        </div>
+        <button class="btn-secondary" onclick="loadQuizMgmt()">↻ 새로고침</button>
+      </div>
+    </div>
+
+    <div id="quizList"><div class="loading-msg">로딩 중...</div></div>
+  </div>
+
   <!-- ===== 품질 비교 탭 (항목 10 — 화면 골격만, 실제 답변 자동 생성 연결은 다음 단계) ===== -->
   <div id="tab-compare" class="tab-content" style="display:none">
     <div class="section-title">⚖️ 품질 비교 (블라인드 A/B)</div>
@@ -788,6 +832,9 @@ window.switchTab = (tab) => {
   // 지식 관리 탭은 매번 새로 불러온다 — 다른 흐름(Track1/2/3, 코칭 확정)에서
   // 계속 문서가 쌓이므로 캐시가 쉽게 낡는다. 데이터 규모가 작아 비용도 적다.
   if (tab === 'knowledge') { loadKnowledgeMgmt(); }
+  // 퀴즈 관리 탭도 지식 탭과 같은 이유로 매번 새로 불러온다 — 생성 버튼을
+  // 누른 직후 상태가 바로바로 바뀌어야 하고, 데이터 규모도 작다.
+  if (tab === 'quiz') { loadQuizMgmt(); }
   if (tab === 'compare' && !compareLoaded) { compareLoaded = true; initCompareTab(); }
 };
 
@@ -2052,6 +2099,194 @@ window.migrateKnowledgeLegacy = async () => {
   } finally {
     btn.disabled = false; btn.textContent = '구 문서 백필하기';
   }
+};
+
+/* ---- OX 퀴즈 관리 ---- */
+const MANAGE_QUIZ_URL = 'https://thestepper-api.vercel.app/api/manage-quiz';
+
+const QUIZ_STATUS_LABEL = { draft: '승인 대기', confirmed: '게임 노출중', discarded: '폐기됨' };
+const QUIZ_STATUS_COLOR = {
+  draft:      { bg: '#fff7e6', fg: '#8a5b00' },
+  confirmed:  { bg: '#e8f7ec', fg: '#0a7a34' },
+  discarded:  { bg: '#f0f0f0', fg: '#888' },
+};
+
+let quizItemsCache = [];
+let quizEditingId = null;
+
+async function quizApi(body) {
+  const token = await knowledgeAuthToken(); // 인증 방식은 코칭 지식 탭과 동일 (관리자 이메일 고정)
+  const res = await fetch(MANAGE_QUIZ_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function loadQuizMgmt() {
+  const listEl = document.getElementById('quizList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+
+  try {
+    const status = document.getElementById('qfStatus') ? document.getElementById('qfStatus').value : '';
+    const data = await quizApi({ mode: 'list', status });
+    quizItemsCache = data.items;
+
+    renderQuizStats(data.stats);
+
+    const badge = document.getElementById('quizBadge');
+    const need = data.stats.draft || 0;
+    if (need > 0) { badge.style.display = 'flex'; badge.textContent = need > 99 ? '99+' : need; }
+    else { badge.style.display = 'none'; }
+
+    renderQuizList(data.items);
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderQuizStats(stats) {
+  const el = document.getElementById('quizStats');
+  if (!el) return;
+  const chip = (label, n, bg, fg) =>
+    `<span style="font-size:12px;font-weight:700;background:${bg};color:${fg};border-radius:8px;padding:5px 12px">${esc(label)} ${n}</span>`;
+  el.innerHTML =
+    chip('승인 대기', stats.draft, '#fff7e6', '#8a5b00') +
+    chip('게임 노출중', stats.confirmed, '#e8f7ec', '#0a7a34') +
+    chip('폐기됨', stats.discarded, '#f0f0f0', '#888');
+}
+
+window.applyQuizFilters = () => { loadQuizMgmt(); };
+
+window.generateQuizItems = async () => {
+  const btn = document.getElementById('quizGenerateBtn');
+  const resultEl = document.getElementById('quizGenerateResult');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  resultEl.textContent = '';
+  try {
+    const data = await quizApi({ mode: 'generate' });
+    resultEl.textContent =
+      `${data.processedDocs}건 처리 → 문제 ${data.generated}개 생성 ` +
+      `(내용 없어 건너뜀 ${data.skippedNoContent}건, 남은 대상 ${data.remaining}건)`;
+    showToast(data.generated > 0 ? `문제 ${data.generated}개가 초안으로 생성되었습니다.` : '새로 생성된 문제가 없습니다.');
+    loadQuizMgmt();
+  } catch (e) {
+    showToast('생성 실패: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🪄 코칭 지식에서 문제 자동 생성';
+  }
+};
+
+function renderQuizList(items) {
+  const listEl = document.getElementById('quizList');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">조건에 맞는 문제가 없습니다. 위 버튼으로 자동 생성해보세요.</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(quizCardHtml).join('');
+}
+
+function quizCardHtml(item) {
+  if (quizEditingId === item.id) return quizEditFormHtml(item);
+
+  const sc = QUIZ_STATUS_COLOR[item.status] || { bg: '#f0f0f0', fg: '#888' };
+  const statusLabel = QUIZ_STATUS_LABEL[item.status] || item.status;
+  const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'}) : '';
+  const isDiscarded = item.status === 'discarded';
+
+  const badges = [
+    `<span style="font-size:11px;background:${sc.bg};color:${sc.fg};border-radius:5px;padding:2px 8px;font-weight:700">${esc(statusLabel)}</span>`,
+    `<span style="font-size:11px;background:${item.answer ? '#e8f7ec' : '#fdeaea'};color:${item.answer ? '#0a7a34' : '#c8102e'};border-radius:5px;padding:2px 8px;font-weight:700">정답: ${item.answer ? 'O' : 'X'}</span>`,
+  ].join(' ');
+
+  const actions = isDiscarded ? '' : [
+    `<button class="btn-edit" onclick="startEditQuizItem('${item.id}')">수정</button>`,
+    item.status === 'draft'
+      ? `<button class="btn-primary" style="padding:6px 12px;font-size:12px" onclick="approveQuizItem('${item.id}')">승인</button>`
+      : '',
+    `<button class="btn-danger" onclick="discardQuizItem('${item.id}')">폐기</button>`,
+  ].filter(Boolean).join('');
+
+  return `
+    <div style="border:1px solid #e5e5e7;border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;background:${isDiscarded ? '#fafafa' : '#fff'};opacity:${isDiscarded ? '0.7' : '1'}">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${badges}
+        <span style="font-size:11px;color:#aaa;margin-left:auto">${esc(createdAt)}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;line-height:1.6">Q. ${esc(item.question)}</div>
+      <div style="font-size:12.5px;color:#555;line-height:1.6">💬 ${esc(item.explanation)}</div>
+      ${actions ? `<div class="row-actions" style="justify-content:flex-start;margin-top:10px">${actions}</div>` : ''}
+    </div>`;
+}
+
+function quizEditFormHtml(item) {
+  return `
+    <div style="border:2px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fffafa">
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">문제</label>
+        <textarea class="form-control" id="qzEditQuestion-${esc(item.id)}" rows="2" style="font-family:inherit;resize:vertical">${esc(item.question || '')}</textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">정답</label>
+        <select class="form-control" id="qzEditAnswer-${esc(item.id)}">
+          <option value="true" ${item.answer ? 'selected' : ''}>O (참)</option>
+          <option value="false" ${!item.answer ? 'selected' : ''}>X (거짓)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">정답 이유 설명</label>
+        <textarea class="form-control" id="qzEditExplanation-${esc(item.id)}" rows="3" style="font-family:inherit;resize:vertical">${esc(item.explanation || '')}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveEditQuizItem('${item.id}')">저장</button>
+        <button class="btn-secondary" onclick="cancelEditQuizItem()">취소</button>
+      </div>
+    </div>`;
+}
+
+window.startEditQuizItem = (id) => {
+  quizEditingId = id;
+  renderQuizList(quizItemsCache);
+};
+
+window.cancelEditQuizItem = () => {
+  quizEditingId = null;
+  renderQuizList(quizItemsCache);
+};
+
+window.saveEditQuizItem = async (id) => {
+  const question = document.getElementById('qzEditQuestion-' + id).value.trim();
+  const answer = document.getElementById('qzEditAnswer-' + id).value === 'true';
+  const explanation = document.getElementById('qzEditExplanation-' + id).value.trim();
+  if (!question) { showToast('문제 문장을 입력해주세요.', 'error'); return; }
+  if (!explanation) { showToast('정답 이유 설명을 입력해주세요.', 'error'); return; }
+  try {
+    await quizApi({ mode: 'update', docId: id, question, answer, explanation });
+    showToast('저장되었습니다.');
+    quizEditingId = null;
+    loadQuizMgmt();
+  } catch (e) { showToast('저장 실패: ' + e.message, 'error'); }
+};
+
+window.approveQuizItem = async (id) => {
+  try {
+    await quizApi({ mode: 'approve', docId: id });
+    showToast('승인되었습니다. 이제 게임에 노출됩니다.');
+    loadQuizMgmt();
+  } catch (e) { showToast('승인 실패: ' + e.message, 'error'); }
+};
+
+window.discardQuizItem = async (id) => {
+  if (!confirm('이 문제를 폐기하시겠습니까?')) return;
+  try {
+    await quizApi({ mode: 'discard', docId: id });
+    showToast('폐기 처리되었습니다.');
+    loadQuizMgmt();
+  } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };
 
 /* ---- AI INTERVIEW ---- */

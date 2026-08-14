@@ -374,12 +374,45 @@ select.form-control{cursor:pointer}
           <span id="interviewChapterBadge" style="margin-left:auto;background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0"></span>
         </div>
         <div id="interviewLoading" style="text-align:center;padding:14px 0;font-size:13px;color:rgba(255,255,255,0.4)">로딩 중...</div>
-        <div id="interviewWithQuestion" style="display:none">
-          <div id="interviewQuestion" style="font-size:15px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:14px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
-          <textarea id="interviewAnswerInput" placeholder="대표님의 답변을 입력하세요..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(201,168,76,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
-          <div id="interviewErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
-          <button id="interviewSubmitBtn" onclick="submitInterviewAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C9A84C,#a58030);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📚 답변하고 AI 학습시키기</button>
+
+        <div id="interviewMain" style="display:none">
+          <div id="interviewQuestion" style="font-size:15px;font-weight:600;color:#fff;line-height:1.7;margin-bottom:10px;background:rgba(255,255,255,0.07);border-radius:10px;padding:14px"></div>
+
+          <!-- 체크리스트 진행 표시 (인터뷰 시작 후에만, voice.html과 동일 규약) -->
+          <div id="interviewChecklistArea" style="display:none">
+            <div id="interviewChecklistRow" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px"></div>
+            <div id="interviewChecklistMeta" style="font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:12px"></div>
+          </div>
+
+          <!-- STEP 1: 답변 전 유형 선택 -->
+          <div id="interviewTypeSelectArea" style="display:none">
+            <div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:10px">먼저 이 질문의 성격을 선택하세요</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="startInterviewTrack1('tacit')" style="flex:1;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:10px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;line-height:1.5">🧠 전술 판단<br>경험 지식</button>
+              <button onclick="startInterviewTrack1('curriculum')" style="flex:1;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.4);color:#C9A84C;border-radius:10px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;line-height:1.5">📘 커리큘럼<br>원문</button>
+            </div>
+          </div>
+
+          <!-- STEP 2: 답변 입력 (오타 정리 미리보기 없이 바로 제출 — admin.html은 대표 직접 타이핑이라 생략) -->
+          <div id="interviewAnswerArea" style="display:none">
+            <textarea id="interviewAnswerInput" placeholder="대표님의 답변을 입력하세요..." style="width:100%;min-height:80px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;resize:vertical;outline:none;line-height:1.6;transition:border-color 0.2s" onfocus="this.style.borderColor='rgba(201,168,76,0.6)'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"></textarea>
+            <div id="interviewErr" style="font-size:12px;color:#ff7070;margin-top:5px;min-height:16px"></div>
+            <button id="interviewSubmitBtn" onclick="submitInterviewAnswer()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#C9A84C,#a58030);color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">📚 답변 제출</button>
+            <button onclick="toggleInterviewOverridePicker()" style="display:block;margin:10px auto 0;background:transparent;border:none;color:rgba(201,168,76,0.75);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;text-decoration:underline">🔀 다른 질문으로</button>
+
+            <!-- 우선순위 무시하고 지정 항목부터 질문 -->
+            <div id="interviewOverridePicker" style="display:none;margin-top:10px;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px">
+              <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px">어떤 항목부터 물어볼까요?</div>
+              <div id="interviewOverrideList" style="display:flex;flex-direction:column;gap:6px"></div>
+            </div>
+          </div>
+
+          <!-- STEP 3: 인터뷰 종료 (초안 검토·승인은 🧠 코칭 지식 탭에서) -->
+          <div id="interviewFinishedArea" style="display:none;text-align:center;padding:6px 0">
+            <div style="font-size:13px;color:#6fe39a;line-height:1.6">✅ 인터뷰가 끝났습니다.<br>초안이 생성됐습니다 — <b>🧠 코칭 지식</b> 탭에서 검토·승인해주세요.</div>
+          </div>
         </div>
+
         <div id="interviewEmpty" style="display:none;text-align:center;padding:10px 0">
           <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:12px">현재 대기중인 질문이 없습니다.</div>
           <button onclick="generateInterviewQuestion()" style="background:transparent;border:1.5px solid rgba(201,168,76,0.5);color:#C9A84C;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✨ 새 질문 생성하기</button>
@@ -2289,37 +2322,62 @@ window.discardQuizItem = async (id) => {
   } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };
 
-/* ---- AI INTERVIEW ---- */
+/* ---- AI INTERVIEW ----
+   voice.html Track1과 동일한 체크리스트 기반 후속질문 엔진
+   (startInterview → confirmAnswer 반복 → 종료)을 그대로 쓴다.
+   voice.html과 다른 점은 오타 자동 정리 미리보기(correctAnswer)와
+   음성 인식 UI뿐이다 — admin.html은 대표가 키보드로 직접 입력하므로
+   그 두 가지는 필요 없어 뺐다. */
 const PROCESS_INTERVIEW_URL = 'https://thestepper-api.vercel.app/api/process-interview';
+const INTERVIEW_CHECKLIST_LABELS = {
+  judgement:        '판단 기준',
+  reason:           '선택 이유/우선순위',
+  exception:        '예외 조건',
+  failure:          '실패 조건',
+  levelDifference:  '선수 수준별 차이',
+  opponentResponse: '상대 대응',
+  risk:             '위험 요소'
+};
+const INTERVIEW_CHECKLIST_ORDER = ['judgement', 'exception', 'failure', 'levelDifference', 'opponentResponse', 'reason', 'risk'];
+
 let currentInterviewDocId = null;
+let currentInterviewChecklist = null;
+let currentInterviewFollowUpCount = 0;
 
 async function loadInterviewCard() {
   const loading = document.getElementById('interviewLoading');
-  const withQ = document.getElementById('interviewWithQuestion');
+  const main = document.getElementById('interviewMain');
   const empty = document.getElementById('interviewEmpty');
   loading.style.display = 'block';
-  withQ.style.display = 'none';
+  main.style.display = 'none';
   empty.style.display = 'none';
   try {
     const snap = await getDocs(collection(db, 'ai_interview'));
-    const pending = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(d => d.status === '대기중' && d.trackType !== 'sos')
-      .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+    const inProgress = [], pending = [];
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if (data.trackType !== 'scenario') return;
+      if (data.status === '인터뷰중') inProgress.push({ id: d.id, ...data });
+      else if (data.status === '대기중') pending.push({ id: d.id, ...data });
+    });
+    const byCreatedAsc = (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0);
+    inProgress.sort(byCreatedAsc);
+    pending.sort(byCreatedAsc);
     loading.style.display = 'none';
-    if (pending.length === 0) {
+
+    // 이미 시작해 후속 질문이 남은 인터뷰가 있으면 그것부터 이어서 진행한다
+    // (voice.html과 동일 — turns/checklist는 서버에 매 턴 저장돼 있어 이어받기 가능).
+    if (inProgress.length) {
+      resumeInterviewTrack1(inProgress[0]);
+      return;
+    }
+    if (!pending.length) {
       empty.style.display = 'block';
       currentInterviewDocId = null;
       document.getElementById('interviewChapterBadge').textContent = '';
-    } else {
-      const item = pending[0];
-      currentInterviewDocId = item.id;
-      document.getElementById('interviewQuestion').textContent = item.question || '';
-      document.getElementById('interviewChapterBadge').textContent = item.chapter || '';
-      document.getElementById('interviewAnswerInput').value = '';
-      document.getElementById('interviewErr').textContent = '';
-      withQ.style.display = 'block';
+      return;
     }
+    setInterviewTrack1Question(pending[0]);
   } catch (e) {
     loading.style.display = 'none';
     empty.style.display = 'block';
@@ -2327,6 +2385,86 @@ async function loadInterviewCard() {
   }
 }
 
+// 새 질문 — 유형 선택부터 시작
+function setInterviewTrack1Question(item) {
+  currentInterviewDocId = item.id;
+  currentInterviewChecklist = null;
+  currentInterviewFollowUpCount = 0;
+  document.getElementById('interviewQuestion').textContent = item.question || '';
+  document.getElementById('interviewChapterBadge').textContent = item.chapter || '';
+  document.getElementById('interviewAnswerInput').value = '';
+  document.getElementById('interviewErr').textContent = '';
+  document.getElementById('interviewMain').style.display = 'block';
+  document.getElementById('interviewEmpty').style.display = 'none';
+  showInterviewTrack1Step('typeSelect');
+}
+
+// 이미 인터뷰중인 문서를 그대로 복원 (유형 선택은 이미 끝난 상태)
+function resumeInterviewTrack1(item) {
+  currentInterviewDocId = item.id;
+  currentInterviewChecklist = item.checklist || null;
+  currentInterviewFollowUpCount = item.followUpCount || 0;
+  document.getElementById('interviewQuestion').textContent = item.currentQuestion || item.question || '';
+  document.getElementById('interviewChapterBadge').textContent = item.chapter || '';
+  document.getElementById('interviewAnswerInput').value = '';
+  document.getElementById('interviewErr').textContent = '';
+  document.getElementById('interviewMain').style.display = 'block';
+  document.getElementById('interviewEmpty').style.display = 'none';
+  renderInterviewChecklist(currentInterviewChecklist);
+  showInterviewTrack1Step('answering');
+}
+
+function showInterviewTrack1Step(step) {
+  document.getElementById('interviewTypeSelectArea').style.display = step === 'typeSelect' ? 'block' : 'none';
+  document.getElementById('interviewChecklistArea').style.display  = step === 'typeSelect' ? 'none' : 'block';
+  document.getElementById('interviewAnswerArea').style.display     = step === 'answering' ? 'block' : 'none';
+  document.getElementById('interviewFinishedArea').style.display   = step === 'finished' ? 'block' : 'none';
+  if (step !== 'answering') document.getElementById('interviewOverridePicker').style.display = 'none';
+}
+
+function interviewChecklistChipStyle(state) {
+  if (state === 'partial')  return 'border-color:rgba(201,168,76,0.6);color:#C9A84C;background:rgba(201,168,76,0.1)';
+  if (state === 'complete') return 'border-color:rgba(46,204,113,0.6);color:#6fe39a;background:rgba(46,204,113,0.1)';
+  return 'border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.05)';
+}
+
+// 7개 항목을 empty/partial/complete 색으로 표시 (voice.html과 동일 규약 —
+// 판정 근거는 서버 로그에만 남고 화면에는 상태만 보여준다)
+function renderInterviewChecklist(checklist) {
+  const row = document.getElementById('interviewChecklistRow');
+  const meta = document.getElementById('interviewChecklistMeta');
+  if (!checklist) { row.innerHTML = ''; meta.textContent = ''; return; }
+  row.innerHTML = INTERVIEW_CHECKLIST_ORDER.map(key => {
+    const state = checklist[key] || 'empty';
+    return `<span style="font-size:11px;font-weight:700;border-radius:20px;padding:4px 10px;border:1.5px solid;${interviewChecklistChipStyle(state)}">${INTERVIEW_CHECKLIST_LABELS[key]}</span>`;
+  }).join('');
+  meta.textContent = `후속 질문 ${currentInterviewFollowUpCount}/5회`;
+}
+
+// STEP 1: 답변 전 유형 선택
+window.startInterviewTrack1 = async (interviewType) => {
+  const user = auth.currentUser;
+  if (!user || !currentInterviewDocId) return;
+  try {
+    const token = await user.getIdToken();
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'startInterview', docId: currentInterviewDocId, interviewType })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+    currentInterviewChecklist = json.checklist;
+    currentInterviewFollowUpCount = 0;
+    renderInterviewChecklist(currentInterviewChecklist);
+    showInterviewTrack1Step('answering');
+  } catch (e) {
+    showToast('인터뷰 시작 실패: ' + e.message, 'error');
+  }
+};
+
+// STEP 2 → 계속 or 종료: 답변 확정 → 체크리스트 갱신 → 다음 행동
+// (오타 자동 정리 미리보기 없이 입력한 텍스트를 그대로 confirmAnswer로 보낸다)
 window.submitInterviewAnswer = async () => {
   const answer = document.getElementById('interviewAnswerInput').value.trim();
   const errEl = document.getElementById('interviewErr');
@@ -2336,34 +2474,81 @@ window.submitInterviewAnswer = async () => {
   const user = auth.currentUser;
   if (!user) return;
   btn.disabled = true;
-  btn.textContent = '⏳ 학습 중...';
+  btn.textContent = '⏳ 반영 중...';
   errEl.textContent = '';
   try {
     const token = await user.getIdToken();
     const r = await fetch(PROCESS_INTERVIEW_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ mode: 'answer', docId: currentInterviewDocId, adminAnswer: answer })
+      body: JSON.stringify({ mode: 'confirmAnswer', docId: currentInterviewDocId, confirmedAnswer: answer })
     });
     const json = await r.json();
     if (!r.ok) throw new Error(json.error || '서버 오류');
-    showToast('학습 완료! 다음 질문이 준비됐습니다.');
-    if (json.next) {
-      currentInterviewDocId = json.next.id;
-      document.getElementById('interviewQuestion').textContent = json.next.question;
-      document.getElementById('interviewChapterBadge').textContent = json.next.chapter;
-      document.getElementById('interviewAnswerInput').value = '';
-      document.getElementById('interviewWithQuestion').style.display = 'block';
-      document.getElementById('interviewEmpty').style.display = 'none';
+    currentInterviewChecklist = json.checklist;
+
+    if (json.finished) {
+      renderInterviewChecklist(currentInterviewChecklist);
+      showInterviewTrack1Step('finished');
+      showToast('인터뷰 완료! 초안이 생성됐습니다. 🧠 코칭 지식 탭에서 검토해주세요.');
+      loadKnowledgeLibrary();
+      setTimeout(loadInterviewCard, 1800);
     } else {
-      await loadInterviewCard();
+      currentInterviewFollowUpCount = json.followUpCount;
+      document.getElementById('interviewQuestion').textContent = json.nextQuestion;
+      document.getElementById('interviewAnswerInput').value = '';
+      renderInterviewChecklist(currentInterviewChecklist);
+      showInterviewTrack1Step('answering');
     }
-    loadKnowledgeLibrary();
   } catch (e) {
     errEl.textContent = '오류: ' + e.message;
   } finally {
     btn.disabled = false;
-    btn.textContent = '📚 답변하고 AI 학습시키기';
+    btn.textContent = '📚 답변 제출';
+  }
+};
+
+// "다른 질문으로" — 우선순위 무시하고 지정 항목부터 질문
+window.toggleInterviewOverridePicker = () => {
+  const picker = document.getElementById('interviewOverridePicker');
+  const show = picker.style.display === 'none';
+  if (show) renderInterviewOverrideList();
+  picker.style.display = show ? 'block' : 'none';
+};
+
+function renderInterviewOverrideList() {
+  const list = document.getElementById('interviewOverrideList');
+  const checklist = currentInterviewChecklist || {};
+  list.innerHTML = INTERVIEW_CHECKLIST_ORDER.map(key => {
+    const state = checklist[key] || 'empty';
+    const disabled = state === 'complete';
+    return `<button ${disabled ? 'disabled' : `onclick="chooseInterviewOverride('${key}')"`}
+      style="display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;font-size:12px;color:${disabled ? 'rgba(255,255,255,0.3)' : '#fff'};cursor:${disabled ? 'default' : 'pointer'};font-family:'Noto Sans KR',sans-serif">
+      <span>${INTERVIEW_CHECKLIST_LABELS[key]}</span>
+      <span style="font-size:10px;font-weight:700;border-radius:20px;padding:3px 8px;border:1.5px solid;${interviewChecklistChipStyle(state)}">${state}</span>
+      </button>`;
+  }).join('');
+}
+
+window.chooseInterviewOverride = async (key) => {
+  const user = auth.currentUser;
+  if (!user || !currentInterviewDocId) return;
+  document.getElementById('interviewOverridePicker').style.display = 'none';
+  try {
+    const token = await user.getIdToken();
+    const r = await fetch(PROCESS_INTERVIEW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'overrideQuestion', docId: currentInterviewDocId, key })
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error || '서버 오류');
+    currentInterviewFollowUpCount = json.followUpCount;
+    document.getElementById('interviewQuestion').textContent = json.nextQuestion;
+    document.getElementById('interviewAnswerInput').value = '';
+    renderInterviewChecklist(currentInterviewChecklist);
+  } catch (e) {
+    showToast('실패: ' + e.message, 'error');
   }
 };
 
@@ -2385,13 +2570,7 @@ window.generateInterviewQuestion = async () => {
     if (!r.ok) throw new Error(json.error || '서버 오류');
     loading.style.display = 'none';
     if (json.next) {
-      currentInterviewDocId = json.next.id;
-      document.getElementById('interviewQuestion').textContent = json.next.question;
-      document.getElementById('interviewChapterBadge').textContent = json.next.chapter;
-      document.getElementById('interviewAnswerInput').value = '';
-      document.getElementById('interviewErr').textContent = '';
-      document.getElementById('interviewWithQuestion').style.display = 'block';
-      document.getElementById('interviewEmpty').style.display = 'none';
+      setInterviewTrack1Question(json.next);
     } else {
       await loadInterviewCard();
     }

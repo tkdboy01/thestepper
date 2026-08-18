@@ -531,6 +531,7 @@ select.form-control{cursor:pointer}
           <button onclick="closeCoachingDetail()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
         </div>
         <div style="padding:16px;background:#fff">
+          <div id="detailRequester" style="font-size:12px;font-weight:700;color:#0055b3;background:#f0f4ff;border-radius:8px;padding:8px 12px;margin-bottom:12px"></div>
           <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">수련생 질문</div>
           <div id="detailQuestion" style="font-size:14px;line-height:1.7;color:#1d1d1f;background:#f7f7f9;border-radius:8px;padding:12px;margin-bottom:12px;white-space:pre-wrap;word-break:break-word"></div>
           <div id="detailVideoData" style="display:none;margin-bottom:12px">
@@ -1498,7 +1499,51 @@ let reviewPanelData = { docId: null, question: '', original: '', corrected: '', 
 const CONFIRM_COACHING_URL = 'https://thestepper-api.vercel.app/api/confirm-coaching';
 const PILOT_TOPICS_URL = 'https://thestepper-api.vercel.app/api/pilot-topics';
 
-function initCoachingTab() {
+// 질문자 프로필 캐시 — 코칭 관리 탭 진입 시(initCoachingTab) 한 번만 조회한다.
+// 회원 목록 탭(loadMembers)이 users 컬렉션 전체를 읽는 것과 같은 패턴이며,
+// 별도 API 없이 클라이언트에서 바로 조회한다.
+let coachingUserProfiles = {};
+
+async function loadCoachingUserProfiles() {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    snap.forEach(ds => {
+      const d = ds.data();
+      coachingUserProfiles[ds.id] = {
+        nickname: d.nickname || '',
+        level: d.level || '',
+        role: d.role || '',
+        gym: d.gym || '',
+        athleteTypes: Array.isArray(d.athleteTypes) ? d.athleteTypes : []
+      };
+    });
+  } catch (e) {
+    console.error('[loadCoachingUserProfiles]', e);
+  }
+}
+
+// 탈퇴 등으로 프로필을 못 찾으면 null — 호출부에서 "회원 정보 없음"으로 처리한다.
+function coachingProfileParts(userId, full) {
+  const p = coachingUserProfiles[userId];
+  if (!p) return null;
+  const parts = [p.nickname, p.level, p.role];
+  if (full) {
+    parts.push(p.gym);
+    if (p.level === '선수 출신' && p.athleteTypes.length) parts.push(p.athleteTypes.join('/'));
+  }
+  const text = parts.filter(Boolean).join(' · ');
+  return text || null;
+}
+// 목록 카드용 — nickname · level · role (원문 텍스트, innerHTML에 쓸 땐 호출부에서 esc() 필요)
+function coachingProfileShortText(userId) {
+  return coachingProfileParts(userId, false) || '회원 정보 없음';
+}
+// 상세 패널용 — nickname · level · role · gym (+ 선수 출신이면 athleteTypes)
+function coachingProfileFullText(userId) {
+  return coachingProfileParts(userId, true) || '회원 정보 없음';
+}
+
+async function initCoachingTab() {
   const pendingList = document.getElementById('coachingPendingList');
   pendingList.innerHTML = '<div class="loading-msg">실시간 연결 중...</div>';
   loadKnowledgeLibrary();
@@ -1506,6 +1551,8 @@ function initCoachingTab() {
   loadSosCard();
   loadVoiceDrafts();
   loadPilotTopics();
+
+  await loadCoachingUserProfiles();
 
   coachingUnsubscribe = onSnapshot(collection(db, 'ai_coaching'), (snap) => {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1546,7 +1593,10 @@ function initCoachingTab() {
         const hasVideo = d.videoData ? '📊 ' : '';
         const q = d.question || '';
         row.innerHTML =
-          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
+          `<div>` +
+            `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
+            `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(coachingProfileShortText(d.userId))}</div>` +
+          `</div>` +
           `<div style="font-size:11px;color:#888">${dateStr}</div>` +
           `<div style="text-align:right"><button class="btn-edit" onclick="openCoachingDetail('${d.id}')">답변 작성</button></div>`;
         pendingList.appendChild(row);
@@ -1568,7 +1618,10 @@ function initCoachingTab() {
           : '';
         const q = d.question || '';
         row.innerHTML =
-          `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
+          `<div>` +
+            `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
+            `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(coachingProfileShortText(d.userId))}</div>` +
+          `</div>` +
           `<div style="font-size:11px;color:#888">${dateStr}</div>` +
           `<div style="text-align:right"><button onclick="openReviewPanelFromDoc('${d.id}')" style="background:#b07600;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">검토 확인</button></div>`;
         reviewWaitList.appendChild(row);
@@ -1591,7 +1644,8 @@ function initCoachingTab() {
         row.innerHTML =
           `<div style="display:flex;justify-content:space-between;margin-bottom:4px">` +
           `<span style="font-weight:700;color:#2e7d32">✅ 답변완료</span><span style="color:#888">${dateStr}</span></div>` +
-          `<div style="color:#333">${esc(q.slice(0, 80) + (q.length > 80 ? '…' : ''))}</div>`;
+          `<div style="color:#333">${esc(q.slice(0, 80) + (q.length > 80 ? '…' : ''))}</div>` +
+          `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(coachingProfileShortText(d.userId))}</div>`;
         doneList.appendChild(row);
       });
     }
@@ -1607,6 +1661,7 @@ window.openCoachingDetail = (docId) => {
   getDoc(doc(db, 'ai_coaching', docId)).then(snap => {
     if (!snap.exists()) return;
     const d = snap.data();
+    document.getElementById('detailRequester').textContent = coachingProfileFullText(d.userId);
     document.getElementById('detailQuestion').textContent = d.question || '';
     // 재검토 시 correctedFeedback 우선 표시, 없으면 원본
     document.getElementById('masterFeedbackInput').value = d.correctedFeedback || d.masterFeedback || '';

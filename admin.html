@@ -345,6 +345,82 @@ select.form-control{cursor:pointer}
     </div>
   </div>
 
+  <!-- 회원 프로필 보완 입력 모달 — force-verify 등으로 emailVerified 필드만
+       있는 빈 users 문서가 생긴 계정을 관리자가 대신 채워 넣을 때 사용.
+       ai.html 회원가입 폼과 동일한 필드·선택지를 그대로 쓴다. -->
+  <div id="memberProfileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800;color:#1d1d1f">프로필 보완 입력</div>
+        <button onclick="closeMemberProfileModal()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1">✕</button>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:16px" id="memberProfileModalEmail"></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="form-control" id="mpName" placeholder="이름">
+        </div>
+        <div class="form-group">
+          <label class="form-label">닉네임 (홈페이지 표시용)</label>
+          <input class="form-control" id="mpNickname" placeholder="닉네임">
+        </div>
+        <div class="form-group">
+          <label class="form-label">거주 지역</label>
+          <input class="form-control" id="mpRegion" placeholder="거주 지역 (선택)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">구분</label>
+          <select class="form-control" id="mpRole">
+            <option value="">선택</option>
+            <option value="지도자">지도자</option>
+            <option value="수련생">수련생</option>
+            <option value="비수련생">비수련생</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">수련 목적</label>
+          <select class="form-control" id="mpPurpose">
+            <option value="">선택</option>
+            <option value="성인 겨루기">성인 겨루기</option>
+            <option value="대학 입시">대학 입시</option>
+            <option value="선수">선수</option>
+            <option value="단증 취득">단증 취득</option>
+            <option value="취미">취미</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">현재 수준</label>
+          <select class="form-control" id="mpLevel" onchange="toggleMpAthleteTypes()">
+            <option value="">선택</option>
+            <option value="초보">초보</option>
+            <option value="중급">중급</option>
+            <option value="선수 출신">선수 출신</option>
+          </select>
+        </div>
+        <div class="form-group" id="mpAthleteTypesGroup" style="display:none">
+          <label class="form-label">선수 종목 (복수 선택 가능)</label>
+          <div style="display:flex;gap:14px;font-size:13px">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="mp-athlete-type" value="겨루기"> 겨루기</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="mp-athlete-type" value="품새"> 품새</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="mp-athlete-type" value="시범단"> 시범단</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">소속 도장</label>
+          <select class="form-control" id="mpGym">
+            <option value="">선택</option>
+            <option value="더스텝퍼 회원 도장">더스텝퍼 회원 도장</option>
+            <option value="비회원 도장">비회원 도장</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="memberProfileModalErr" style="font-size:12px;color:#C8102E;margin-top:12px;min-height:16px"></div>
+      <button id="memberProfileModalSubmit" onclick="submitMemberProfile()" style="margin-top:4px;width:100%;background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">저장</button>
+    </div>
+  </div>
+
   <!-- ===== 코칭 관리 탭 ===== -->
   <div id="tab-coaching" class="tab-content" style="display:none">
 
@@ -1231,15 +1307,25 @@ async function loadMembers() {
     membersData = [];
     usersSnap.forEach(ds => {
       const d = ds.data();
+      // force-verify가 문서 없이 실행되면 emailVerified 필드 하나짜리 빈
+      // 문서가 생긴다 — nickname/role/level 이 전부 없으면 "보완 필요"로 본다.
+      const isIncomplete = !(d.nickname || d.role || d.level);
       membersData.push({
         uid: ds.id,
         name: d.name || '',
         nickname: d.nickname || '',
         email: d.email || '',
+        region: d.region || '',
+        role: d.role || '',
+        purpose: d.purpose || '',
+        level: d.level || '',
+        gym: d.gym || '',
+        athleteTypes: Array.isArray(d.athleteTypes) ? d.athleteTypes : [],
         createdAt: d.createdAt,
         aiToday: usageMap[ds.id] || 0,
         disabled:      statusMap[ds.id] ? statusMap[ds.id].disabled      : false,
-        emailVerified: statusMap[ds.id] ? statusMap[ds.id].emailVerified : null
+        emailVerified: statusMap[ds.id] ? statusMap[ds.id].emailVerified : null,
+        isIncomplete
       });
     });
 
@@ -1296,25 +1382,32 @@ function renderMembersPage(page) {
         ? '<span title="이메일 인증 미완료" style="color:#ff9500;font-size:11px;margin-left:3px">⚠</span>'
         : '';
 
-    let actionHtml;
+    let actionHtml = '';
+    if (m.isIncomplete) {
+      actionHtml += '<button onclick="openMemberProfileModal(\'' + safeUid + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px;margin-bottom:3px">프로필 보완</button>';
+    }
     if (m.disabled) {
-      actionHtml =
+      actionHtml +=
         '<span style="font-size:10px;background:#e5e5e7;color:#666;border-radius:4px;padding:2px 5px;margin-right:4px">정지됨</span>' +
         '<button onclick="restoreMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #34c759;border-radius:5px;background:#f0fff4;color:#1a7f37;cursor:pointer;margin-right:3px">복구</button>' +
         '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer">삭제</button>';
     } else if (m.emailVerified === false) {
       // 미인증 활성 계정: 정지 + 인증재발송
-      actionHtml =
+      actionHtml +=
         '<button onclick="resendVerification(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px">인증재발송</button>' +
         '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
     } else {
-      actionHtml =
+      actionHtml +=
         '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
     }
 
+    const incompleteBadge = m.isIncomplete
+      ? '<span style="font-size:10px;background:#fff3e0;color:#c05800;border-radius:4px;padding:2px 5px;margin-right:4px">정보 미입력</span>'
+      : '';
+
     row.innerHTML =
       '<div style="color:#888;font-size:12px">' + num + '</div>' +
-      '<div>' + safeName + '</div>' +
+      '<div>' + incompleteBadge + safeName + '</div>' +
       '<div style="color:#888;font-size:13px">' + esc(m.nickname) + '</div>' +
       '<div style="font-size:12px;word-break:break-all">' + safeEmail + verBadge + '</div>' +
       '<div style="font-size:12px;color:#888">' + dateStr + '</div>' +
@@ -1421,6 +1514,84 @@ window.createMemberProfile = async (uid, email) => {
     membersLoaded = false;
     await loadMembers();
   } catch(e) { showToast('오류: ' + e.message, 'error'); }
+};
+
+// ── 프로필 보완 입력 모달 (force-verify 등으로 nickname/role/level 이
+//    전부 없는 "빈 껍데기" users 문서가 생긴 계정 복구용) ──
+let memberProfileTargetUid = null;
+
+window.openMemberProfileModal = (uid) => {
+  const m = membersData.find(x => x.uid === uid);
+  if (!m) return;
+  memberProfileTargetUid = uid;
+  document.getElementById('memberProfileModalEmail').textContent = m.email || uid;
+  document.getElementById('mpName').value = m.name || '';
+  document.getElementById('mpNickname').value = m.nickname || '';
+  document.getElementById('mpRegion').value = m.region || '';
+  document.getElementById('mpRole').value = m.role || '';
+  document.getElementById('mpPurpose').value = m.purpose || '';
+  document.getElementById('mpLevel').value = m.level || '';
+  document.getElementById('mpGym').value = m.gym || '';
+  document.querySelectorAll('.mp-athlete-type').forEach(cb => {
+    cb.checked = (m.athleteTypes || []).includes(cb.value);
+  });
+  toggleMpAthleteTypes();
+  document.getElementById('memberProfileModalErr').textContent = '';
+  document.getElementById('memberProfileModal').style.display = 'flex';
+};
+
+window.closeMemberProfileModal = () => {
+  document.getElementById('memberProfileModal').style.display = 'none';
+  memberProfileTargetUid = null;
+};
+
+window.toggleMpAthleteTypes = () => {
+  const isAthlete = document.getElementById('mpLevel').value === '선수 출신';
+  document.getElementById('mpAthleteTypesGroup').style.display = isAthlete ? 'block' : 'none';
+};
+
+window.submitMemberProfile = async () => {
+  const errEl = document.getElementById('memberProfileModalErr');
+  const name     = document.getElementById('mpName').value.trim();
+  const nickname = document.getElementById('mpNickname').value.trim();
+  const region   = document.getElementById('mpRegion').value.trim();
+  const role     = document.getElementById('mpRole').value;
+  const purpose  = document.getElementById('mpPurpose').value;
+  const level    = document.getElementById('mpLevel').value;
+  const gym      = document.getElementById('mpGym').value;
+  const athleteTypes = Array.from(document.querySelectorAll('.mp-athlete-type:checked')).map(cb => cb.value);
+
+  if (!name)     { errEl.textContent = '이름을 입력해주세요.'; return; }
+  if (!nickname) { errEl.textContent = '닉네임을 입력해주세요.'; return; }
+  if (!role)     { errEl.textContent = '구분을 선택해주세요.'; return; }
+  if (!purpose)  { errEl.textContent = '수련 목적을 선택해주세요.'; return; }
+  if (!level)    { errEl.textContent = '현재 수준을 선택해주세요.'; return; }
+  if (!gym)      { errEl.textContent = '소속 도장을 선택해주세요.'; return; }
+
+  const btn = document.getElementById('memberProfileModalSubmit');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  errEl.textContent = '';
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        action: 'complete-profile', uid: memberProfileTargetUid,
+        name, nickname, region, role, purpose, level, athleteTypes, gym
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '저장 실패');
+    showToast(data.message || '프로필이 저장되었습니다.', 'success');
+    closeMemberProfileModal();
+    membersLoaded = false;
+    await loadMembers();
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '저장';
+  }
 };
 
 window.suspendMember = async (uid, name) => {

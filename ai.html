@@ -404,6 +404,70 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     </div>
   </div>
 
+  <!-- 프로필 보완 모달 — 회원가입 중 오류 등으로 nickname/role/level 이
+       비어있는 계정이 로그인하면 뜬다. 닫기 버튼이 없고, 저장 전까지는
+       챗봇 등 다른 기능을 열지 않는다(onLoggedIn 참고). -->
+  <div id="profileCompleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+    <div style="background:#fff;border-radius:18px;padding:28px 24px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.28);margin:20px 0">
+      <div style="font-size:40px;text-align:center;margin-bottom:10px">🔧</div>
+      <div style="font-size:16px;font-weight:800;color:#1d1d1f;text-align:center;margin-bottom:8px">프로필 정보를 다시 입력해주세요</div>
+      <div style="font-size:13px;color:#555;line-height:1.8;text-align:center;margin-bottom:22px">
+        회원가입 중 일시적인 오류로 프로필 정보가 저장되지 않았습니다.<br>이용을 위해 정보를 다시 입력해 주세요.
+      </div>
+
+      <input type="text" class="auth-input" id="pcNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
+      <input type="text" class="auth-input" id="pcRegion" placeholder="거주 지역">
+
+      <div class="reg-section">
+        <span class="reg-section-label">구분</span>
+        <div class="reg-opts">
+          <label class="reg-opt"><input type="radio" name="pcRole" value="지도자"><span class="reg-opt-mark"></span><span>지도자</span></label>
+          <label class="reg-opt"><input type="radio" name="pcRole" value="수련생"><span class="reg-opt-mark"></span><span>수련생</span></label>
+          <label class="reg-opt"><input type="radio" name="pcRole" value="비수련생"><span class="reg-opt-mark"></span><span>비수련생</span></label>
+        </div>
+      </div>
+
+      <div class="reg-section">
+        <span class="reg-section-label">수련 목적</span>
+        <div class="reg-opts">
+          <label class="reg-opt"><input type="radio" name="pcPurpose" value="성인 겨루기"><span class="reg-opt-mark"></span><span>성인 겨루기</span></label>
+          <label class="reg-opt"><input type="radio" name="pcPurpose" value="대학 입시"><span class="reg-opt-mark"></span><span>대학 입시</span></label>
+          <label class="reg-opt"><input type="radio" name="pcPurpose" value="선수"><span class="reg-opt-mark"></span><span>선수</span></label>
+          <label class="reg-opt"><input type="radio" name="pcPurpose" value="단증 취득"><span class="reg-opt-mark"></span><span>단증 취득</span></label>
+          <label class="reg-opt"><input type="radio" name="pcPurpose" value="취미"><span class="reg-opt-mark"></span><span>취미</span></label>
+        </div>
+      </div>
+
+      <div class="reg-section">
+        <span class="reg-section-label">현재 수준</span>
+        <div class="reg-opts">
+          <label class="reg-opt"><input type="radio" name="pcLevel" value="초보" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>초보</span></label>
+          <label class="reg-opt"><input type="radio" name="pcLevel" value="중급" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>중급</span></label>
+          <label class="reg-opt"><input type="radio" name="pcLevel" value="선수 출신" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>선수 출신</span></label>
+        </div>
+        <div class="reg-sub" id="pcAthleteSubGroup">
+          <div class="reg-sub-label">선수 종목 (복수 선택 가능)</div>
+          <div class="reg-opts">
+            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="겨루기"><span class="reg-opt-mark"></span><span>겨루기</span></label>
+            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="품새"><span class="reg-opt-mark"></span><span>품새</span></label>
+            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="시범단"><span class="reg-opt-mark"></span><span>시범단</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="reg-section">
+        <span class="reg-section-label">소속 도장</span>
+        <div class="reg-opts">
+          <label class="reg-opt"><input type="radio" name="pcGym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span><span>더스텝퍼 회원 도장</span></label>
+          <label class="reg-opt"><input type="radio" name="pcGym" value="비회원 도장"><span class="reg-opt-mark"></span><span>비회원 도장</span></label>
+        </div>
+      </div>
+
+      <div id="profileCompleteError" style="display:none;color:#C8102E;font-size:13px;margin:4px 0 6px"></div>
+      <button id="profileCompleteBtn" onclick="submitProfileComplete()" style="background:#C8102E;color:#fff;border:none;border-radius:12px;padding:14px 0;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px;margin-top:6px">저장하고 계속하기</button>
+    </div>
+  </div>
+
   <!-- 이메일 인증 카드 -->
   <div class="auth-card" id="verifyCard" style="display:none">
     <div class="auth-brand">
@@ -526,6 +590,7 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 <script>
 const API_URL = 'https://thestepper-api.vercel.app/api/coach';
 const GENERATE_FEEDBACK_URL = 'https://thestepper-api.vercel.app/api/generate-feedback';
+const MANAGE_MEMBER_URL = 'https://thestepper-api.vercel.app/api/manage-member';
 const DAILY_LIMIT = 5;
 const EXPERT_DAILY_LIMIT = 2;
 const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
@@ -800,7 +865,7 @@ auth.onAuthStateChanged(function(user) {
   }
 });
 
-function onLoggedIn(user) {
+async function onLoggedIn(user) {
   if (!user.emailVerified && user.email !== ADMIN_EMAIL) {
     showVerifyCard(user);
     return;
@@ -811,6 +876,27 @@ function onLoggedIn(user) {
     { merge: true }
   ).catch(function(){});
 
+  // 프로필 완성도 확인 — 회원가입 중 오류(force-verify 버그 등)로
+  // nickname/role/level 이 비어있는 계정이면, 그 정보를 다시 입력받기
+  // 전까지는 챗봇 등 다른 기능을 열어주지 않는다. admin.html "회원
+  // 목록"의 프로필 보완 대상 판정과 동일한 기준(하나라도 없으면
+  // 미완료)을 쓴다 — 문서가 아예 없는 계정도 당연히 여기 포함된다.
+  var profile = {};
+  try {
+    var docSnap = await db.collection('users').doc(user.uid).get();
+    if (docSnap.exists) profile = docSnap.data() || {};
+  } catch (e) {
+    profile = {};
+  }
+  if (!profile.nickname || !profile.role || !profile.level) {
+    showProfileCompleteModal(user, profile);
+    return;
+  }
+
+  revealApp(user);
+}
+
+function revealApp(user) {
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'flex';
   document.getElementById('chatInputArea').style.display = 'block';
@@ -821,6 +907,100 @@ function onLoggedIn(user) {
   loadRemainingCount(user.uid, user.email);
   startInboxListener(user.uid);
   checkExpertHashOnLoad();
+}
+
+// ===== 프로필 보완 모달 (회원가입 실패로 빈 프로필이 된 계정 복구) =====
+var profileCompleteUser = null;
+
+function showProfileCompleteModal(user, profile) {
+  document.getElementById('authSection').style.display = 'none';
+  document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('chatInputArea').style.display = 'none';
+  document.getElementById('navUserArea').style.display = 'none';
+
+  profileCompleteUser = user;
+  document.getElementById('pcNickname').value = profile.nickname || '';
+  document.getElementById('pcRegion').value = profile.region || '';
+  setRadioValue('pcRole', profile.role);
+  setRadioValue('pcPurpose', profile.purpose);
+  setRadioValue('pcLevel', profile.level);
+  document.querySelectorAll('.pc-athlete-type').forEach(function(cb) {
+    cb.checked = (profile.athleteTypes || []).indexOf(cb.value) !== -1;
+  });
+  togglePcAthleteTypes();
+  setRadioValue('pcGym', profile.gym);
+  document.getElementById('profileCompleteError').style.display = 'none';
+  document.getElementById('profileCompleteModal').style.display = 'flex';
+}
+
+function setRadioValue(name, value) {
+  if (!value) return;
+  var el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+  if (el) el.checked = true;
+}
+
+function togglePcAthleteTypes() {
+  var levelEl = document.querySelector('input[name="pcLevel"]:checked');
+  document.getElementById('pcAthleteSubGroup').classList.toggle('show', !!levelEl && levelEl.value === '선수 출신');
+}
+
+async function submitProfileComplete() {
+  if (!profileCompleteUser) return;
+  var nickname = document.getElementById('pcNickname').value.trim();
+  var region   = document.getElementById('pcRegion').value.trim();
+  var roleEl2    = document.querySelector('input[name="pcRole"]:checked');
+  var purposeEl2 = document.querySelector('input[name="pcPurpose"]:checked');
+  var levelEl2   = document.querySelector('input[name="pcLevel"]:checked');
+  var gymEl2     = document.querySelector('input[name="pcGym"]:checked');
+
+  if (!nickname)  { showErr('profileCompleteError', '닉네임을 입력해주세요.'); return; }
+  if (!roleEl2)   { showErr('profileCompleteError', '구분을 선택해주세요.'); return; }
+  if (!purposeEl2){ showErr('profileCompleteError', '수련 목적을 선택해주세요.'); return; }
+  if (!levelEl2)  { showErr('profileCompleteError', '현재 수준을 선택해주세요.'); return; }
+  if (!gymEl2)    { showErr('profileCompleteError', '소속 도장을 선택해주세요.'); return; }
+
+  var athleteTypes = [];
+  if (levelEl2.value === '선수 출신') {
+    document.querySelectorAll('.pc-athlete-type:checked').forEach(function(cb) { athleteTypes.push(cb.value); });
+  }
+
+  var btn = document.getElementById('profileCompleteBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  document.getElementById('profileCompleteError').style.display = 'none';
+
+  try {
+    var user = profileCompleteUser;
+    // complete-profile 은 name 이 필수라, 이 화면에는 안 보이지만 기존
+    // 값/구글 표시 이름/이메일 아이디 중 있는 값으로 채워서 함께 보낸다.
+    var fallbackName = (user.displayName || '').trim() || (user.email || '').split('@')[0] || '(미등록)';
+    var token = await user.getIdToken();
+    var res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        action: 'complete-profile',
+        uid: user.uid,
+        name: fallbackName,
+        nickname: nickname,
+        region: region,
+        role: roleEl2.value,
+        purpose: purposeEl2.value,
+        level: levelEl2.value,
+        athleteTypes: athleteTypes,
+        gym: gymEl2.value
+      })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || '저장 실패');
+
+    document.getElementById('profileCompleteModal').style.display = 'none';
+    profileCompleteUser = null;
+    revealApp(user);
+  } catch (e) {
+    showErr('profileCompleteError', '오류: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '저장하고 계속하기';
+  }
 }
 
 function onLoggedOut() {

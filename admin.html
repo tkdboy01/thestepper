@@ -1307,9 +1307,11 @@ async function loadMembers() {
     membersData = [];
     usersSnap.forEach(ds => {
       const d = ds.data();
-      // force-verify가 문서 없이 실행되면 emailVerified 필드 하나짜리 빈
-      // 문서가 생긴다 — nickname/role/level 이 전부 없으면 "보완 필요"로 본다.
-      const isIncomplete = !(d.nickname || d.role || d.level);
+      // ai.html 로그인 시점의 프로필 완성도 체크(onLoggedIn)와 동일한
+      // 기준을 쓴다 — nickname/role/level 중 하나라도 없으면 보완 필요.
+      // (force-verify가 문서 없이 실행되면 이 3개가 전부 없는 빈 문서가
+      // 생기는 것도 이 조건에 포함된다.)
+      const isIncomplete = !(d.nickname && d.role && d.level);
       membersData.push({
         uid: ds.id,
         name: d.name || '',

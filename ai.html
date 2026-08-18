@@ -1017,28 +1017,39 @@ async function doRegister() {
 
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pw);
-    // Firestore 프로필을 먼저 저장 (인증 전이므로 emailVerified: false)
+    var profileData = {
+      name:          name,
+      nickname:      nickname,
+      region:        region,
+      role:          roleEl.value,
+      purpose:       purposeEl.value,
+      level:         levelEl.value,
+      athleteTypes:  athleteTypes,
+      gym:           gymEl.value,
+      email:         email,
+      emailVerified: false,
+      createdAt:     firebase.firestore.FieldValue.serverTimestamp()
+    };
+    // Firestore 프로필을 먼저 저장 (인증 전이므로 emailVerified: false).
+    // 계정 생성 직후에는 보안 규칙 판정에 쓰이는 인증 토큰이 아직 완전히
+    // 반영되지 않았거나 네트워크가 불안정해 첫 시도가 일시적으로 실패할
+    // 수 있다 — 정당한 가입을 곧바로 실패 처리하지 않도록 잠깐 기다렸다
+    // 한 번 더 시도해본 뒤에만 롤백한다.
     try {
-      await db.collection('users').doc(cred.user.uid).set({
-        name:          name,
-        nickname:      nickname,
-        region:        region,
-        role:          roleEl.value,
-        purpose:       purposeEl.value,
-        level:         levelEl.value,
-        athleteTypes:  athleteTypes,
-        gym:           gymEl.value,
-        email:         email,
-        emailVerified: false,
-        createdAt:     firebase.firestore.FieldValue.serverTimestamp()
-      });
+      await db.collection('users').doc(cred.user.uid).set(profileData);
     } catch(fsErr) {
-      // Firestore 저장 실패 시 Auth 계정도 삭제하고 재시도 안내
-      await cred.user.delete().catch(function(){});
-      await auth.signOut().catch(function(){});
-      showErr('registerError', '회원 정보 저장에 실패했습니다. 잠시 후 다시 시도해주세요. (' + fsErr.message + ')');
-      btn.disabled = false; btn.textContent = t('registerBtn');
-      return;
+      console.warn('[doRegister] 프로필 저장 1차 실패, 재시도:', fsErr.message);
+      try {
+        await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+        await db.collection('users').doc(cred.user.uid).set(profileData);
+      } catch(fsErr2) {
+        // 재시도까지 실패하면 Auth 계정도 삭제하고 재시도 안내
+        await cred.user.delete().catch(function(){});
+        await auth.signOut().catch(function(){});
+        showErr('registerError', '회원 정보 저장에 실패했습니다. 잠시 후 다시 시도해주세요. (' + fsErr2.message + ')');
+        btn.disabled = false; btn.textContent = t('registerBtn');
+        return;
+      }
     }
     await cred.user.sendEmailVerification();
   } catch(e) {

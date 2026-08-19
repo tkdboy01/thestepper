@@ -857,16 +857,27 @@ const db = firebase.firestore();
 
 // ===== Auth 상태 감지 =====
 auth.onAuthStateChanged(function(user) {
-  document.getElementById('initLoading').style.display = 'none';
   if (user) {
     onLoggedIn(user);
   } else {
+    hideInitLoading();
     onLoggedOut();
   }
 });
 
+// initLoading(로딩 스피너)은 "무엇을 보여줄지 다 정해진 시점"에만 숨긴다.
+// 예전엔 로그인 확인 직후 바로 숨겼는데, 프로필 완성도 확인용 Firestore
+// 조회(아래 onLoggedIn의 await)가 추가되면서 스피너가 사라진 뒤부터
+// 응답이 올 때까지 화면에 아무것도 안 보이는 빈 구간이 생겨버렸다
+// (느리거나 불안정한 모바일 네트워크에서 "완전히 빈 화면"으로 보이는
+// 원인). 그 구간 동안은 스피너를 계속 띄워둔다.
+function hideInitLoading() {
+  document.getElementById('initLoading').style.display = 'none';
+}
+
 async function onLoggedIn(user) {
   if (!user.emailVerified && user.email !== ADMIN_EMAIL) {
+    hideInitLoading();
     showVerifyCard(user);
     return;
   }
@@ -888,6 +899,9 @@ async function onLoggedIn(user) {
   } catch (e) {
     profile = {};
   }
+
+  hideInitLoading();
+
   if (!profile.nickname || !profile.role || !profile.level) {
     showProfileCompleteModal(user, profile);
     return;

@@ -1388,19 +1388,23 @@ function renderMembersPage(page) {
     if (m.isIncomplete) {
       actionHtml += '<button onclick="openMemberProfileModal(\'' + safeUid + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px;margin-bottom:3px">프로필 보완</button>';
     }
+    const deleteBtnHtml = '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer;margin-bottom:3px">삭제</button>';
+
     if (m.disabled) {
       actionHtml +=
         '<span style="font-size:10px;background:#e5e5e7;color:#666;border-radius:4px;padding:2px 5px;margin-right:4px">정지됨</span>' +
-        '<button onclick="restoreMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #34c759;border-radius:5px;background:#f0fff4;color:#1a7f37;cursor:pointer;margin-right:3px">복구</button>' +
-        '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer">삭제</button>';
+        '<button onclick="restoreMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #34c759;border-radius:5px;background:#f0fff4;color:#1a7f37;cursor:pointer;margin-right:3px;margin-bottom:3px">복구</button>' +
+        deleteBtnHtml;
     } else if (m.emailVerified === false) {
-      // 미인증 활성 계정: 정지 + 인증재발송
+      // 미인증 활성 계정: 인증재발송 + 정지 + 삭제
       actionHtml +=
-        '<button onclick="resendVerification(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px">인증재발송</button>' +
-        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
+        '<button onclick="resendVerification(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px;margin-bottom:3px">인증재발송</button>' +
+        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer;margin-right:3px;margin-bottom:3px">정지</button>' +
+        deleteBtnHtml;
     } else {
       actionHtml +=
-        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer">정지</button>';
+        '<button onclick="suspendMember(\'' + safeUid + '\',\'' + safeName + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #ff9500;border-radius:5px;background:#fff9f0;color:#c05800;cursor:pointer;margin-right:3px;margin-bottom:3px">정지</button>' +
+        deleteBtnHtml;
     }
 
     const incompleteBadge = m.isIncomplete
@@ -1630,10 +1634,8 @@ window.restoreMember = async (uid, name) => {
   } catch(e) { showToast('오류: ' + e.message, 'error'); }
 };
 
-window.deleteMember = async (uid, name) => {
-  const input = prompt('계정을 완전히 삭제합니다. 이 작업은 되돌릴 수 없습니다.\n\n삭제하려면 아래 칸에 [' + name + '] 을 그대로 입력하세요:');
-  if (input === null) return;
-  if (input.trim() !== name) { alert('이름이 일치하지 않습니다. 삭제를 취소합니다.'); return; }
+window.deleteMember = async (uid, email) => {
+  if (!confirm('이 계정(' + email + ')을 완전히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
   try {
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(MANAGE_MEMBER_URL, {

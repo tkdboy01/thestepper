@@ -404,70 +404,6 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     </div>
   </div>
 
-  <!-- 프로필 보완 모달 — 회원가입 중 오류 등으로 nickname/role/level 이
-       비어있는 계정이 로그인하면 뜬다. 닫기 버튼이 없고, 저장 전까지는
-       챗봇 등 다른 기능을 열지 않는다(onLoggedIn 참고). -->
-  <div id="profileCompleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
-    <div style="background:#fff;border-radius:18px;padding:28px 24px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.28);margin:20px 0">
-      <div style="font-size:40px;text-align:center;margin-bottom:10px">🔧</div>
-      <div style="font-size:16px;font-weight:800;color:#1d1d1f;text-align:center;margin-bottom:8px">프로필 정보를 다시 입력해주세요</div>
-      <div style="font-size:13px;color:#555;line-height:1.8;text-align:center;margin-bottom:22px">
-        회원가입 중 일시적인 오류로 프로필 정보가 저장되지 않았습니다.<br>이용을 위해 정보를 다시 입력해 주세요.
-      </div>
-
-      <input type="text" class="auth-input" id="pcNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
-      <input type="text" class="auth-input" id="pcRegion" placeholder="거주 지역">
-
-      <div class="reg-section">
-        <span class="reg-section-label">구분</span>
-        <div class="reg-opts">
-          <label class="reg-opt"><input type="radio" name="pcRole" value="지도자"><span class="reg-opt-mark"></span><span>지도자</span></label>
-          <label class="reg-opt"><input type="radio" name="pcRole" value="수련생"><span class="reg-opt-mark"></span><span>수련생</span></label>
-          <label class="reg-opt"><input type="radio" name="pcRole" value="비수련생"><span class="reg-opt-mark"></span><span>비수련생</span></label>
-        </div>
-      </div>
-
-      <div class="reg-section">
-        <span class="reg-section-label">수련 목적</span>
-        <div class="reg-opts">
-          <label class="reg-opt"><input type="radio" name="pcPurpose" value="성인 겨루기"><span class="reg-opt-mark"></span><span>성인 겨루기</span></label>
-          <label class="reg-opt"><input type="radio" name="pcPurpose" value="대학 입시"><span class="reg-opt-mark"></span><span>대학 입시</span></label>
-          <label class="reg-opt"><input type="radio" name="pcPurpose" value="선수"><span class="reg-opt-mark"></span><span>선수</span></label>
-          <label class="reg-opt"><input type="radio" name="pcPurpose" value="단증 취득"><span class="reg-opt-mark"></span><span>단증 취득</span></label>
-          <label class="reg-opt"><input type="radio" name="pcPurpose" value="취미"><span class="reg-opt-mark"></span><span>취미</span></label>
-        </div>
-      </div>
-
-      <div class="reg-section">
-        <span class="reg-section-label">현재 수준</span>
-        <div class="reg-opts">
-          <label class="reg-opt"><input type="radio" name="pcLevel" value="초보" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>초보</span></label>
-          <label class="reg-opt"><input type="radio" name="pcLevel" value="중급" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>중급</span></label>
-          <label class="reg-opt"><input type="radio" name="pcLevel" value="선수 출신" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>선수 출신</span></label>
-        </div>
-        <div class="reg-sub" id="pcAthleteSubGroup">
-          <div class="reg-sub-label">선수 종목 (복수 선택 가능)</div>
-          <div class="reg-opts">
-            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="겨루기"><span class="reg-opt-mark"></span><span>겨루기</span></label>
-            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="품새"><span class="reg-opt-mark"></span><span>품새</span></label>
-            <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="시범단"><span class="reg-opt-mark"></span><span>시범단</span></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="reg-section">
-        <span class="reg-section-label">소속 도장</span>
-        <div class="reg-opts">
-          <label class="reg-opt"><input type="radio" name="pcGym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span><span>더스텝퍼 회원 도장</span></label>
-          <label class="reg-opt"><input type="radio" name="pcGym" value="비회원 도장"><span class="reg-opt-mark"></span><span>비회원 도장</span></label>
-        </div>
-      </div>
-
-      <div id="profileCompleteError" style="display:none;color:#C8102E;font-size:13px;margin:4px 0 6px"></div>
-      <button id="profileCompleteBtn" onclick="submitProfileComplete()" style="background:#C8102E;color:#fff;border:none;border-radius:12px;padding:14px 0;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px;margin-top:6px">저장하고 계속하기</button>
-    </div>
-  </div>
-
   <!-- 이메일 인증 카드 -->
   <div class="auth-card" id="verifyCard" style="display:none">
     <div class="auth-brand">
@@ -493,6 +429,74 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
     <div class="auth-footer" style="margin-top:8px"><span class="auth-link" id="verifyOtherLink" onclick="doLogout()">다른 계정으로 로그인</span></div>
   </div>
 
+</div>
+
+<!-- 프로필 보완 모달 — 회원가입 중 오류 등으로 nickname/role/level 이
+     비어있는 계정이 로그인하면 뜬다. 닫기 버튼이 없고, 저장 전까지는
+     챗봇 등 다른 기능을 열지 않는다(onLoggedIn 참고).
+     authSection의 형제(sibling)로 둔다 — authSection 안에 있으면
+     showProfileCompleteModal()이 authSection을 display:none 처리할 때
+     이 모달까지 같이 화면에서 사라져버린다(부모가 display:none이면
+     자식에 display:flex를 줘도 렌더링되지 않는다). -->
+<div id="profileCompleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.28);margin:20px 0">
+    <div style="font-size:40px;text-align:center;margin-bottom:10px">🔧</div>
+    <div style="font-size:16px;font-weight:800;color:#1d1d1f;text-align:center;margin-bottom:8px">프로필 정보를 다시 입력해주세요</div>
+    <div style="font-size:13px;color:#555;line-height:1.8;text-align:center;margin-bottom:22px">
+      회원가입 중 일시적인 오류로 프로필 정보가 저장되지 않았습니다.<br>이용을 위해 정보를 다시 입력해 주세요.
+    </div>
+
+    <input type="text" class="auth-input" id="pcNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
+    <input type="text" class="auth-input" id="pcRegion" placeholder="거주 지역">
+
+    <div class="reg-section">
+      <span class="reg-section-label">구분</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="pcRole" value="지도자"><span class="reg-opt-mark"></span><span>지도자</span></label>
+        <label class="reg-opt"><input type="radio" name="pcRole" value="수련생"><span class="reg-opt-mark"></span><span>수련생</span></label>
+        <label class="reg-opt"><input type="radio" name="pcRole" value="비수련생"><span class="reg-opt-mark"></span><span>비수련생</span></label>
+      </div>
+    </div>
+
+    <div class="reg-section">
+      <span class="reg-section-label">수련 목적</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="pcPurpose" value="성인 겨루기"><span class="reg-opt-mark"></span><span>성인 겨루기</span></label>
+        <label class="reg-opt"><input type="radio" name="pcPurpose" value="대학 입시"><span class="reg-opt-mark"></span><span>대학 입시</span></label>
+        <label class="reg-opt"><input type="radio" name="pcPurpose" value="선수"><span class="reg-opt-mark"></span><span>선수</span></label>
+        <label class="reg-opt"><input type="radio" name="pcPurpose" value="단증 취득"><span class="reg-opt-mark"></span><span>단증 취득</span></label>
+        <label class="reg-opt"><input type="radio" name="pcPurpose" value="취미"><span class="reg-opt-mark"></span><span>취미</span></label>
+      </div>
+    </div>
+
+    <div class="reg-section">
+      <span class="reg-section-label">현재 수준</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="pcLevel" value="초보" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>초보</span></label>
+        <label class="reg-opt"><input type="radio" name="pcLevel" value="중급" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>중급</span></label>
+        <label class="reg-opt"><input type="radio" name="pcLevel" value="선수 출신" onchange="togglePcAthleteTypes()"><span class="reg-opt-mark"></span><span>선수 출신</span></label>
+      </div>
+      <div class="reg-sub" id="pcAthleteSubGroup">
+        <div class="reg-sub-label">선수 종목 (복수 선택 가능)</div>
+        <div class="reg-opts">
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="겨루기"><span class="reg-opt-mark"></span><span>겨루기</span></label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="품새"><span class="reg-opt-mark"></span><span>품새</span></label>
+          <label class="reg-opt reg-opt-cb"><input type="checkbox" class="pc-athlete-type" value="시범단"><span class="reg-opt-mark"></span><span>시범단</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="reg-section">
+      <span class="reg-section-label">소속 도장</span>
+      <div class="reg-opts">
+        <label class="reg-opt"><input type="radio" name="pcGym" value="더스텝퍼 회원 도장"><span class="reg-opt-mark"></span><span>더스텝퍼 회원 도장</span></label>
+        <label class="reg-opt"><input type="radio" name="pcGym" value="비회원 도장"><span class="reg-opt-mark"></span><span>비회원 도장</span></label>
+      </div>
+    </div>
+
+    <div id="profileCompleteError" style="display:none;color:#C8102E;font-size:13px;margin:4px 0 6px"></div>
+    <button id="profileCompleteBtn" onclick="submitProfileComplete()" style="background:#C8102E;color:#fff;border:none;border-radius:12px;padding:14px 0;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:'Noto Sans KR',sans-serif;letter-spacing:0.3px;margin-top:6px">저장하고 계속하기</button>
+  </div>
 </div>
 
 <!-- CHAT SECTION -->
@@ -588,19 +592,6 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// ══════ [DEBUG] 임시 진단 로그 — 원인 확정되면 전부 제거 예정 ══════
-// 화면이 완전히 비는데 콘솔에 에러가 없다는 건, 어딘가에서 실행이
-// "조용히" 멈췄거나 특정 콜백이 아예 호출되지 않았다는 뜻이다.
-// 그 지점을 정확히 잡기 위해 스크립트 시작/Firebase 초기화/
-// onAuthStateChanged 호출 여부/각 분기 진입 시점을 전부 남긴다.
-console.log('[DEBUG] 1) 인라인 스크립트 시작. typeof firebase =', typeof firebase);
-window.addEventListener('error', function(e) {
-  console.error('[DEBUG] window onerror:', e.message, '@', e.filename + ':' + e.lineno);
-});
-window.addEventListener('unhandledrejection', function(e) {
-  console.error('[DEBUG] unhandledrejection:', e.reason);
-});
-
 const API_URL = 'https://thestepper-api.vercel.app/api/coach';
 const GENERATE_FEEDBACK_URL = 'https://thestepper-api.vercel.app/api/generate-feedback';
 const MANAGE_MEMBER_URL = 'https://thestepper-api.vercel.app/api/manage-member';
@@ -857,7 +848,6 @@ function initLang() {
 }
 
 // ===== Firebase 초기화 =====
-console.log('[DEBUG] 2) firebase.initializeApp 호출 직전');
 firebase.initializeApp({
   apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
   authDomain: "thestepper-c9bfb.firebaseapp.com",
@@ -866,14 +856,11 @@ firebase.initializeApp({
   messagingSenderId: "787224576231",
   appId: "1:787224576231:web:04d4003f42ecace9016242"
 });
-console.log('[DEBUG] 3) firebase.initializeApp 완료');
 const auth = firebase.auth();
 const db = firebase.firestore();
-console.log('[DEBUG] 4) auth/db 생성 완료. onAuthStateChanged 등록 시작');
 
 // ===== Auth 상태 감지 =====
 auth.onAuthStateChanged(function(user) {
-  console.log('[DEBUG] 5) onAuthStateChanged 콜백 호출됨! user=', user ? user.uid + ' / ' + user.email : null);
   if (user) {
     onLoggedIn(user);
   } else {
@@ -881,7 +868,6 @@ auth.onAuthStateChanged(function(user) {
     onLoggedOut();
   }
 });
-console.log('[DEBUG] 4-1) onAuthStateChanged 등록 완료 (콜백이 나중에 비동기로 호출되는지는 5번 로그로 확인)');
 
 // initLoading(로딩 스피너)은 "무엇을 보여줄지 다 정해진 시점"에만 숨긴다.
 // 예전엔 로그인 확인 직후 바로 숨겼는데, 프로필 완성도 확인용 Firestore
@@ -894,9 +880,7 @@ function hideInitLoading() {
 }
 
 async function onLoggedIn(user) {
-  console.log('[DEBUG] 6) onLoggedIn 진입. uid=', user.uid, 'emailVerified=', user.emailVerified);
   if (!user.emailVerified && user.email !== ADMIN_EMAIL) {
-    console.log('[DEBUG] 6-a) 이메일 미인증 분기 → showVerifyCard');
     hideInitLoading();
     showVerifyCard(user);
     return;
@@ -912,32 +896,25 @@ async function onLoggedIn(user) {
   // 전까지는 챗봇 등 다른 기능을 열어주지 않는다. admin.html "회원
   // 목록"의 프로필 보완 대상 판정과 동일한 기준(하나라도 없으면
   // 미완료)을 쓴다 — 문서가 아예 없는 계정도 당연히 여기 포함된다.
-  console.log('[DEBUG] 7) 프로필 조회 시작 (users/' + user.uid + ')');
   var profile = {};
   try {
     var docSnap = await db.collection('users').doc(user.uid).get();
-    console.log('[DEBUG] 8) 프로필 조회 완료. exists=', docSnap.exists);
     if (docSnap.exists) profile = docSnap.data() || {};
   } catch (e) {
-    console.error('[DEBUG] 8-err) 프로필 조회 실패(catch됨):', e && e.code, e && e.message);
     profile = {};
   }
 
-  console.log('[DEBUG] 9) hideInitLoading 호출. profile=', JSON.stringify(profile));
   hideInitLoading();
 
   if (!profile.nickname || !profile.role || !profile.level) {
-    console.log('[DEBUG] 9-a) 프로필 미완료 분기 → showProfileCompleteModal');
     showProfileCompleteModal(user, profile);
     return;
   }
 
-  console.log('[DEBUG] 9-b) 프로필 완료 분기 → revealApp');
   revealApp(user);
 }
 
 function revealApp(user) {
-  console.log('[DEBUG] 10) revealApp 진입');
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'flex';
   document.getElementById('chatInputArea').style.display = 'block';
@@ -948,14 +925,12 @@ function revealApp(user) {
   loadRemainingCount(user.uid, user.email);
   startInboxListener(user.uid);
   checkExpertHashOnLoad();
-  console.log('[DEBUG] 11) revealApp 완료. chatSection display=', getComputedStyle(document.getElementById('chatSection')).display);
 }
 
 // ===== 프로필 보완 모달 (회원가입 실패로 빈 프로필이 된 계정 복구) =====
 var profileCompleteUser = null;
 
 function showProfileCompleteModal(user, profile) {
-  console.log('[DEBUG] 12) showProfileCompleteModal 진입');
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chatInputArea').style.display = 'none';
@@ -974,7 +949,6 @@ function showProfileCompleteModal(user, profile) {
   setRadioValue('pcGym', profile.gym);
   document.getElementById('profileCompleteError').style.display = 'none';
   document.getElementById('profileCompleteModal').style.display = 'flex';
-  console.log('[DEBUG] 13) showProfileCompleteModal 완료. modal display=', getComputedStyle(document.getElementById('profileCompleteModal')).display);
 }
 
 function setRadioValue(name, value) {
@@ -1048,14 +1022,12 @@ async function submitProfileComplete() {
 }
 
 function onLoggedOut() {
-  console.log('[DEBUG] 5-b) onLoggedOut 진입');
   stopInboxListener();
   document.getElementById('authSection').style.display = 'flex';
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chatInputArea').style.display = 'none';
   document.getElementById('inboxSection').style.display = 'none';
   document.getElementById('navUserArea').style.display = 'none';
-  console.log('[DEBUG] 5-c) onLoggedOut: authSection display=', getComputedStyle(document.getElementById('authSection')).display);
   // ?signup=1 딥링크: 회원가입 폼 자동 활성화
   if (new URLSearchParams(window.location.search).get('signup') === '1') {
     showRegister();
@@ -1795,9 +1767,7 @@ function checkExpertHashOnLoad() {
 }
 
 // ===== 초기화 =====
-console.log('[DEBUG] 14) initLang() 호출 직전 (스크립트 마지막 줄 — 여기까지 로그가 안 찍히면 이 줄 이전 어딘가에서 멈춘 것)');
 initLang();
-console.log('[DEBUG] 15) 스크립트 끝까지 실행 완료');
 </script>
 
 <!-- 관리자 전용 메뉴 표시 제어 (상세 주석은 admin-nav.js 참고) -->

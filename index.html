@@ -40,7 +40,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .hamburger.open span:nth-child(2){opacity:0}
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(255,255,255,0.99);border:1px solid #DDE3EA;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;max-height:calc(100vh - 82px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:rgba(255,255,255,0.99);border:1px solid #DDE3EA;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
 .nav-menu a{display:block;color:#2A3A50;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #D8E0EA;letter-spacing:0.5px;transition:all 0.15s}
 .nav-menu a:last-child{border-bottom:none}
@@ -87,7 +87,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .nqb-ai:hover{background:rgba(0,0,0,0.06)}
 @media(max-width:600px){.nav-quick{display:none}}
 
-.nav-menu{position:fixed;top:62px;right:20px;width:220px;background:rgba(12,12,12,0.98);border:1px solid #DDE3EA;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+.nav-menu{position:fixed;top:62px;right:20px;width:220px;max-height:calc(100vh - 82px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:rgba(12,12,12,0.98);border:1px solid #DDE3EA;border-top:2px solid var(--red);border-radius:0 0 10px 10px;z-index:999;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity 0.22s ease,transform 0.22s ease;padding:8px 0;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
 .nav-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
 .nav-menu a{display:block;color:#95A5B5;text-decoration:none;font-size:14px;font-weight:600;padding:13px 20px;border-bottom:1px solid #E8EDF3;letter-spacing:0.5px;transition:all 0.15s}
 .nav-menu a:last-child{border-bottom:none}

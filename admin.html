@@ -2583,17 +2583,41 @@ async function loadInterviewCard() {
   empty.style.display = 'none';
   try {
     const snap = await getDocs(collection(db, 'ai_interview'));
-    const inProgress = [], pending = [];
+    const inProgress = [], pending = [], summarizing = [];
     snap.docs.forEach(d => {
       const data = d.data();
       if (data.trackType !== 'scenario') return;
       if (data.status === '인터뷰중') inProgress.push({ id: d.id, ...data });
+      else if (data.status === '요약생성중') summarizing.push({ id: d.id, ...data });
       else if (data.status === '대기중') pending.push({ id: d.id, ...data });
     });
     const byCreatedAsc = (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0);
     inProgress.sort(byCreatedAsc);
+    summarizing.sort(byCreatedAsc);
     pending.sort(byCreatedAsc);
     loading.style.display = 'none';
+
+    // 지식 요약 생성 도중 탭이 닫히는 등으로 "요약생성중"에 멈춰있던
+    // 인터뷰가 있으면, 완료 화면을 보여주면서 뒤에서 요약 생성을 재시도한다.
+    if (summarizing.length) {
+      const s = summarizing[0];
+      currentInterviewDocId = s.id;
+      document.getElementById('interviewQuestion').textContent = s.currentQuestion || s.question || '';
+      document.getElementById('interviewChapterBadge').textContent = s.chapter || '';
+      main.style.display = 'block';
+      empty.style.display = 'none';
+      renderInterviewChecklist(s.checklist || null);
+      showInterviewTrack1Step('finished');
+      try {
+        await finishInterviewTrack1(s.id);
+        showToast('인터뷰 완료! 초안이 생성됐습니다. 🧠 코칭 지식 탭에서 검토해주세요.');
+        loadKnowledgeLibrary();
+        setTimeout(loadInterviewCard, 1800);
+      } catch (e) {
+        showToast('지식 초안 생성 재시도 실패: ' + e.message, 'error');
+      }
+      return;
+    }
 
     // 이미 시작해 후속 질문이 남은 인터뷰가 있으면 그것부터 이어서 진행한다
     // (voice.html과 동일 — turns/checklist는 서버에 매 턴 저장돼 있어 이어받기 가능).
@@ -2693,6 +2717,26 @@ window.startInterviewTrack1 = async (interviewType) => {
   }
 };
 
+// 인터뷰 종료(finished:true) 후 지식 요약 생성만 별도 요청으로 보낸다.
+// confirmAnswer가 체크리스트 갱신까지만 하고 끝내는 이유: 요약 생성
+// (최대 4000토큰)까지 한 요청에서 같이 하면 Vercel Hobby 플랜의 60초
+// 실행 제한을 넘겨 함수가 강제 종료되는 사고가 있었다(2026-08-25,
+// "Task timed out after 60 seconds"). 실패해도 서버에 "요약생성중"
+// 상태로 남아 있어 loadInterviewCard가 다음에 자동으로 재시도한다.
+async function finishInterviewTrack1(docId) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('로그인이 필요합니다.');
+  const token = await user.getIdToken();
+  const r = await fetch(PROCESS_INTERVIEW_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ mode: 'finishInterview', docId })
+  });
+  const json = await r.json();
+  if (!r.ok) throw new Error(json.error || '서버 오류');
+  return json;
+}
+
 // STEP 2 → 계속 or 종료: 답변 확정 → 체크리스트 갱신 → 다음 행동
 // (오타 자동 정리 미리보기 없이 입력한 텍스트를 그대로 confirmAnswer로 보낸다)
 window.submitInterviewAnswer = async () => {
@@ -2719,6 +2763,8 @@ window.submitInterviewAnswer = async () => {
 
     if (json.finished) {
       renderInterviewChecklist(currentInterviewChecklist);
+      btn.textContent = '⏳ 지식 초안 정리 중...';
+      await finishInterviewTrack1(currentInterviewDocId);
       showInterviewTrack1Step('finished');
       showToast('인터뷰 완료! 초안이 생성됐습니다. 🧠 코칭 지식 탭에서 검토해주세요.');
       loadKnowledgeLibrary();

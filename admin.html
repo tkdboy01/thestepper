@@ -210,6 +210,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-quiz-btn" onclick="switchTab('quiz')" style="position:relative">🎮 OX 퀴즈 관리<span id="quizBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
+    <button class="tab-btn" id="tab-evalq-btn" onclick="switchTab('evalq')" style="position:relative">📝 평가문제 관리<span id="evalqBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-compare-btn" onclick="switchTab('compare')">⚖️ 품질 비교</button>
   </div>
 
@@ -565,6 +566,18 @@ select.form-control{cursor:pointer}
 
     </div>
 
+    <!-- 파생 질문 후보함 — confirmed 코칭 지식마다 자동 생성, 대표가 골라야만 아래 시범 운영 주제로 등록됨 -->
+    <div class="form-card">
+      <div class="form-card-title">💡 파생 질문 후보
+        <span id="topicCandidateCount" style="font-size:13px;font-weight:400;color:#888;margin-left:8px"></span>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:12px;line-height:1.6">
+        확정된 코칭 지식에서 자동 생성된 "이 상황을 변형한 다음 인터뷰 주제감" 후보입니다.
+        자동으로 등록되지 않습니다 — 마음에 드는 것만 골라 아래 시범 운영 주제에 등록하세요.
+      </div>
+      <div id="topicCandidateList"><div class="loading-msg">로딩 중...</div></div>
+    </div>
+
     <!-- 시범 운영 주제 관리 (항목 8) — Track1 인터뷰 질문 생성을 20~30개 주제로 한정 -->
     <div class="form-card">
       <div class="form-card-title">🎯 시범 운영 주제
@@ -703,6 +716,11 @@ select.form-control{cursor:pointer}
       </div>
     </div>
 
+    <!-- 커리큘럼 커버리지 (홈페이지 기준 42장). technique_id 는 내부 번호
+         체계라 그대로 쓰면 22장부터 어긋난다 — 서버가 _curriculumChapters.js
+         매핑표로 변환해 내려준다. -->
+    <div id="curriculumCoverageBox" style="font-size:12px;color:#555;background:#f7f7f9;border:1px solid #e5e5e7;border-radius:10px;padding:10px 14px;margin-bottom:16px;line-height:1.6"></div>
+
     <!-- 구 문서(판정·출처·측정버전 없음) 백필 안내 -->
     <div class="migrate-box" id="knowledgeMigrateBox" style="display:none">
       <div class="migrate-text" id="knowledgeMigrateText"></div>
@@ -804,6 +822,38 @@ select.form-control{cursor:pointer}
     </div>
 
     <div id="quizList"><div class="loading-msg">로딩 중...</div></div>
+  </div>
+
+  <!-- ===== 평가문제 관리 탭 ===== -->
+  <div id="tab-evalq" class="tab-content" style="display:none">
+    <div class="section-title">📝 평가문제 관리</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;line-height:1.6">
+      확정(confirmed)된 코칭 지식이 생길 때마다 "AI 코치의 실전 판단 정확도를 검증하는 시험 문제"가
+      자동으로 초안(draft)으로 생성됩니다. OX 퀴즈와 달리 암기 확인용이 아니라, 원본 상황을 변형해
+      AI의 판단력 자체를 시험하는 용도입니다. 여기서 검토·수정한 뒤 승인(confirmed)하거나 폐기하세요.
+      승인해도 어디에도 자동 노출되지 않습니다 — 나중에 직접 골라 블라인드 테스트에 쓰는 비공개 문제은행입니다.
+    </div>
+
+    <!-- 통계 -->
+    <div id="evalqStats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+
+    <!-- 필터 -->
+    <div class="form-card" style="padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="min-width:140px">
+          <label class="form-label">상태</label>
+          <select class="form-control" id="eqfStatus" onchange="applyEvalQuestionFilters()">
+            <option value="">전체</option>
+            <option value="draft">draft (검토 대기)</option>
+            <option value="confirmed">confirmed (승인됨)</option>
+            <option value="discarded">discarded (폐기됨)</option>
+          </select>
+        </div>
+        <button class="btn-secondary" onclick="applyEvalQuestionFilters()">↻ 새로고침</button>
+      </div>
+    </div>
+
+    <div id="evalqList"><div class="loading-msg">로딩 중...</div></div>
   </div>
 
   <!-- ===== 품질 비교 탭 (항목 10 — 화면 골격만, 실제 답변 자동 생성 연결은 다음 단계) ===== -->
@@ -945,6 +995,9 @@ window.switchTab = (tab) => {
   // 퀴즈 관리 탭도 지식 탭과 같은 이유로 매번 새로 불러온다 — 생성 버튼을
   // 누른 직후 상태가 바로바로 바뀌어야 하고, 데이터 규모도 작다.
   if (tab === 'quiz') { loadQuizMgmt(); }
+  // 평가문제 탭도 지식/퀴즈 탭과 같은 이유로 매번 새로 불러온다 — 코칭
+  // 지식 탭에서 확정할 때마다 자동 생성되어 계속 쌓이기 때문이다.
+  if (tab === 'evalq') { loadEvalQuestionsMgmt(); }
   if (tab === 'compare' && !compareLoaded) { compareLoaded = true; initCompareTab(); }
 };
 
@@ -1725,6 +1778,7 @@ async function initCoachingTab() {
   loadInterviewCard();
   loadSosCard();
   loadVoiceDrafts();
+  loadTopicCandidates();
   loadPilotTopics();
 
   await loadCoachingUserProfiles();
@@ -2106,6 +2160,7 @@ async function loadKnowledgeMgmt() {
     KNOWLEDGE_CURRENT_VERSION_HINT = data.currentMeasurementVersion;
     renderKnowledgeStats(data.stats, data.currentMeasurementVersion);
     renderKnowledgeCounterBar(data.total, data.stats, data.pilotProgress);
+    renderCurriculumCoverage(data.curriculumCoverage);
 
     const badge = document.getElementById('knowledgeBadge');
     const need = (data.stats.draft || 0) + (data.stats.needsReview || 0);
@@ -2160,6 +2215,31 @@ function renderKnowledgeCounterBar(total, stats, pilotProgress) {
     pilotEl.textContent = '미설정';
     pilotEl.title = '관리자 화면의 "🎯 시범 운영 주제"에 주제를 등록하면 진행률이 표시됩니다.';
   }
+}
+
+// 홈페이지 기준 42장 커리큘럼 커버리지 요약. 연속된 미커버 장 번호는
+// "33~42장"처럼 구간으로 묶어 표시한다.
+function compressChapterRanges(nums) {
+  if (!nums.length) return '';
+  const sorted = [...nums].sort((a, b) => a - b);
+  const ranges = [];
+  let start = sorted[0], prev = sorted[0];
+  for (let i = 1; i <= sorted.length; i++) {
+    const n = sorted[i];
+    if (n === prev + 1) { prev = n; continue; }
+    ranges.push(start === prev ? `${start}` : `${start}~${prev}`);
+    if (i < sorted.length) { start = n; prev = n; }
+  }
+  return ranges.join(', ');
+}
+
+function renderCurriculumCoverage(coverage) {
+  const el = document.getElementById('curriculumCoverageBox');
+  if (!el || !coverage) return;
+  const missingText = coverage.missingChapters.length
+    ? `미커버: ${compressChapterRanges(coverage.missingChapters)}장`
+    : '전 장 커버 완료 🎉';
+  el.innerHTML = `<b>커리큘럼 커버리지(홈페이지 42장 기준):</b> ${coverage.coveredCount}/${coverage.totalChapters}장 커버됨 · ${missingText}`;
 }
 
 function renderKnowledgeList(items) {
@@ -2218,6 +2298,9 @@ function knowledgeCardHtml(item) {
               : '규칙 체계를 먼저 지정해야 확정할 수 있습니다 (수정 버튼)';
           return `<button class="btn-primary" style="padding:6px 12px;font-size:12px" ${disabled ? `disabled title="${reason}"` : ''} onclick="confirmKnowledgeItem('${item.id}')">확정</button>`;
         })()
+      : '',
+    (item.status === 'confirmed' && !(item.evalStatus === 'done' && item.topicsStatus === 'done' && item.tagsStatus === 'done'))
+      ? `<button class="btn-secondary" title="평가문제·파생주제·상황태그 자동 생성이 아직 끝나지 않았거나 실패했습니다. 다시 시도합니다." onclick="retryEnrichKnowledge('${item.id}')">🔄 보강자료 생성</button>`
       : '',
     `<button class="btn-danger" onclick="discardKnowledgeItem('${item.id}')">폐기</button>`,
   ].filter(Boolean).join('');
@@ -2290,7 +2373,45 @@ window.confirmKnowledgeItem = async (id) => {
     await knowledgeApi({ mode: 'confirm', docId: id });
     showToast('확정되었습니다. AI 코치가 이제부터 참조합니다.');
     loadKnowledgeMgmt();
+    enrichKnowledgeInBackground(id); // await 하지 않음 — 확정 응답을 기다리게 하지 않는다
   } catch (e) { showToast('확정 실패: ' + e.message, 'error'); }
+};
+
+/* ---- 보강자료 자동 생성 (평가문제/파생질문 후보/상황태그, enrich-knowledge.js) ----
+   confirm 성공 직후 fire-and-forget 로 호출한다. 순차로 3개 LLM 호출을
+   하면 다시 60초 타임아웃(2026-08-25 실제 사고)에 걸릴 수 있어, 서버가
+   Promise.allSettled 로 동시에 처리하고 여기서는 완료를 기다리지 않는다.
+   탭을 닫아 중간에 끊기면 코칭 지식 카드의 "🔄 보강자료 생성" 버튼으로
+   나중에 이어서 처리할 수 있다(evalStatus/topicsStatus/tagsStatus 중
+   done 이 아닌 항목만 다시 생성 — 중복 누적 없음). */
+const ENRICH_KNOWLEDGE_URL = 'https://thestepper-api.vercel.app/api/enrich-knowledge';
+
+async function enrichKnowledgeInBackground(docId) {
+  try {
+    const token = await knowledgeAuthToken();
+    const res = await fetch(ENRICH_KNOWLEDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ mode: 'generate', docId })
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+    if (data.allDone || data.alreadyDone) {
+      showToast('🔄 평가문제·파생주제·상황태그 보강이 완료됐습니다.');
+    } else {
+      showToast('⚠️ 보강자료 일부 생성에 실패했습니다. 코칭 지식 카드의 재시도 버튼을 확인해주세요.', 'error');
+    }
+    loadKnowledgeMgmt();
+    loadTopicCandidates();
+  } catch (e) {
+    console.error('[enrichKnowledgeInBackground]', e);
+    showToast('⚠️ 보강자료 생성 요청에 실패했습니다: ' + e.message, 'error');
+  }
+}
+
+window.retryEnrichKnowledge = async (docId) => {
+  showToast('🔄 보강자료를 생성하는 중입니다...');
+  await enrichKnowledgeInBackground(docId);
 };
 
 // max_tokens 절단 등으로 knowledgeSummary 가 손상된 인터뷰 초안을, 원본
@@ -2549,6 +2670,155 @@ window.discardQuizItem = async (id) => {
     await quizApi({ mode: 'discard', docId: id });
     showToast('폐기 처리되었습니다.');
     loadQuizMgmt();
+  } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
+};
+
+/* ---- 평가문제 관리 (enrich-knowledge.js 가 자동 생성, OX 퀴즈와 완전 별개) ---- */
+const MANAGE_EVAL_QUESTIONS_URL = 'https://thestepper-api.vercel.app/api/manage-eval-questions';
+
+const EVALQ_STATUS_LABEL = { draft: '검토 대기', confirmed: '승인됨', discarded: '폐기됨' };
+const EVALQ_STATUS_COLOR = {
+  draft:      { bg: '#fff7e6', fg: '#8a5b00' },
+  confirmed:  { bg: '#e8f7ec', fg: '#0a7a34' },
+  discarded:  { bg: '#f0f0f0', fg: '#888' },
+};
+
+let evalqItemsCache = [];
+let evalqEditingId = null;
+
+async function evalQuestionsApi(body) {
+  const token = await knowledgeAuthToken();
+  const res = await fetch(MANAGE_EVAL_QUESTIONS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function loadEvalQuestionsMgmt() {
+  const listEl = document.getElementById('evalqList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const status = document.getElementById('eqfStatus') ? document.getElementById('eqfStatus').value : '';
+    const data = await evalQuestionsApi({ mode: 'list', status });
+    evalqItemsCache = data.items;
+
+    const el = document.getElementById('evalqStats');
+    if (el) {
+      const chip = (label, n, bg, fg) =>
+        `<span style="font-size:12px;font-weight:700;background:${bg};color:${fg};border-radius:8px;padding:5px 12px">${esc(label)} ${n}</span>`;
+      el.innerHTML =
+        chip('검토 대기', data.stats.draft, '#fff7e6', '#8a5b00') +
+        chip('승인됨', data.stats.confirmed, '#e8f7ec', '#0a7a34') +
+        chip('폐기됨', data.stats.discarded, '#f0f0f0', '#888');
+    }
+
+    const badge = document.getElementById('evalqBadge');
+    const need = data.stats.draft || 0;
+    if (badge) {
+      if (need > 0) { badge.style.display = 'flex'; badge.textContent = need > 99 ? '99+' : need; }
+      else { badge.style.display = 'none'; }
+    }
+
+    if (!data.items.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">조건에 맞는 평가문제가 없습니다. 코칭 지식을 확정하면 자동으로 생성됩니다.</div>';
+      return;
+    }
+    listEl.innerHTML = data.items.map(evalQuestionCardHtml).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
+
+window.applyEvalQuestionFilters = () => { loadEvalQuestionsMgmt(); };
+
+function evalQuestionCardHtml(item) {
+  if (evalqEditingId === item.id) return evalQuestionEditFormHtml(item);
+
+  const sc = EVALQ_STATUS_COLOR[item.status] || { bg: '#f0f0f0', fg: '#888' };
+  const statusLabel = EVALQ_STATUS_LABEL[item.status] || item.status;
+  const createdAt = item.created_at ? new Date(item.created_at).toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'}) : '';
+  const isDiscarded = item.status === 'discarded';
+
+  const actions = isDiscarded ? '' : [
+    `<button class="btn-edit" onclick="startEditEvalQuestion('${item.id}')">수정</button>`,
+    item.status === 'draft'
+      ? `<button class="btn-primary" style="padding:6px 12px;font-size:12px" onclick="approveEvalQuestion('${item.id}')">승인</button>`
+      : '',
+    `<button class="btn-danger" onclick="discardEvalQuestion('${item.id}')">폐기</button>`,
+  ].filter(Boolean).join('');
+
+  return `
+    <div style="border:1px solid #e5e5e7;border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;background:${isDiscarded ? '#fafafa' : '#fff'};opacity:${isDiscarded ? '0.7' : '1'}">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:11px;background:${sc.bg};color:${sc.fg};border-radius:5px;padding:2px 8px;font-weight:700">${esc(statusLabel)}</span>
+        <span style="font-size:11px;color:#aaa;margin-left:auto">${esc(createdAt)}</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;line-height:1.6">Q. ${esc(item.question)}</div>
+      <div style="font-size:12.5px;color:#555;line-height:1.6">✅ 정답 판단 기준: ${esc(item.expectedAnswerCriteria)}</div>
+      ${actions ? `<div class="row-actions" style="justify-content:flex-start;margin-top:10px">${actions}</div>` : ''}
+    </div>`;
+}
+
+function evalQuestionEditFormHtml(item) {
+  return `
+    <div style="border:2px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fffafa">
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">문제</label>
+        <textarea class="form-control" id="eqEditQuestion-${esc(item.id)}" rows="3" style="font-family:inherit;resize:vertical">${esc(item.question || '')}</textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label">정답 판단 기준</label>
+        <textarea class="form-control" id="eqEditCriteria-${esc(item.id)}" rows="3" style="font-family:inherit;resize:vertical">${esc(item.expectedAnswerCriteria || '')}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveEditEvalQuestion('${item.id}')">저장</button>
+        <button class="btn-secondary" onclick="cancelEditEvalQuestion()">취소</button>
+      </div>
+    </div>`;
+}
+
+window.startEditEvalQuestion = (id) => {
+  evalqEditingId = id;
+  loadEvalQuestionsMgmt();
+};
+
+window.cancelEditEvalQuestion = () => {
+  evalqEditingId = null;
+  loadEvalQuestionsMgmt();
+};
+
+window.saveEditEvalQuestion = async (id) => {
+  const question = document.getElementById('eqEditQuestion-' + id).value.trim();
+  const expectedAnswerCriteria = document.getElementById('eqEditCriteria-' + id).value.trim();
+  if (!question) { showToast('문제 문장을 입력해주세요.', 'error'); return; }
+  if (!expectedAnswerCriteria) { showToast('정답 판단 기준을 입력해주세요.', 'error'); return; }
+  try {
+    await evalQuestionsApi({ mode: 'update', docId: id, question, expectedAnswerCriteria });
+    showToast('저장되었습니다.');
+    evalqEditingId = null;
+    loadEvalQuestionsMgmt();
+  } catch (e) { showToast('저장 실패: ' + e.message, 'error'); }
+};
+
+window.approveEvalQuestion = async (id) => {
+  try {
+    await evalQuestionsApi({ mode: 'approve', docId: id });
+    showToast('승인되었습니다.');
+    loadEvalQuestionsMgmt();
+  } catch (e) { showToast('승인 실패: ' + e.message, 'error'); }
+};
+
+window.discardEvalQuestion = async (id) => {
+  if (!confirm('이 평가문제를 폐기하시겠습니까?')) return;
+  try {
+    await evalQuestionsApi({ mode: 'discard', docId: id });
+    showToast('폐기 처리되었습니다.');
+    loadEvalQuestionsMgmt();
   } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };
 
@@ -2974,6 +3244,67 @@ window.submitVoiceDraft = async (id) => {
   } catch (e) {
     errEl.textContent = '오류: ' + e.message;
   }
+};
+
+/* ---- 파생 질문 후보함 (enrich-knowledge.js 가 자동 생성) ----
+   대표가 promote 를 눌러야만 pilot_topics 에 등록된다 — 자동 등록 없음. */
+const MANAGE_TOPIC_CANDIDATES_URL = 'https://thestepper-api.vercel.app/api/manage-topic-candidates';
+
+async function topicCandidatesApi(body) {
+  const token = await knowledgeAuthToken();
+  const res = await fetch(MANAGE_TOPIC_CANDIDATES_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function loadTopicCandidates() {
+  const listEl = document.getElementById('topicCandidateList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  try {
+    const data = await topicCandidatesApi({ mode: 'list', status: 'draft' });
+    const countEl = document.getElementById('topicCandidateCount');
+    if (countEl) countEl.textContent = data.items.length ? `(검토 대기 ${data.items.length}개)` : '';
+
+    if (!data.items.length) {
+      listEl.innerHTML = '<div class="empty-msg" style="font-size:13px;padding:16px 0">검토 대기 중인 후보가 없습니다. 코칭 지식을 확정하면 자동으로 생성됩니다.</div>';
+      return;
+    }
+    listEl.innerHTML = data.items.map(topicCandidateCardHtml).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-msg" style="font-size:13px">오류: ${esc(e.message)}</div>`;
+  }
+}
+
+function topicCandidateCardHtml(item) {
+  return `
+    <div style="display:flex;align-items:center;gap:10px;border:1px solid #e5e5e7;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;background:#fff">
+      <span style="flex:1;color:#1d1d1f">${esc(item.topic)}</span>
+      <button class="btn-primary" style="padding:6px 12px;font-size:12px" onclick="promoteTopicCandidate('${item.id}')">➕ 시범 주제로 등록</button>
+      <button class="btn-danger" onclick="discardTopicCandidate('${item.id}')">폐기</button>
+    </div>`;
+}
+
+window.promoteTopicCandidate = async (docId) => {
+  try {
+    await topicCandidatesApi({ mode: 'promote', docId });
+    showToast('시범 운영 주제로 등록되었습니다.');
+    await loadTopicCandidates();
+    await loadPilotTopics();
+  } catch (e) { showToast('등록 실패: ' + e.message, 'error'); }
+};
+
+window.discardTopicCandidate = async (docId) => {
+  if (!confirm('이 후보를 폐기하시겠습니까?')) return;
+  try {
+    await topicCandidatesApi({ mode: 'discard', docId });
+    await loadTopicCandidates();
+  } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };
 
 /* ---- 시범 운영 주제 (항목 8) ---- */

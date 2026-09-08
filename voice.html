@@ -388,6 +388,24 @@ function requireAdmin() {
 var PROCESS_INTERVIEW_URL  = 'https://thestepper-api.vercel.app/api/process-interview';
 var MANUAL_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/manual-knowledge';
 var MANAGE_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/manage-knowledge';
+var ENRICH_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/enrich-knowledge';
+
+// 확정(승인) 직후 평가문제/파생주제/상황태그를 생성한다. await 하지 않고
+// 그냥 발사만 한다 — 승인 버튼 응답을 기다리게 하면 다시 60초 타임아웃
+// 사고(2026-08-25)가 재발할 수 있어, 확정 자체와 완전히 분리했다. 탭을
+// 닫아 중간에 끊겨도 admin.html 코칭 지식 탭에 "🔄 보강자료 생성" 버튼이
+// 남아 나중에 이어서 처리할 수 있다.
+function enrichKnowledgeInBackground(docId) {
+  auth.currentUser.getIdToken().then(function (idToken) {
+    return fetch(ENRICH_KNOWLEDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ mode: 'generate', docId: docId })
+    });
+  }).catch(function (e) {
+    console.error('[enrichKnowledgeInBackground]', e);
+  });
+}
 
 var currentQuestionId = null;
 var currentQuestionText = '';
@@ -908,6 +926,7 @@ window.approveDraft = async function () {
     if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
 
     setStatus('✅ 승인 완료! AI 코치가 바로 참조합니다. 다음 질문을 불러옵니다.', 'ok');
+    enrichKnowledgeInBackground(currentDraftId);
     currentDraftId = null;
     currentDraftOriginalSummary = '';
     await loadPendingQuestion();

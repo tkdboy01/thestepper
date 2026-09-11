@@ -1340,8 +1340,13 @@ async function loadMembers() {
     const today = getTodayKST();
     const token = await auth.currentUser.getIdToken();
 
+    // createdAt 필드가 없는 문서는 Firestore orderBy() 쿼리 결과에서 통째로
+    // 빠진다(정렬 기준 필드가 없으면 그 문서 자체가 제외됨) — 그 상태로
+    // orderBy 를 걸어서 가져오면 "총 N명" 카운트에서도 조용히 누락된다
+    // (실제 사고: 2026-09-11, 24명 중 5명이 이렇게 빠져 19명으로 표시됨).
+    // 정렬 없이 전체를 가져온 뒤 아래에서 직접 정렬한다.
     const [usersSnap, usageSnap, auditRes] = await Promise.all([
-      getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'))),
+      getDocs(collection(db, 'users')),
       getDocs(collection(db, 'aiUsage')),
       fetch(MANAGE_MEMBER_URL + '?action=audit', {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -1382,6 +1387,16 @@ async function loadMembers() {
         emailVerified: statusMap[ds.id] ? statusMap[ds.id].emailVerified : null,
         isIncomplete
       });
+    });
+
+    // 가입일 기준 최신순, createdAt 없는 문서는("가입일 미상") 맨 뒤로
+    membersData.sort((a, b) => {
+      const aTime = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : null;
+      const bTime = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : null;
+      if (aTime === null && bTime === null) return 0;
+      if (aTime === null) return 1;
+      if (bTime === null) return -1;
+      return bTime - aTime;
     });
 
     document.getElementById('membersCountBadge').textContent = '(총 ' + membersData.length + '명)';
@@ -1425,7 +1440,7 @@ function renderMembersPage(page) {
     const num = start + i + 1;
     const dateStr = m.createdAt && m.createdAt.toDate
       ? m.createdAt.toDate().toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })
-      : (m.createdAt ? String(m.createdAt).slice(0, 10) : '-');
+      : (m.createdAt ? String(m.createdAt).slice(0, 10) : '가입일 미상');
 
     const safeUid   = esc(m.uid);
     const safeName  = esc(m.name);

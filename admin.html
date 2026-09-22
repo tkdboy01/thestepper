@@ -2427,25 +2427,19 @@ window.confirmKnowledgeItem = async (id) => {
   } catch (e) { showToast('확정 실패: ' + e.message, 'error'); }
 };
 
-/* ---- 보강자료 자동 생성 (평가문제/파생질문 후보/상황태그, enrich-knowledge.js) ----
+/* ---- 보강자료 자동 생성 (평가문제/파생질문 후보/상황태그) ----
    confirm 성공 직후 fire-and-forget 로 호출한다. 순차로 3개 LLM 호출을
    하면 다시 60초 타임아웃(2026-08-25 실제 사고)에 걸릴 수 있어, 서버가
    Promise.allSettled 로 동시에 처리하고 여기서는 완료를 기다리지 않는다.
    탭을 닫아 중간에 끊기면 코칭 지식 카드의 "🔄 보강자료 생성" 버튼으로
    나중에 이어서 처리할 수 있다(evalStatus/topicsStatus/tagsStatus 중
-   done 이 아닌 항목만 다시 생성 — 중복 누적 없음). */
-const ENRICH_KNOWLEDGE_URL = 'https://thestepper-api.vercel.app/api/enrich-knowledge';
-
+   done 이 아닌 항목만 다시 생성 — 중복 누적 없음).
+   원래 별도 라우트(enrich-knowledge.js)였지만, Vercel Hobby 플랜의
+   서버리스 함수 12개 제한에 걸려 2026-09-15부터 배포가 조용히 실패하고
+   있었다 — manage-knowledge.js 의 mode:'enrichGenerate' 로 합쳤다. */
 async function enrichKnowledgeInBackground(docId) {
   try {
-    const token = await knowledgeAuthToken();
-    const res = await fetch(ENRICH_KNOWLEDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ mode: 'generate', docId })
-    });
-    const data = await res.json();
-    if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
+    const data = await knowledgeApi({ mode: 'enrichGenerate', docId });
     if (data.allDone || data.alreadyDone) {
       showToast('🔄 평가문제·파생주제·상황태그 보강이 완료됐습니다.');
     } else {
@@ -2723,9 +2717,9 @@ window.discardQuizItem = async (id) => {
   } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };
 
-/* ---- 평가문제 관리 (enrich-knowledge.js 가 자동 생성, OX 퀴즈와 완전 별개) ---- */
-const MANAGE_EVAL_QUESTIONS_URL = 'https://thestepper-api.vercel.app/api/manage-eval-questions';
-
+/* ---- 평가문제 관리 (manage-knowledge.js 의 eval* 모드가 자동 생성, OX 퀴즈와 완전 별개) ----
+   원래 별도 라우트(manage-eval-questions.js)였지만, Vercel Hobby 플랜의
+   서버리스 함수 12개 제한에 걸려 manage-knowledge.js 로 합쳤다(knowledgeApi 재사용). */
 const EVALQ_STATUS_LABEL = { draft: '검토 대기', confirmed: '승인됨', discarded: '폐기됨' };
 const EVALQ_STATUS_COLOR = {
   draft:      { bg: '#fff7e6', fg: '#8a5b00' },
@@ -2736,25 +2730,13 @@ const EVALQ_STATUS_COLOR = {
 let evalqItemsCache = [];
 let evalqEditingId = null;
 
-async function evalQuestionsApi(body) {
-  const token = await knowledgeAuthToken();
-  const res = await fetch(MANAGE_EVAL_QUESTIONS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
-  return data;
-}
-
 async function loadEvalQuestionsMgmt() {
   const listEl = document.getElementById('evalqList');
   if (!listEl) return;
   listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
   try {
     const status = document.getElementById('eqfStatus') ? document.getElementById('eqfStatus').value : '';
-    const data = await evalQuestionsApi({ mode: 'list', status });
+    const data = await knowledgeApi({ mode: 'evalList', status });
     evalqItemsCache = data.items;
 
     const el = document.getElementById('evalqStats');
@@ -2848,7 +2830,7 @@ window.saveEditEvalQuestion = async (id) => {
   if (!question) { showToast('문제 문장을 입력해주세요.', 'error'); return; }
   if (!expectedAnswerCriteria) { showToast('정답 판단 기준을 입력해주세요.', 'error'); return; }
   try {
-    await evalQuestionsApi({ mode: 'update', docId: id, question, expectedAnswerCriteria });
+    await knowledgeApi({ mode: 'evalUpdate', docId: id, question, expectedAnswerCriteria });
     showToast('저장되었습니다.');
     evalqEditingId = null;
     loadEvalQuestionsMgmt();
@@ -2857,7 +2839,7 @@ window.saveEditEvalQuestion = async (id) => {
 
 window.approveEvalQuestion = async (id) => {
   try {
-    await evalQuestionsApi({ mode: 'approve', docId: id });
+    await knowledgeApi({ mode: 'evalApprove', docId: id });
     showToast('승인되었습니다.');
     loadEvalQuestionsMgmt();
   } catch (e) { showToast('승인 실패: ' + e.message, 'error'); }
@@ -2866,7 +2848,7 @@ window.approveEvalQuestion = async (id) => {
 window.discardEvalQuestion = async (id) => {
   if (!confirm('이 평가문제를 폐기하시겠습니까?')) return;
   try {
-    await evalQuestionsApi({ mode: 'discard', docId: id });
+    await knowledgeApi({ mode: 'evalDiscard', docId: id });
     showToast('폐기 처리되었습니다.');
     loadEvalQuestionsMgmt();
   } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
@@ -3296,28 +3278,16 @@ window.submitVoiceDraft = async (id) => {
   }
 };
 
-/* ---- 파생 질문 후보함 (enrich-knowledge.js 가 자동 생성) ----
-   대표가 promote 를 눌러야만 pilot_topics 에 등록된다 — 자동 등록 없음. */
-const MANAGE_TOPIC_CANDIDATES_URL = 'https://thestepper-api.vercel.app/api/manage-topic-candidates';
-
-async function topicCandidatesApi(body) {
-  const token = await knowledgeAuthToken();
-  const res = await fetch(MANAGE_TOPIC_CANDIDATES_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!res.ok || data.ok === false) throw new Error(data.error || '서버 오류');
-  return data;
-}
-
+/* ---- 파생 질문 후보함 (manage-knowledge.js 의 topicCandidate* 모드가 자동 생성) ----
+   대표가 promote 를 눌러야만 pilot_topics 에 등록된다 — 자동 등록 없음.
+   원래 별도 라우트(manage-topic-candidates.js)였지만, Vercel Hobby 플랜의
+   서버리스 함수 12개 제한에 걸려 manage-knowledge.js 로 합쳤다(knowledgeApi 재사용). */
 async function loadTopicCandidates() {
   const listEl = document.getElementById('topicCandidateList');
   if (!listEl) return;
   listEl.innerHTML = '<div class="loading-msg">로딩 중...</div>';
   try {
-    const data = await topicCandidatesApi({ mode: 'list', status: 'draft' });
+    const data = await knowledgeApi({ mode: 'topicCandidateList', status: 'draft' });
     const countEl = document.getElementById('topicCandidateCount');
     if (countEl) countEl.textContent = data.items.length ? `(검토 대기 ${data.items.length}개)` : '';
 
@@ -3342,7 +3312,7 @@ function topicCandidateCardHtml(item) {
 
 window.promoteTopicCandidate = async (docId) => {
   try {
-    await topicCandidatesApi({ mode: 'promote', docId });
+    await knowledgeApi({ mode: 'topicCandidatePromote', docId });
     showToast('시범 운영 주제로 등록되었습니다.');
     await loadTopicCandidates();
     await loadPilotTopics();
@@ -3352,7 +3322,7 @@ window.promoteTopicCandidate = async (docId) => {
 window.discardTopicCandidate = async (docId) => {
   if (!confirm('이 후보를 폐기하시겠습니까?')) return;
   try {
-    await topicCandidatesApi({ mode: 'discard', docId });
+    await knowledgeApi({ mode: 'topicCandidateDiscard', docId });
     await loadTopicCandidates();
   } catch (e) { showToast('폐기 실패: ' + e.message, 'error'); }
 };

@@ -388,19 +388,21 @@ function requireAdmin() {
 var PROCESS_INTERVIEW_URL  = 'https://thestepper-api.vercel.app/api/process-interview';
 var MANUAL_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/manual-knowledge';
 var MANAGE_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/manage-knowledge';
-var ENRICH_KNOWLEDGE_URL   = 'https://thestepper-api.vercel.app/api/enrich-knowledge';
 
 // 확정(승인) 직후 평가문제/파생주제/상황태그를 생성한다. await 하지 않고
 // 그냥 발사만 한다 — 승인 버튼 응답을 기다리게 하면 다시 60초 타임아웃
 // 사고(2026-08-25)가 재발할 수 있어, 확정 자체와 완전히 분리했다. 탭을
 // 닫아 중간에 끊겨도 admin.html 코칭 지식 탭에 "🔄 보강자료 생성" 버튼이
 // 남아 나중에 이어서 처리할 수 있다.
+// 원래 별도 라우트(enrich-knowledge.js)였지만, Vercel Hobby 플랜의
+// 서버리스 함수 12개 제한에 걸려 manage-knowledge.js 의 mode:'enrichGenerate'
+// 로 합쳤다(2026-09-22).
 function enrichKnowledgeInBackground(docId) {
   auth.currentUser.getIdToken().then(function (idToken) {
-    return fetch(ENRICH_KNOWLEDGE_URL, {
+    return fetch(MANAGE_KNOWLEDGE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-      body: JSON.stringify({ mode: 'generate', docId: docId })
+      body: JSON.stringify({ mode: 'enrichGenerate', docId: docId })
     });
   }).catch(function (e) {
     console.error('[enrichKnowledgeInBackground]', e);

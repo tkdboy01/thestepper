@@ -308,7 +308,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ===== Auth 상태 감지 =====
-// 비회원도 목록 열람 가능 — 리다이렉트 없음
+// 비로그인도 페이지는 열린다(리다이렉트 없음) — 목록 대신 로그인 안내 표시
 auth.onAuthStateChanged(function(user) {
   document.getElementById('initLoading').style.display = 'none';
   currentUser = user || null;
@@ -343,24 +343,41 @@ function initBoard() {
   loadInquiries();
 }
 
-// ===== 목록 로드 (전체 공개) =====
+// ===== 목록 로드 =====
+// Firestore 규칙상 문의는 작성자 본인과 관리자만 읽을 수 있다.
+//   관리자: 전체 목록 / 회원: 본인 글(where uid) / 비로그인: 로그인 안내만
+// 정렬은 복합 인덱스 없이 쓰도록 브라우저에서 한다.
 async function loadInquiries() {
   document.getElementById('listLoading').style.display = 'block';
   document.getElementById('inquiryList').innerHTML = '';
 
+  if (!currentUser) {
+    document.getElementById('listLoading').style.display = 'none';
+    document.getElementById('inquiryList').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">로그인 후 내 문의 내역을 확인할 수 있습니다.<br>문의는 작성자 본인과 관리자만 볼 수 있습니다.</div></div>';
+    return;
+  }
+
   try {
-    // 비회원 포함 전체 목록 조회 (Firestore 규칙: allow read: if true)
-    var snap = await db.collection('inquiries').orderBy('createdAt', 'desc').get();
+    var ref = isAdmin
+      ? db.collection('inquiries')
+      : db.collection('inquiries').where('uid', '==', currentUser.uid);
+    var snap = await ref.get();
+    var docs = snap.docs.slice().sort(function(a, b) {
+      var ta = a.data().createdAt, tb = b.data().createdAt;
+      var ma = ta ? ta.toMillis() : Infinity, mb = tb ? tb.toMillis() : Infinity;
+      return mb - ma;
+    });
 
     document.getElementById('listLoading').style.display = 'none';
 
-    if (snap.empty) {
+    if (docs.length === 0) {
       document.getElementById('inquiryList').innerHTML =
         '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">아직 문의 내역이 없습니다.<br>궁금한 점을 문의해보세요.</div></div>';
       return;
     }
 
-    document.getElementById('inquiryList').innerHTML = snap.docs.map(function(doc) {
+    document.getElementById('inquiryList').innerHTML = docs.map(function(doc) {
       var d = doc.data();
       var date = d.createdAt ? d.createdAt.toDate().toLocaleDateString('ko-KR') : '';
       var answered = d.status === 'answered';

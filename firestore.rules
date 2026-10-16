@@ -1,6 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 관리자 판별 — 배포본(2026-10-16 스냅샷)에 반복되던
+    // request.auth != null && request.auth.token.email == '...' 를 묶은 것.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+
     match /visitors/{doc=**} {
       allow read, write: if true;
     }
@@ -8,35 +15,43 @@ service cloud.firestore {
       allow read, write: if true;
     }
     match /movement_data/{doc=**} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read, write: if isAdmin();
     }
     match /schedules/{doc=**} {
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if isAdmin();
     }
     match /locations/{doc=**} {
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if isAdmin();
     }
+    // 1:1 문의 (board.html) — 작성자 본인과 관리자만 읽는다.
+    // 생성 필드는 board.html submitInquiry() 가 저장하는 9개와 정확히 같아야 한다.
+    // 작성자 수정·삭제 기능은 코드에 없으므로 막는다.
     match /inquiries/{docId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['title', 'content', 'uid', 'email',
+             'nickname', 'createdAt', 'answer', 'answeredAt', 'status'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.answer == ''
+        && request.resource.data.answeredAt == null
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['answer', 'answeredAt', 'status']);
+      allow delete: if isAdmin();
     }
     match /users/{uid} {
-      allow read: if request.auth != null
-        && (request.auth.uid == uid
-            || request.auth.token.email == 'tkdboykms0007@gmail.com');
+      allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       allow create, update: if request.auth != null && request.auth.uid == uid;
     }
     match /aiUsage/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read: if isAdmin();
       allow write: if false;
     }
     match /ai_coaching/{docId} {
@@ -44,10 +59,10 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow read: if request.auth != null && (
         resource.data.userId == request.auth.uid ||
-        request.auth.token.email == 'tkdboykms0007@gmail.com'
+        isAdmin()
       );
       allow update: if request.auth != null && (
-        request.auth.token.email == 'tkdboykms0007@gmail.com' ||
+        isAdmin() ||
         (resource.data.userId == request.auth.uid &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']))
       );
@@ -57,29 +72,23 @@ service cloud.firestore {
     }
     match /coaching_knowledge/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if isAdmin();
     }
     match /ai_interview/{doc=**} {
-      allow read: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read: if isAdmin();
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow update, delete: if isAdmin();
     }
     match /voice_drafts/{docId} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read, write: if isAdmin();
     }
     // admin.html "⚖️ 품질 비교" 탭(항목 10) — 관리자가 브라우저에서 직접
     // Firestore 클라이언트 SDK로 읽고 쓴다 (서버 API 를 거치지 않음).
     match /comparison_questions/{docId} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read, write: if isAdmin();
     }
     match /comparison_results/{docId} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow read, write: if isAdmin();
     }
     match /user_messages/{docId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
@@ -92,8 +101,7 @@ service cloud.firestore {
     // SDK 경유 manage-quiz.js)만 볼 수 있어야 하므로 공개 읽기에서 제외한다.
     match /quiz_questions/{docId} {
       allow read: if resource.data.status == 'confirmed';
-      allow write: if request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+      allow write: if isAdmin();
     }
   }
 }

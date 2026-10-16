@@ -1,0 +1,58 @@
+// ══════════════════════════════════════════════════════════════════
+//  배포본 원문 (Storage) — Firebase Admin SDK securityRules() 로 조회
+//  가져온 시각: 2026-10-16T08:04:22.731Z
+//  ruleset 이름: cac0c3d0-1c8d-4256-a265-b13cd5e18a66
+//  ruleset 생성시각: Mon, 20 Jul 2026 02:16:12 GMT
+//  소스 파일명: storage.rules
+//  ※ 이 주석 블록 아래가 배포본 원문 그대로다. 수정 금지.
+// ══════════════════════════════════════════════════════════════════
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /assets/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /center/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /guide/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /logos/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /staff/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /sos_videos/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read:  if request.auth != null
+        && (request.auth.uid == userId
+            || request.auth.token.email == 'tkdboykms0007@gmail.com');
+    }
+
+    match /movement_landmarks/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+    match /movement_videos/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

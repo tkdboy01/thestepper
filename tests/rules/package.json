@@ -1,0 +1,12 @@
+{
+  "name": "thestepper-rules-tests",
+  "private": true,
+  "description": "Firestore / Storage 보안 규칙 에뮬레이터 테스트 (루트 firestore.rules, storage.rules 대상)",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore,storage --project demo-thestepper \"node --test --test-concurrency=1 --test-timeout=600000 rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.0.0"
+  }
+}

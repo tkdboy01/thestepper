@@ -1,0 +1,71 @@
+// ══════════════════════════════════════════════════════════════════
+//  배포본 원문 (Storage) — Firebase Admin SDK securityRules() 로 조회
+//  가져온 시각: 2026-10-16T09:01:46.134Z
+//  ruleset 이름: 09599645-7914-4ee3-9a31-367dc9cb6050
+//  ruleset 생성시각: Fri, 16 Oct 2026 09:01:32 GMT
+//  소스 파일명: storage.rules
+//  ※ 이 주석 블록 아래가 배포본 원문 그대로다. 수정 금지.
+// ══════════════════════════════════════════════════════════════════
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 관리자 판별 — firestore.rules 의 isAdmin() 과 같은 조건.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+    }
+
+    // 공개 이미지 폴더 — 누구나 읽고, 쓰기는 관리자만.
+    // (배포본 2026-07-20 은 "로그인한 누구나" 쓰기였다)
+    // 코드에서 이 경로에 쓰는 곳은 admin.html 로고 업로드(logos/)뿐이고,
+    // 나머지는 콘솔/Admin SDK 업로드라 규칙의 영향을 받지 않는다.
+    match /assets/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /center/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /guide/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /logos/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /staff/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // SOS 영상 (motion-legacy.html) — 본인 폴더에만 영상 파일을 올린다.
+    // 상한 250MB: 업로드 화면 안내 "최대 200MB"(motion-legacy.html:300)에
+    // 여유 25%. 클라이언트 코드에는 크기 검사가 없고, 2026-10-16 기준
+    // 버킷에 남은 파일은 0개(서버가 답변 후 삭제)라 실측 상한은 없다.
+    // 영상 외 형식을 올리는 코드는 없다.
+    match /sos_videos/{userId}/{allPaths=**} {
+      allow create, update: if request.auth != null && request.auth.uid == userId
+        && request.resource.size < 250 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow read:  if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    match /movement_landmarks/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+    match /movement_videos/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

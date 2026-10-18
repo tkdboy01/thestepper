@@ -134,3 +134,12 @@
   .ix-schedule li { grid-template-columns: 1fr; gap: 2px; }
 }
 .ix-reviews-head { margin-bottom: 48px; }
+.ix-schedule__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 0 0 12px; }
+.ix-schedule__label { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--accent); }
+.ix-schedule__note { font-size: 15px; color: var(--muted); }
+/* 첫 화면 제목: 1024px 이상에서 "사라지기 전에, / 기록한다." 2줄 고정.
+   본문·버튼은 620px 열에 두고 제목만 열 밖으로 나가게 한다(열 전체를 넓히면
+   본문 문단까지 사진 쪽으로 밀려 겹침이 커진다). */
+@media (min-width: 1024px) {
+  .ix-hero__text .sa-h1 { white-space: nowrap; width: max-content; max-width: none; }
+}

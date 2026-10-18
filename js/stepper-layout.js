@@ -40,7 +40,18 @@
     { label: '유튜브 태권민국', href: 'https://www.youtube.com/@%ED%83%9C%EA%B6%8C%EB%AF%BC%EA%B5%AD', external: true },
     { label: '인스타그램',     href: 'https://www.instagram.com/the_stepper_kms', external: true },
     { label: '카카오톡 상담',   href: 'https://open.kakao.com/o/gFVIg0Dh', external: true },
-    { label: '1:1 문의',       href: 'board.html', external: false }
+    { label: '1:1 문의',       href: 'board.html', external: false },
+    // 리뉴얼 전 index.html 플로팅 버튼(title="대한버추얼스포츠협회")의 주소 그대로
+    { label: '대한버추얼스포츠협회', href: 'https://koreavsa.com/', external: true }
+  ];
+
+  // 보조 링크 — 메뉴 7개에 없는 기존 페이지. 이름은 각 페이지 <title> 에서 그대로 가져옴
+  var SUB_LINKS = [
+    { label: '스텝 소개',         href: 'staff.html' },
+    { label: '성인부 & 입시센터',  href: 'center.html' },
+    { label: '활동 갤러리',       href: 'gallery.html' },
+    { label: 'OX 겨루기 퀴즈',    href: 'quiz.html' },
+    { label: 'VR 버추얼 태권도',   href: 'virtual.html' }
   ];
 
   function currentFile() {
@@ -108,6 +119,9 @@
     var links = CHANNELS.map(function (c) {
       return '<li><a href="' + esc(c.href) + '"' + (c.external ? ' target="_blank" rel="noopener"' : '') + '>' + esc(c.label) + '</a></li>';
     }).join('');
+    var subs = SUB_LINKS.map(function (l) {
+      return '<li><a href="' + esc(l.href) + '"' + (isCurrent(l.href) ? ' aria-current="page"' : '') + '>' + esc(l.label) + '</a></li>';
+    }).join('');
     return '' +
       '<footer class="sa-footer">' +
         '<div class="sa-wrap">' +
@@ -119,6 +133,7 @@
             '</div>' +
             '<nav aria-label="외부 채널"><ul class="sa-footer__links">' + links + '</ul></nav>' +
           '</div>' +
+          '<nav class="sa-footer__sub" aria-label="다른 페이지"><ul>' + subs + '</ul></nav>' +
           '<div class="sa-footer__copy">© 2026 THE STEPPER. All rights reserved.</div>' +
         '</div>' +
       '</footer>';

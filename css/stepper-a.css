@@ -210,3 +210,10 @@ h1, h2, h3 { margin: 0; font-weight: 900; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* 하단 보조 링크 줄 (메뉴 7개에 없는 기존 페이지) */
+.sa-footer__sub { margin-top: 40px; padding-top: 20px; border-top: 1px solid #3D3B37; }
+.sa-footer__sub ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0 24px; }
+.sa-footer__sub a { display: inline-flex; align-items: center; min-height: var(--touch); font-size: 14px; color: var(--dark-muted); }
+.sa-footer__sub a:hover { color: var(--dark-ink); }
+.sa-footer__sub + .sa-footer__copy { margin-top: 16px; }

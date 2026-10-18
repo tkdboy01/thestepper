@@ -79,7 +79,7 @@ h1, h2, h3 { margin: 0; font-weight: 900; }
 .sa-label--muted { color: var(--muted); font-weight: 500; }
 .sa-h1 {
   font-family: var(--font-serif); font-weight: 900;
-  font-size: clamp(40px, 7vw, 104px); line-height: 1.06; letter-spacing: -0.03em;
+  font-size: clamp(40px, 6.4vw, 92px); line-height: 1.06; letter-spacing: -0.03em;
 }
 .sa-h2 {
   font-family: var(--font-serif); font-weight: 900;

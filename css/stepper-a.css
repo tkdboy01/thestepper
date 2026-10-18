@@ -30,7 +30,7 @@
 
   --font-serif: 'Noto Serif KR', serif;
   --font-sans: 'IBM Plex Sans KR', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-mono: 'IBM Plex Mono', 'IBM Plex Sans KR', ui-monospace, monospace;  /* Plex Mono 에 한글이 없어 한글은 Plex Sans KR 로 */
 
   --wrap: 1200px;
   --gutter: 24px;
@@ -49,6 +49,8 @@ body {
   font-size: 17px;
   line-height: 1.7;
   overflow-x: hidden;
+  word-break: keep-all;          /* 한글을 어절 단위로 줄바꿈 */
+  overflow-wrap: break-word;
 }
 body.sa-scroll-locked { overflow: hidden; }
 img { max-width: 100%; display: block; }

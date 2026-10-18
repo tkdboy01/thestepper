@@ -238,3 +238,110 @@ index.html 안에서는 `#video` 처럼 같은 문서 앵커로 바꿔 새로고
   - https://thestepper-7mwx-8oqnf920p-tkdboykms0007-5463s-projects.vercel.app (프로젝트 thestepper-7mwx)
 - 두 주소 모두 비로그인 요청은 302(Vercel 로그인으로 이동) — 미리보기 보호가 켜져 있어 Vercel 계정으로 로그인해야 열린다.
 - main 병합 안 함.
+
+---
+
+## 보완 1차 (2026-10-19)
+
+커밋: `64e47b0` index 방문자 집계·세미나 규칙·제목 2줄 / `10a56e0` h1 크기 / `5caa56f` 하단 보조 링크 / `8a0fbf9` .gitignore / `8292eed` 도장 명단·스크린샷 / (이 보고서 커밋)
+
+### 1. 방문자 집계 복구
+
+- 출처: 리뉴얼 전 index.html(`591d14c~1`) `:1011-1066` `updateVisitor()`.
+- 옮긴 로직(`js/stepper-index.js`): 문서 **`stats/visitors`** 를 `getDoc` → 없으면 `setDoc({count: 1})`, 있으면 `updateDoc({count: increment(1)})`. **증가 조건: index.html 을 열 때마다 1회. 중복 방지 장치 없음** — 둘 다 기존과 동일.
+- 뺀 것: 기존 코드의 "증가 후 다시 읽어 숫자 애니메이션 표시"(화면 표시용 재조회 1회)와 `#visitorCount` 요소 검사. 기존 코드는 `#visitorCount` 가 없으면 집계도 하지 않았는데(`if(!el) return;`), 새 코드는 표시 요소 없이 항상 집계한다.
+- SDK: 기존과 같은 `firebasejs/10.12.2/firebase-firestore.js`. (1차에서 쓰던 firestore-lite 는 요청 방식이 달라 이번에 기존과 같은 SDK 로 통일)
+- **이 값을 읽는 곳**: 레포 전체 검색 결과 **없음**. `stats/visitors` 를 쓰는 코드는 리뉴얼 전 index.html(표시 겸 증가)과 `새 폴더/index.html`(초안)뿐이고, admin.html 은 `:1305` 주석 안의 옛 규칙 예시(`/visitors/`)에만 등장한다. thestepper-api 에도 없다. 즉 리뉴얼 후에는 이 숫자를 화면에서 보는 곳이 없다(Firestore 콘솔에서만 확인 가능).
+- 규칙: `stats/{doc=**}` 는 `allow read, write: if true` (배포본) — 변경 불필요.
+
+**검증 (실제 실행)** — Playwright 로 Firestore 요청을 가로채, 쓰기 내용이 담긴 Write 채널 요청은 전부 abort(서버 미도달), 읽기·핸드셰이크만 통과시켰다.
+
+| | 리뉴얼 전 index.html | 리뉴얼 후 index.html |
+|---|---|---|
+| `stats/visitors` 읽기 (Listen 채널 addTarget) | 있음 | 있음 |
+| 차단한 쓰기 요청 수 (SDK 재시도 포함) | 2 | 2 |
+| 쓰기 요청 대상 | `POST https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel` | 같음 |
+
+쓰기 요청 본문(디코딩) — 전후 동일:
+
+```
+{"writes":[{"update":{"name":"projects/thestepper-c9bfb/databases/(default)/documents/stats/visitors"},
+ "updateMask":{"fieldPaths":[]},
+ "updateTransforms":[{"fieldPath":"count","increment":{"integerValue":"1"}}],
+ "currentDocument":{"exists":true}}]}
+```
+
+- 실서버 오염 확인: 테스트 전 `stats/visitors` = **2311** (updateTime 2026-10-18T18:07:04Z) → 모든 테스트 후에도 **2311**, updateTime 동일.
+- 참고: 지금 운영 중인 main 의 index.html 은 리뉴얼 전 버전이라 집계가 계속되고 있다(마지막 증가 2026-10-18).
+
+### 2. 첫 화면 제목 2줄 고정
+
+- 글자 크기 `clamp(40px, 6.4vw, 92px)` (`.sa-h1`, 공통 CSS).
+- 선택: **제목만 620px 열 제한에서 벗어나게**(`@media (min-width:1024px){ white-space:nowrap; width:max-content }`), 열 폭은 그대로.
+- 이유: 열 전체를 넓히면 본문 문단도 사진 쪽으로 같이 밀린다. 측정해 보니 92px 에서도 "사라지기 전에," 줄이 571px 로 620px 안에 들어가, 제목 오른쪽 끝의 사진 불투명도(0.39)가 본문 오른쪽 끝(0.48)보다 낮다 — 열을 넓히지 않는 쪽이 겹침이 적다. nowrap 은 글꼴 로딩 차이 등으로 폭이 늘어도 3줄로 넘어가지 않게 하는 보장 장치다.
+
+| 폭 | 줄 수 (getClientRects) | 높이÷줄간격 | 글자 크기 | h1 가로 범위 | 사진 시작 | h1 끝 사진 불투명도 | 본문 끝 불투명도 |
+|---|---|---|---|---|---|---|---|
+| 1024 | **2** | 2 | 65.5px | 24→431 | 369 | 0.17 | 0.76 |
+| 1280 | **2** | 2 | 81.9px | 64→573 | 461 | 0.25 | 0.50 |
+| 1440 | **2** | 2 | 92.0px | 144→715 | 518 | 0.39 | 0.48 |
+| 1920 | **2** | 2 | 92.0px | 384→955 | 691 | 0.39 | 0.46 |
+| 390 | **2** | 2 | 40.0px | 24→366 | 0 (사진은 위쪽 320px) | — | — |
+
+스크린샷: `docs/renewal/hero-1024.png`, `hero-1280.png`, `hero-1440.png`, `hero-1920.png`, 전체 `index-1440/768/390.png` 재저장.
+
+### 3. 하단 정보 보조 링크 줄
+
+외부 채널 줄 아래에 구분선을 두고 보조 링크 줄을 추가했다. 메뉴 7개는 그대로(검증: `["영상","브랜드","커리큘럼","AI 코치","세미나","회원 도장","문의"]`).
+
+| 링크 | 이름 | 출처 |
+|---|---|---|
+| staff.html | 스텝 소개 | `<title>스텝 소개 - THE STEPPER` (기존 index 메뉴도 같은 이름) |
+| center.html | 성인부 & 입시센터 | `<title>THE STEPPER - 성인부 & 입시센터` (기존 index 빠른 링크는 "성인&입시") |
+| gallery.html | 활동 갤러리 | `<title>활동 갤러리 - THE STEPPER` (기존 index 메뉴도 같은 이름) |
+| quiz.html | OX 겨루기 퀴즈 | `<title>OX 겨루기 퀴즈 — THE STEPPER` (기존 index 메뉴 "🎮 OX 겨루기 퀴즈"에서 이모지만 없음) |
+| virtual.html | VR 버추얼 태권도 | `<title>VR 버추얼 태권도 - THE STEPPER` (기존 index 메뉴도 같은 이름) |
+
+- 대한버추얼스포츠협회: virtual.html 에는 koreavsa.com 링크가 **없다** → 외부 채널 줄에 "대한버추얼스포츠협회 → https://koreavsa.com/" 추가(이름은 기존 플로팅 버튼 `title="대한버추얼스포츠협회"`, 주소 그대로).
+- 검증: 1440px 렌더링에서 외부 채널 5개·보조 링크 5개 href 확인, `docs/renewal/footer-1440.png`.
+
+### 4. 앱 비밀번호 파일 점검 (파일은 열지 않음)
+
+- `git log --all -- "입시 센터/앱 비밀번호.png"`: **결과 없음 — 어떤 커밋에도 포함된 적 없음**(원격 푸시도 없음).
+- `git log --all --name-only` 전체에서 파일명에 비밀번호·password·secret·credential·.env·adminsdk 가 들어간 파일: `extensions/firestore-send-email.env` 1개(커밋 `7f48b3d`, origin/main 에 푸시됨). 값은 출력하지 않고 종류만 확인: `SMTP_PASSWORD` 는 **Secret Manager 참조**(`projects/…/secrets/…`), `SMTP_CONNECTION_URI` 에는 `사용자:비밀번호@` 형태가 없음 → **저장소에 비밀번호 원문 없음**. 이력 수정은 하지 않았다.
+- `입시 센터/` 폴더의 과거 커밋 파일 목록에도 비밀번호 관련 파일 없음.
+- `.gitignore` 에 `입시 센터/앱 비밀번호.png` 추가, `git check-ignore` 로 적용 확인.
+
+### 5. 회원 도장 명단
+
+`docs/renewal/dojang-list.md` — Firestore `locations` 28개, region 가나다순 → order 순, 등록일(createdAt, KST). 28개 모두 등록일이 2026-07-06(마이그레이션 일괄 등록으로 보임). region 별: 경기도 1 / 경남 기타 4 / 경남 김해 8 / 경남 창원 8 / 대구 2 / 부산 2 / 울산 2 / 충북 청주 1. 코드 수정 없음.
+
+### 6. 후기 6개 유지
+
+변경 없음(3열 × 2줄).
+
+### 7. 세미나 일정 표시 규칙
+
+- 오늘 날짜: `Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' })` 로 한국 시간 `YYYY-MM-DD`.
+- `date >= 오늘` 이 1건 이상 → 가까운 순 최대 3개. 0건 → Mono 빨강 라벨 "지난 세미나" + 옆에 보조 문장 "예정된 세미나는 곧 공지됩니다" + 가장 최근 지난 일정 3개(최신순).
+
+**검증** — 실데이터는 건드리지 않고 Playwright `page.clock.setFixedTime()` 으로 브라우저 시계만 바꿈.
+
+| 경우 | KST 오늘 | 라벨 | 표시된 목록 |
+|---|---|---|---|
+| 현재 (실제 날짜) | 2026-10-19 | 지난 세미나 + 보조 문장 | 2026.08.08 하계 훈련 캠프 / 07.21 대구 정기 세미나 / 07.04 유소년 합동훈련 |
+| 미래로 (2027-06-01) | 2027-06-01 | 지난 세미나 + 보조 문장 | 위와 같음 |
+| 과거로 (2026-05-01) | 2026-05-01 | 없음(다가오는 일정) | 05.16 주니어 합동훈련 / **05.16 주니어 합동훈련** / 05.19 대구광역시 정기 세미나 |
+| 경계: UTC 08-08 15:30 | 2026-08-09 | 지난 세미나 | 08.08 / 07.21 / 07.04 — UTC 기준이었다면 08-08 이 "다가오는 일정"이 됐을 시각 |
+| 경계: UTC 08-07 15:30 | 2026-08-08 | 없음(다가오는 일정) | 08.08 하계 훈련 캠프 1건 |
+
+- 과거 날짜 경우에 같은 일정이 두 번 보이는 것은 Firestore `schedules` 에 **같은 날짜·제목 문서가 중복 등록**돼 있기 때문이다(9쌍 동일, 2쌍은 제목 띄어쓰기만 다름). 표시 코드에서 중복을 걸러내지는 않았다 — 데이터 정리 또는 화면 중복 제거 중 어느 쪽으로 할지 결정 필요.
+- 1440px 에서 일정 목록 일부가 세미나 사진이 녹아드는 끝부분 위에 놓인다(`docs/renewal/seminar-1440-past.png`).
+
+### 공통 검증
+
+| 항목 | 결과 |
+|---|---|
+| 가로 스크롤 1440 / 768 / 390 | 없음 / 없음 / 없음 (scrollWidth = clientWidth) |
+| 콘솔 에러 | **페이지 자체 0건.** 측정 중 `Failed to load resource: net::ERR_FAILED` 12건이 찍혔는데, 위치를 확인한 결과 전부 테스트가 일부러 abort 한 방문자 집계 Write 채널 요청(`…/Firestore/Write/channel?VER=8…`)이었다. 차단 없이 돌리면 실데이터가 증가하므로 차단 상태로만 측정했다 |
+| 다른 HTML 페이지 15개 전후 비교 (1440×900) | admin, ai, board, center, contact, gallery, locations, motion-legacy, motion, quiz, schedule, staff, thestepper_homepage (1), voice: **0픽셀**. virtual.html: 347픽셀 → 같은 파일을 두 번 찍어도 222픽셀이 달라지는 무한 CSS 애니메이션(gridPulse·glowPulse·float·blink) 때문. 애니메이션을 멈추고 다시 비교하면 **0픽셀**. 파일도 `git diff origin/main` 변경 없음 |

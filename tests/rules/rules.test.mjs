@@ -58,6 +58,12 @@ beforeEach(async () => {
     await setDoc(doc(db, 'quiz_questions', 'draft1'), { status: 'draft' });
     await setDoc(doc(db, 'ai_coaching', 'c-alice'), { userId: 'alice', viewed: false });
     await setDoc(doc(db, 'movement_data', 'm1'), { x: 1 });
+    await setDoc(doc(db, 'coaching_knowledge', 'k1'), { status: 'confirmed', title: '지식' });
+    await setDoc(doc(db, 'ai_interview', 'i1'), { trackType: 'sos', userId: 'alice', status: '대기중' });
+    await setDoc(doc(db, 'voice_drafts', 'v1'), { status: 'draft' });
+    await setDoc(doc(db, 'comparison_questions', 'cq1'), { question: 'q' });
+    await setDoc(doc(db, 'aiUsage', 'alice'), { date: '2026-10-19', count: 1 });
+    await setDoc(doc(db, 'stats', 'visitors'), { count: 100 });
     const st = ctx.storage();
     for (const p of ['assets', 'center', 'gallery', 'guide', 'logos', 'staff']) {
       await uploadBytes(ref(st, `${p}/seed.png`), bytes(10), { contentType: 'image/png' });
@@ -113,7 +119,12 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('ai_coaching 본인 viewed 수정 허용', () => assertSucceeds(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { viewed: true })));
   test('ai_coaching 관리자 전체 목록 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_coaching'))));
   test('coaching_knowledge 비로그인 읽기 거부', () => assertFails(getDocs(collection(anon().firestore(), 'coaching_knowledge'))));
-  test('coaching_knowledge 로그인 읽기 허용', () => assertSucceeds(getDocs(collection(alice().firestore(), 'coaching_knowledge'))));
+  // 1단계(2026-10-19): 회원 읽기 차단, 관리자만
+  test('coaching_knowledge 일반회원 목록 읽기 거부', () => assertFails(getDocs(collection(alice().firestore(), 'coaching_knowledge'))));
+  test('coaching_knowledge 일반회원 단건 읽기 거부', () => assertFails(getDoc(doc(alice().firestore(), 'coaching_knowledge', 'k1'))));
+  test('coaching_knowledge 일반회원 쓰기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'coaching_knowledge', 'k2'), { status: 'draft' })));
+  test('coaching_knowledge 관리자 읽기 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'coaching_knowledge'))));
+  test('coaching_knowledge 관리자 쓰기 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'coaching_knowledge', 'k2'), { status: 'draft' })));
   test('quiz_questions confirmed 비로그인 읽기 허용', () => assertSucceeds(getDoc(doc(anon().firestore(), 'quiz_questions', 'confirmed1'))));
   test('quiz_questions draft 비로그인 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'quiz_questions', 'draft1'))));
   test('movement_data 일반회원 거부', () => assertFails(getDoc(doc(alice().firestore(), 'movement_data', 'm1'))));
@@ -122,6 +133,49 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('voice_drafts 관리자 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'voice_drafts'))));
   test('comparison_results 관리자 쓰기 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'comparison_results'), { a: 1 })));
   test('user_messages 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'user_messages'), { userId: 'alice' })));
+});
+
+// ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────
+// 관리 화면이 브라우저에서 직접 하는 읽기·쓰기 전부. API(Admin SDK) 경유 작업
+// (회원 정지/삭제, 코칭 지식 확정·보류, 인터뷰 진행, 퀴즈 등)은 규칙 영향 없음.
+describe('관리자 화면 작업 회귀', () => {
+  const A = () => admin().firestore();
+  test('세미나 목록 (orderBy date)', () => assertSucceeds(getDocs(query(collection(A(), 'schedules'), orderBy('date', 'desc')))));
+  test('세미나 같은 날짜 조회 (중복 경고)', () => assertSucceeds(getDocs(query(collection(A(), 'schedules'), where('date', '==', '2026-11-20')))));
+  test('세미나 단건 읽기', () => assertSucceeds(getDoc(doc(A(), 'schedules', 's1'))));
+  test('세미나 추가', () => assertSucceeds(addDoc(collection(A(), 'schedules'), { date: '2026-11-20', title: 't', detail: 'd', type: 'upcoming', createdAt: new Date().toISOString() })));
+  test('세미나 수정', () => assertSucceeds(updateDoc(doc(A(), 'schedules', 's1'), { title: '수정', updatedAt: new Date().toISOString() })));
+  test('세미나 삭제', () => assertSucceeds(deleteDoc(doc(A(), 'schedules', 's1'))));
+  test('도장 목록', () => assertSucceeds(getDocs(query(collection(A(), 'locations'), orderBy('order', 'asc')))));
+  test('도장 추가', () => assertSucceeds(addDoc(collection(A(), 'locations'), { name: 'x', order: 29 })));
+  test('도장 삭제', () => assertSucceeds(deleteDoc(doc(A(), 'locations', 'l1'))));
+  test('회원 목록 (users 전체)', () => assertSucceeds(getDocs(collection(A(), 'users'))));
+  test('AI 사용량 목록 (aiUsage 전체)', () => assertSucceeds(getDocs(collection(A(), 'aiUsage'))));
+  test('코칭 관리 목록 (ai_coaching 전체)', () => assertSucceeds(getDocs(collection(A(), 'ai_coaching'))));
+  test('코칭 단건 읽기', () => assertSucceeds(getDoc(doc(A(), 'ai_coaching', 'c-alice'))));
+  test('인터뷰·SOS 목록 (ai_interview 전체)', () => assertSucceeds(getDocs(collection(A(), 'ai_interview'))));
+  test('인터뷰 문서 수정', () => assertSucceeds(updateDoc(doc(A(), 'ai_interview', 'i1'), { status: '답변완료' })));
+  test('인터뷰 문서 생성', () => assertSucceeds(addDoc(collection(A(), 'ai_interview'), { question: 'q', status: '인터뷰중' })));
+  test('음성 초안 목록 (where status)', () => assertSucceeds(getDocs(query(collection(A(), 'voice_drafts'), where('status', '==', 'draft')))));
+  test('음성 초안 제출 처리', () => assertSucceeds(updateDoc(doc(A(), 'voice_drafts', 'v1'), { status: 'submitted' })));
+  test('품질 비교 질문 목록·추가·삭제', async () => {
+    await assertSucceeds(getDocs(collection(A(), 'comparison_questions')));
+    await assertSucceeds(addDoc(collection(A(), 'comparison_questions'), { question: 'q2' }));
+    await assertSucceeds(deleteDoc(doc(A(), 'comparison_questions', 'cq1')));
+  });
+  test('품질 비교 결과 추가·목록', async () => {
+    await assertSucceeds(addDoc(collection(A(), 'comparison_results'), { a: 1 }));
+    await assertSucceeds(getDocs(collection(A(), 'comparison_results')));
+  });
+  test('동작 분석 저장·읽기·수정 (movement_data)', async () => {
+    await assertSucceeds(addDoc(collection(A(), 'movement_data'), { x: 2 }));
+    await assertSucceeds(getDoc(doc(A(), 'movement_data', 'm1')));
+    await assertSucceeds(updateDoc(doc(A(), 'movement_data', 'm1'), { ai_feedback: 'f' }));
+  });
+  test('코칭 지식 직접 읽기·쓰기', async () => {
+    await assertSucceeds(getDocs(collection(A(), 'coaching_knowledge')));
+    await assertSucceeds(updateDoc(doc(A(), 'coaching_knowledge', 'k1'), { status: 'superseded' }));
+  });
 });
 
 // ───────────────────────────── Storage ─────────────────────────────

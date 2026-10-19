@@ -70,9 +70,10 @@ service cloud.firestore {
     match /expertUsage/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // 코칭 지식 원문 — 관리자만. 회원 브라우저에서 직접 읽는 코드는 없고,
+    // AI 코치(coach.js 등)는 Admin SDK 로 읽어 규칙의 영향을 받지 않는다. (2026-10-19 1단계)
     match /coaching_knowledge/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
     match /ai_interview/{doc=**} {
       allow read: if isAdmin();

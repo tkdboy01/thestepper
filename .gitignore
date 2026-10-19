@@ -6,3 +6,4 @@ serviceAccount*.json
 outputs/node_modules/
 outputs/package*.json
 %TEMP%/
+/더 스텝퍼 AI 코치 프로그램/

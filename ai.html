@@ -1675,8 +1675,10 @@ async function showExpertForm() {
   document.getElementById('expertModalErr').textContent = '';
   document.getElementById('videoDataAttach').style.display = 'none';
 
-  var today = getTodayKST();
-  try {
+  if (auth.currentUser.email === ADMIN_EMAIL) {
+    document.getElementById('expertLimitTxt').textContent = '오늘 남은 전문가 질문: 무제한';
+  } else try {
+    var today = getTodayKST();
     var snap = await db.collection('expertUsage').doc(uid).get();
     var used = (snap.exists && snap.data().date === today) ? (snap.data().count || 0) : 0;
     var left = Math.max(0, EXPERT_DAILY_LIMIT - used);
@@ -1715,20 +1717,11 @@ async function submitExpertQuestion() {
   if (!question) { errEl.textContent = '질문을 입력해주세요.'; return; }
   if (question.length > 500) { errEl.textContent = '질문은 500자 이내로 입력해주세요.'; return; }
 
-  var today = getTodayKST();
-  var usageRef = db.collection('expertUsage').doc(uid);
   var btn = document.getElementById('expertSubmitBtn');
   btn.disabled = true; btn.textContent = '제출 중...';
   errEl.textContent = '';
 
   try {
-    var usageSnap = await usageRef.get();
-    var used = (usageSnap.exists && usageSnap.data().date === today) ? (usageSnap.data().count || 0) : 0;
-    if (used >= EXPERT_DAILY_LIMIT) {
-      errEl.textContent = '오늘 전문가 코칭 질문 횟수(' + EXPERT_DAILY_LIMIT + '회)를 모두 사용했습니다. 내일 다시 이용해주세요.';
-      return;
-    }
-
     var videoData = null;
     var chk = document.getElementById('videoDataCheck');
     if (chk && chk.checked) {
@@ -1736,19 +1729,22 @@ async function submitExpertQuestion() {
       if (vStr) { try { videoData = JSON.parse(vStr); } catch(e) {} }
     }
 
-    await db.collection('ai_coaching').add({
-      userId: uid,
-      question: question,
-      videoData: videoData,
-      status: '대기중',
-      masterFeedback: '',
-      finalAiResponse: '',
-      viewed: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    // 횟수 확인·질문 저장·횟수 증가는 서버(manage-member)가 한 트랜잭션으로 처리한다.
+    // 브라우저는 expertUsage·ai_coaching 에 직접 쓰지 않는다(보안 규칙으로도 막힘).
+    var token = await auth.currentUser.getIdToken();
+    var res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'submit-expert-question', question: question, videoData: videoData })
     });
+    var data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (res.status === 429) {
+      errEl.textContent = '오늘 전문가 코칭 질문 횟수(' + EXPERT_DAILY_LIMIT + '회)를 모두 사용했습니다. 내일 다시 이용해주세요.';
+      return;
+    }
+    if (!res.ok) throw new Error(data.error || ('서버 오류 ' + res.status));
 
-    await usageRef.set({ date: today, count: used + 1 });
     sessionStorage.removeItem('expertVideoData');
     closeExpertForm();
     alert('질문이 접수되었습니다!\n전문가 코치 검토 후 답변이 전달됩니다.\nnav의 📬 버튼에서 답변을 확인하세요.');

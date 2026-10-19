@@ -9,7 +9,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, getDocs,
-  query, where, orderBy, serverTimestamp,
+  query, where, orderBy, serverTimestamp, increment,
 } from 'firebase/firestore';
 import {
   ref, uploadBytes, uploadBytesResumable, getMetadata, listAll, deleteObject,
@@ -57,7 +57,14 @@ beforeEach(async () => {
     await setDoc(doc(db, 'quiz_questions', 'confirmed1'), { status: 'confirmed' });
     await setDoc(doc(db, 'quiz_questions', 'draft1'), { status: 'draft' });
     await setDoc(doc(db, 'ai_coaching', 'c-alice'), { userId: 'alice', viewed: false });
+    await setDoc(doc(db, 'expertUsage', 'alice'), { date: '2026-10-19', count: 1 });
     await setDoc(doc(db, 'movement_data', 'm1'), { x: 1 });
+    await setDoc(doc(db, 'coaching_knowledge', 'k1'), { status: 'confirmed', title: '지식' });
+    await setDoc(doc(db, 'ai_interview', 'i1'), { trackType: 'sos', userId: 'alice', status: '대기중' });
+    await setDoc(doc(db, 'voice_drafts', 'v1'), { status: 'draft' });
+    await setDoc(doc(db, 'comparison_questions', 'cq1'), { question: 'q' });
+    await setDoc(doc(db, 'aiUsage', 'alice'), { date: '2026-10-19', count: 1 });
+    await setDoc(doc(db, 'stats', 'visitors'), { count: 100 });
     const st = ctx.storage();
     for (const p of ['assets', 'center', 'gallery', 'guide', 'logos', 'staff']) {
       await uploadBytes(ref(st, `${p}/seed.png`), bytes(10), { contentType: 'image/png' });
@@ -100,20 +107,22 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('schedules 관리자 쓰기 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'schedules', 's2'), { t: 1 })));
   test('locations 비로그인 읽기 허용', () => assertSucceeds(getDocs(collection(anon().firestore(), 'locations'))));
   test('locations 일반회원 쓰기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'locations', 'l2'), { t: 1 })));
-  test('stats 비로그인 쓰기 허용 (방문자 카운터)', () => assertSucceeds(setDoc(doc(anon().firestore(), 'stats', 'visitors'), { count: 1 })));
   test('users 본인 읽기 허용', () => assertSucceeds(getDoc(doc(alice().firestore(), 'users', 'alice'))));
   test('users 본인 쓰기 허용', () => assertSucceeds(setDoc(doc(alice().firestore(), 'users', 'alice'), { nickname: 'a' })));
   test('users 타인 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'users', 'alice'))));
   test('users 관리자 읽기 허용', () => assertSucceeds(getDoc(doc(admin().firestore(), 'users', 'alice'))));
-  test('ai_interview 일반회원 생성 허용', () => assertSucceeds(addDoc(collection(alice().firestore(), 'ai_interview'), { q: 1 })));
   test('ai_interview 일반회원 읽기 거부', () => assertFails(getDocs(collection(alice().firestore(), 'ai_interview'))));
   test('ai_interview 관리자 읽기 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_interview'))));
-  test('ai_coaching 본인 생성 허용', () => assertSucceeds(addDoc(collection(alice().firestore(), 'ai_coaching'), { userId: 'alice' })));
   test('ai_coaching 본인 읽기 허용', () => assertSucceeds(getDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'))));
   test('ai_coaching 본인 viewed 수정 허용', () => assertSucceeds(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { viewed: true })));
   test('ai_coaching 관리자 전체 목록 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_coaching'))));
   test('coaching_knowledge 비로그인 읽기 거부', () => assertFails(getDocs(collection(anon().firestore(), 'coaching_knowledge'))));
-  test('coaching_knowledge 로그인 읽기 허용', () => assertSucceeds(getDocs(collection(alice().firestore(), 'coaching_knowledge'))));
+  // 1단계(2026-10-19): 회원 읽기 차단, 관리자만
+  test('coaching_knowledge 일반회원 목록 읽기 거부', () => assertFails(getDocs(collection(alice().firestore(), 'coaching_knowledge'))));
+  test('coaching_knowledge 일반회원 단건 읽기 거부', () => assertFails(getDoc(doc(alice().firestore(), 'coaching_knowledge', 'k1'))));
+  test('coaching_knowledge 일반회원 쓰기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'coaching_knowledge', 'k2'), { status: 'draft' })));
+  test('coaching_knowledge 관리자 읽기 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'coaching_knowledge'))));
+  test('coaching_knowledge 관리자 쓰기 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'coaching_knowledge', 'k2'), { status: 'draft' })));
   test('quiz_questions confirmed 비로그인 읽기 허용', () => assertSucceeds(getDoc(doc(anon().firestore(), 'quiz_questions', 'confirmed1'))));
   test('quiz_questions draft 비로그인 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'quiz_questions', 'draft1'))));
   test('movement_data 일반회원 거부', () => assertFails(getDoc(doc(alice().firestore(), 'movement_data', 'm1'))));
@@ -122,6 +131,250 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('voice_drafts 관리자 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'voice_drafts'))));
   test('comparison_results 관리자 쓰기 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'comparison_results'), { a: 1 })));
   test('user_messages 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'user_messages'), { userId: 'alice' })));
+});
+
+
+// ───────────── 2단계: 방문자 집계 stats/visitors ─────────────
+// index.html(리뉴얼 전)·js/stepper-index.js(리뉴얼) 의 updateVisitor() 와 같은 순서·값
+async function visitorCounterCode(db) {
+  const r = doc(db, 'stats', 'visitors');
+  const snap = await getDoc(r);
+  if (!snap.exists()) await setDoc(r, { count: 1 });
+  else await updateDoc(r, { count: increment(1) });
+}
+async function visitorCount() {
+  let v; await env.withSecurityRulesDisabled(async c => { v = (await getDoc(doc(c.firestore(), 'stats', 'visitors'))).data().count; });
+  return v;
+}
+describe('2단계 stats/visitors', () => {
+  const V = c => doc(c.firestore(), 'stats', 'visitors');
+  const removeVisitors = () => env.withSecurityRulesDisabled(c => deleteDoc(V(c)));
+  test('비로그인 읽기 허용', () => assertSucceeds(getDoc(V(anon()))));
+  test('집계 코드(문서 있음 → increment 1) 비로그인 통과, 정확히 +1', async () => {
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 101) throw new Error('count != 101');
+  });
+  test('집계 코드 일반회원 통과', () => assertSucceeds(visitorCounterCode(alice().firestore())));
+  test('집계 코드(문서 없음 → count 1 생성) 통과', async () => {
+    await removeVisitors();
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 1) throw new Error('count != 1');
+  });
+  test('집계 코드 2번 연속 → 정확히 +2', async () => {
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 102) throw new Error('count != 102');
+  });
+  test('집계 코드 동시 2건 → 정확히 +2', async () => {
+    await Promise.all([visitorCounterCode(anon().firestore()), visitorCounterCode(alice().firestore())]);
+    if (await visitorCount() !== 102) throw new Error('count != 102');
+  });
+  test('count 를 명시적으로 기존+1 로 수정 허용', () => assertSucceeds(updateDoc(V(anon()), { count: 101 })));
+  test('increment(2) 거부', () => assertFails(updateDoc(V(anon()), { count: increment(2) })));
+  test('임의 값(+2) 거부', () => assertFails(updateDoc(V(anon()), { count: 102 })));
+  test('임의 값(감소) 거부', () => assertFails(updateDoc(V(anon()), { count: 0 })));
+  test('setDoc 덮어쓰기(임의 값) 거부', () => assertFails(setDoc(V(anon()), { count: 999999 })));
+  test('필드 추가 거부', () => assertFails(updateDoc(V(anon()), { count: increment(1), hacked: true })));
+  test('삭제 거부 (비로그인)', () => assertFails(deleteDoc(V(anon()))));
+  test('삭제 거부 (일반회원)', () => assertFails(deleteDoc(V(alice()))));
+  test('문서 없을 때 count 5 로 생성 거부', async () => { await removeVisitors(); await assertFails(setDoc(V(anon()), { count: 5 })); });
+  test('문서 없을 때 필드 추가 생성 거부', async () => { await removeVisitors(); await assertFails(setDoc(V(anon()), { count: 1, x: 1 })); });
+  test('stats 다른 문서 비로그인 읽기·쓰기 거부', async () => {
+    await assertFails(getDoc(doc(anon().firestore(), 'stats', 'other')));
+    await assertFails(setDoc(doc(anon().firestore(), 'stats', 'other'), { a: 1 }));
+  });
+  test('stats 다른 문서 일반회원 읽기·쓰기 거부', async () => {
+    await assertFails(getDoc(doc(alice().firestore(), 'stats', 'other')));
+    await assertFails(setDoc(doc(alice().firestore(), 'stats', 'other'), { a: 1 }));
+  });
+  test('stats 다른 문서 관리자 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'stats', 'other'), { a: 1 })));
+  test('visitors 컬렉션 비로그인·회원 거부', async () => {
+    await assertFails(getDocs(collection(anon().firestore(), 'visitors')));
+    await assertFails(addDoc(collection(alice().firestore(), 'visitors'), { a: 1 }));
+  });
+  test('visitors 컬렉션 관리자 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'visitors'), { a: 1 })));
+});
+
+
+// ───────────── 3단계: ai_interview 생성 = motion-legacy SOS 만 ─────────────
+// motion-legacy.html submitSOS() 의 add() 와 같은 필드·값 (compat 의 FieldValue.serverTimestamp() 와 같은 의미)
+function sosPayload(uid, overrides = {}) {
+  return Object.assign({
+    trackType: 'sos', userId: uid, userEmail: uid + '@example.com', userName: '홍길동',
+    question: '[SOS] 1장 앞차기 동작 분석 추가 피드백 요청', chapter: '1장 앞차기',
+    videoUrl: '', videoPath: '',
+    measurements: { rightKnee: { value: 150, time: 1.2 }, leftKnee: { value: 140, time: 1.4 },
+      hip: { value: 30, time: 1.3 }, totalFrames: 90, videoDuration: 3.0 },
+    aiFeedback: '무릎을 더 펴세요', status: '대기중', adminAnswer: '',
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  }, overrides);
+}
+describe('3단계 ai_interview 생성', () => {
+  const C = c => collection(c.firestore(), 'ai_interview');
+  test('SOS 요청(영상 없음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice'))));
+  test('SOS 요청(영상 있음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice', {
+    videoUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/sos_videos%2Falice%2Fabc.mp4', videoPath: 'sos_videos/alice/abc.mp4' }))));
+  test('SOS 요청 미리 만든 문서 ID 로 set 도 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'preid'), sosPayload('alice'))));
+  test('비로그인 거부', () => assertFails(addDoc(C(anon()), sosPayload('alice'))));
+  test('필드 추가 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { extra: 1 }))));
+  test('필드 누락 거부', async () => { const d = sosPayload('alice'); delete d.aiFeedback; await assertFails(addDoc(C(alice()), d)); });
+  test('다른 uid 거부', () => assertFails(addDoc(C(alice()), sosPayload('bob'))));
+  test('다른 status(답변완료) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { status: '답변완료' }))));
+  test('다른 status(인터뷰중) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { status: '인터뷰중' }))));
+  test('다른 trackType 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { trackType: 'scenario' }))));
+  test('adminAnswer 미리 채우기 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { adminAnswer: '답변' }))));
+  test('createdAt 임의 시각 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { createdAt: new Date(0) }))));
+  test('measurements 가 map 아니면 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { measurements: 'x' }))));
+  test('임의 문서(옛 규칙에선 허용) 거부', () => assertFails(addDoc(C(alice()), { q: 1 })));
+  test('하위 컬렉션 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'ai_interview', 'i1', 'sub'), sosPayload('alice'))));
+  test('일반회원 본인 문서 수정 거부', () => assertFails(updateDoc(doc(alice().firestore(), 'ai_interview', 'i1'), { status: '답변완료' })));
+  test('일반회원 본인 문서 삭제 거부', () => assertFails(deleteDoc(doc(alice().firestore(), 'ai_interview', 'i1'))));
+  test('일반회원 본인 문서 읽기 거부(기존과 같음)', () => assertFails(getDoc(doc(alice().firestore(), 'ai_interview', 'i1'))));
+  test('관리자 임의 필드 생성 허용', () => assertSucceeds(addDoc(C(admin()), { question: 'q', status: '인터뷰중', turns: [] })));
+  test('관리자 SOS 형식 생성 허용', () => assertSucceeds(addDoc(C(admin()), sosPayload('alice'))));
+  test('관리자 수정·삭제 허용', async () => {
+    await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_interview', 'i1'), { adminAnswer: '답변', status: '답변완료' }));
+    await assertSucceeds(deleteDoc(doc(admin().firestore(), 'ai_interview', 'i1')));
+  });
+});
+
+
+// ───────────── 4단계: 전문가 질문은 서버만 쓴다 ─────────────
+describe('4단계 ai_coaching·expertUsage', () => {
+  const oldAdd = c => addDoc(collection(c.firestore(), 'ai_coaching'), { userId: 'alice', question: 'q', videoData: null, status: '대기중',
+    masterFeedback: '', finalAiResponse: '', viewed: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  test('회원 ai_coaching 직접 생성(예전 ai.html 코드) 거부', () => assertFails(oldAdd(alice())));
+  test('비로그인 ai_coaching 생성 거부', () => assertFails(addDoc(collection(anon().firestore(), 'ai_coaching'), { userId: 'x' })));
+  test('회원 ai_coaching 본인 읽기 유지', () => assertSucceeds(getDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'))));
+  test('회원 ai_coaching 본인 목록(받은함 where userId) 유지', () => assertSucceeds(getDocs(query(collection(alice().firestore(), 'ai_coaching'), where('userId', '==', 'alice')))));
+  test('회원 ai_coaching 읽음 표시(viewed) 수정 유지', () => assertSucceeds(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { viewed: true })));
+  test('회원 ai_coaching 다른 필드 수정 거부', () => assertFails(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { status: '답변완료' })));
+  test('타인 ai_coaching 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'ai_coaching', 'c-alice'))));
+  test('관리자 ai_coaching 읽기·수정 유지', async () => {
+    await assertSucceeds(getDocs(collection(admin().firestore(), 'ai_coaching')));
+    await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_coaching', 'c-alice'), { status: '검토대기' }));
+  });
+  test('회원 expertUsage 본인 읽기 유지', () => assertSucceeds(getDoc(doc(alice().firestore(), 'expertUsage', 'alice'))));
+  test('회원 expertUsage 본인 쓰기(예전 ai.html set) 거부', () => assertFails(setDoc(doc(alice().firestore(), 'expertUsage', 'alice'), { date: '2026-10-19', count: 0 })));
+  test('회원 expertUsage 본인 삭제 거부', () => assertFails(deleteDoc(doc(alice().firestore(), 'expertUsage', 'alice'))));
+  test('회원 expertUsage 문서 없을 때 생성 거부', () => assertFails(setDoc(doc(bob().firestore(), 'expertUsage', 'bob'), { date: '2026-10-19', count: 0 })));
+  test('타인 expertUsage 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'expertUsage', 'alice'))));
+  test('비로그인 expertUsage 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'expertUsage', 'alice'))));
+});
+
+
+// ───────────── 6단계: users 일부 보호 ─────────────
+// ai.html doRegister() 의 프로필 저장(재시도 포함)과 같은 코드
+async function signupCode(db, uid, email) {
+  const profileData = { name: '홍길동', nickname: '길동', region: '서울', role: '수련생', purpose: '취미', level: '초보',
+    athleteTypes: [], gym: '비회원 도장', email, emailVerified: false, createdAt: serverTimestamp() };
+  try { await setDoc(doc(db, 'users', uid), profileData); }
+  catch (e) { await new Promise(r => setTimeout(r, 200)); await setDoc(doc(db, 'users', uid), profileData); }
+}
+// ai.html onLoggedIn() 의 로그인 시 동기화
+const loginMerge = (db, uid) => setDoc(doc(db, 'users', uid), { emailVerified: true }, { merge: true });
+const U = (uid, email, verified) => env.authenticatedContext(uid, { email, email_verified: verified });
+const DAY_AGO = new Date(Date.now() - 86400e3);
+async function seedOld() {
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'old'), {
+    name: '기존', nickname: '기존회원', email: 'old@example.com', emailVerified: false, createdAt: DAY_AGO,
+    completedByAdmin: true, updatedAt: DAY_AGO, profileReminderCount: 1 }));
+}
+async function usersDoc(uid) { let v; await env.withSecurityRulesDisabled(async c => { const s = await getDoc(doc(c.firestore(), 'users', uid)); v = s.exists() ? s.data() : null; }); return v; }
+describe('6단계 users', () => {
+  test('가입 코드(11개 필드, 미인증 토큰) 통과', async () => {
+    await assertSucceeds(signupCode(U('new1', 'new1@example.com', false).firestore(), 'new1', 'new1@example.com'));
+    const d = await usersDoc('new1'); if (Object.keys(d).length !== 11 || d.emailVerified !== false) throw new Error(JSON.stringify(d));
+  });
+  test('가입 코드 — 입력 이메일 대소문자 섞임(Auth 는 소문자) 통과', () =>
+    assertSucceeds(signupCode(U('new2', 'mixed.case@example.com', false).firestore(), 'new2', 'Mixed.Case@Example.com')));
+  test('가입 재시도 — 첫 저장이 반영된 뒤 같은 코드로 다시 저장(5분 안) 통과', async () => {
+    const db = U('new3', 'new3@example.com', false).firestore();
+    await assertSucceeds(signupCode(db, 'new3', 'new3@example.com'));
+    await assertSucceeds(signupCode(db, 'new3', 'new3@example.com'));
+  });
+  test('로그인 merge — 인증된 토큰 · 문서 있음 통과', async () => { await seedOld(); await assertSucceeds(loginMerge(U('old', 'old@example.com', true).firestore(), 'old')); });
+  test('로그인 merge — 인증된 토큰 · 문서 없음(생성) 통과', () => assertSucceeds(loginMerge(U('nodoc', 'nodoc@example.com', true).firestore(), 'nodoc')));
+  test('로그인 merge — 미인증 토큰 · 문서 있음 거부', async () => { await seedOld(); await assertFails(loginMerge(U('old', 'old@example.com', false).firestore(), 'old')); });
+  test('로그인 merge — 미인증 토큰 · 문서 없음 거부', () => assertFails(loginMerge(U('nodoc2', 'nodoc2@example.com', false).firestore(), 'nodoc2')));
+  test('로그인 merge — 이미 true 인 문서는 바뀌는 값이 없어 미인증 토큰도 통과', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'vt'), { nickname: 'v', emailVerified: true }));
+    await assertSucceeds(loginMerge(U('vt', 'vt@example.com', false).firestore(), 'vt'));
+  });
+  test('emailVerified false 쓰기 허용', async () => { await seedOld(); await assertSucceeds(updateDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { emailVerified: false })); });
+  test('emailVerified 에 true/false 외 값 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { emailVerified: 'yes' })); });
+  test('서버 전용 필드 있는 기존 문서 — 회원이 닉네임만 수정 통과', async () => { await seedOld(); await assertSucceeds(updateDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { nickname: '새닉' })); });
+  test('서버 전용 필드 있는 기존 문서 — 회원 merge 저장(닉네임) 통과', async () => { await seedOld(); await assertSucceeds(setDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { nickname: '새닉' }, { merge: true })); });
+  for (const f of ['completedByAdmin', 'createdByAdmin', 'updatedAt', 'profileReminderSentAt', 'profileReminderCount']) {
+    test(`서버 전용 필드 ${f} 생성 시 포함 거부`, () => assertFails(setDoc(doc(U('sf', 'sf@example.com', true).firestore(), 'users', 'sf'), { nickname: 'x', [f]: f === 'completedByAdmin' || f === 'createdByAdmin' ? true : 1 })));
+    test(`서버 전용 필드 ${f} 수정 거부`, async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { [f]: f === 'completedByAdmin' || f === 'createdByAdmin' ? false : 2 })); });
+  }
+  test('서버 전용 필드 삭제(덮어쓰기로 빠짐) 거부', async () => { await seedOld(); await assertFails(setDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { nickname: 'x' })); });
+  test('다른 email 로 생성 거부', () => assertFails(signupCode(U('new4', 'new4@example.com', false).firestore(), 'new4', 'other@example.com')));
+  test('다른 email 로 수정 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { email: 'evil@example.com' })); });
+  test('createdAt 변경(가입 하루 뒤) 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { createdAt: serverTimestamp() })); });
+  test('createdAt 임의 과거 값으로 변경 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { createdAt: new Date(0) })); });
+  test('createdAt 임의 값으로 생성 거부', () => assertFails(setDoc(doc(U('new5', 'new5@example.com', false).firestore(), 'users', 'new5'), { nickname: 'x', createdAt: new Date(0) })));
+  test('createdAt 없는 문서에 회원이 createdAt 추가 거부', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'noc'), { emailVerified: true }));
+    await assertFails(updateDoc(doc(U('noc', 'noc@example.com', true).firestore(), 'users', 'noc'), { createdAt: serverTimestamp() }));
+  });
+  test('타인 문서 생성 거부', () => assertFails(signupCode(U('bob', 'bob@example.com', true).firestore(), 'victim', 'bob@example.com')));
+  test('타인 문서 수정 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('bob', 'bob@example.com', true).firestore(), 'users', 'old'), { nickname: 'x' })); });
+  test('비로그인 쓰기 거부', () => assertFails(setDoc(doc(anon().firestore(), 'users', 'x'), { nickname: 'x' })));
+  test('관리자 회원 목록·단건 읽기 유지', async () => {
+    await seedOld();
+    await assertSucceeds(getDocs(collection(admin().firestore(), 'users')));
+    await assertSucceeds(getDoc(doc(admin().firestore(), 'users', 'old')));
+  });
+  test('본인 읽기 유지 · 타인 읽기 거부', async () => {
+    await seedOld();
+    await assertSucceeds(getDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old')));
+    await assertFails(getDoc(doc(U('bob', 'bob@example.com', true).firestore(), 'users', 'old')));
+  });
+});
+
+// ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────
+// 관리 화면이 브라우저에서 직접 하는 읽기·쓰기 전부. API(Admin SDK) 경유 작업
+// (회원 정지/삭제, 코칭 지식 확정·보류, 인터뷰 진행, 퀴즈 등)은 규칙 영향 없음.
+describe('관리자 화면 작업 회귀', () => {
+  const A = () => admin().firestore();
+  test('세미나 목록 (orderBy date)', () => assertSucceeds(getDocs(query(collection(A(), 'schedules'), orderBy('date', 'desc')))));
+  test('세미나 같은 날짜 조회 (중복 경고)', () => assertSucceeds(getDocs(query(collection(A(), 'schedules'), where('date', '==', '2026-11-20')))));
+  test('세미나 단건 읽기', () => assertSucceeds(getDoc(doc(A(), 'schedules', 's1'))));
+  test('세미나 추가', () => assertSucceeds(addDoc(collection(A(), 'schedules'), { date: '2026-11-20', title: 't', detail: 'd', type: 'upcoming', createdAt: new Date().toISOString() })));
+  test('세미나 수정', () => assertSucceeds(updateDoc(doc(A(), 'schedules', 's1'), { title: '수정', updatedAt: new Date().toISOString() })));
+  test('세미나 삭제', () => assertSucceeds(deleteDoc(doc(A(), 'schedules', 's1'))));
+  test('도장 목록', () => assertSucceeds(getDocs(query(collection(A(), 'locations'), orderBy('order', 'asc')))));
+  test('도장 추가', () => assertSucceeds(addDoc(collection(A(), 'locations'), { name: 'x', order: 29 })));
+  test('도장 삭제', () => assertSucceeds(deleteDoc(doc(A(), 'locations', 'l1'))));
+  test('회원 목록 (users 전체)', () => assertSucceeds(getDocs(collection(A(), 'users'))));
+  test('AI 사용량 목록 (aiUsage 전체)', () => assertSucceeds(getDocs(collection(A(), 'aiUsage'))));
+  test('코칭 관리 목록 (ai_coaching 전체)', () => assertSucceeds(getDocs(collection(A(), 'ai_coaching'))));
+  test('코칭 단건 읽기', () => assertSucceeds(getDoc(doc(A(), 'ai_coaching', 'c-alice'))));
+  test('인터뷰·SOS 목록 (ai_interview 전체)', () => assertSucceeds(getDocs(collection(A(), 'ai_interview'))));
+  test('인터뷰 문서 수정', () => assertSucceeds(updateDoc(doc(A(), 'ai_interview', 'i1'), { status: '답변완료' })));
+  test('인터뷰 문서 생성', () => assertSucceeds(addDoc(collection(A(), 'ai_interview'), { question: 'q', status: '인터뷰중' })));
+  test('음성 초안 목록 (where status)', () => assertSucceeds(getDocs(query(collection(A(), 'voice_drafts'), where('status', '==', 'draft')))));
+  test('음성 초안 제출 처리', () => assertSucceeds(updateDoc(doc(A(), 'voice_drafts', 'v1'), { status: 'submitted' })));
+  test('품질 비교 질문 목록·추가·삭제', async () => {
+    await assertSucceeds(getDocs(collection(A(), 'comparison_questions')));
+    await assertSucceeds(addDoc(collection(A(), 'comparison_questions'), { question: 'q2' }));
+    await assertSucceeds(deleteDoc(doc(A(), 'comparison_questions', 'cq1')));
+  });
+  test('품질 비교 결과 추가·목록', async () => {
+    await assertSucceeds(addDoc(collection(A(), 'comparison_results'), { a: 1 }));
+    await assertSucceeds(getDocs(collection(A(), 'comparison_results')));
+  });
+  test('동작 분석 저장·읽기·수정 (movement_data)', async () => {
+    await assertSucceeds(addDoc(collection(A(), 'movement_data'), { x: 2 }));
+    await assertSucceeds(getDoc(doc(A(), 'movement_data', 'm1')));
+    await assertSucceeds(updateDoc(doc(A(), 'movement_data', 'm1'), { ai_feedback: 'f' }));
+  });
+  test('코칭 지식 직접 읽기·쓰기', async () => {
+    await assertSucceeds(getDocs(collection(A(), 'coaching_knowledge')));
+    await assertSucceeds(updateDoc(doc(A(), 'coaching_knowledge', 'k1'), { status: 'superseded' }));
+  });
 });
 
 // ───────────────────────────── Storage ─────────────────────────────

@@ -262,6 +262,78 @@ describe('4단계 ai_coaching·expertUsage', () => {
   test('비로그인 expertUsage 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'expertUsage', 'alice'))));
 });
 
+
+// ───────────── 6단계: users 일부 보호 ─────────────
+// ai.html doRegister() 의 프로필 저장(재시도 포함)과 같은 코드
+async function signupCode(db, uid, email) {
+  const profileData = { name: '홍길동', nickname: '길동', region: '서울', role: '수련생', purpose: '취미', level: '초보',
+    athleteTypes: [], gym: '비회원 도장', email, emailVerified: false, createdAt: serverTimestamp() };
+  try { await setDoc(doc(db, 'users', uid), profileData); }
+  catch (e) { await new Promise(r => setTimeout(r, 200)); await setDoc(doc(db, 'users', uid), profileData); }
+}
+// ai.html onLoggedIn() 의 로그인 시 동기화
+const loginMerge = (db, uid) => setDoc(doc(db, 'users', uid), { emailVerified: true }, { merge: true });
+const U = (uid, email, verified) => env.authenticatedContext(uid, { email, email_verified: verified });
+const DAY_AGO = new Date(Date.now() - 86400e3);
+async function seedOld() {
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'old'), {
+    name: '기존', nickname: '기존회원', email: 'old@example.com', emailVerified: false, createdAt: DAY_AGO,
+    completedByAdmin: true, updatedAt: DAY_AGO, profileReminderCount: 1 }));
+}
+async function usersDoc(uid) { let v; await env.withSecurityRulesDisabled(async c => { const s = await getDoc(doc(c.firestore(), 'users', uid)); v = s.exists() ? s.data() : null; }); return v; }
+describe('6단계 users', () => {
+  test('가입 코드(11개 필드, 미인증 토큰) 통과', async () => {
+    await assertSucceeds(signupCode(U('new1', 'new1@example.com', false).firestore(), 'new1', 'new1@example.com'));
+    const d = await usersDoc('new1'); if (Object.keys(d).length !== 11 || d.emailVerified !== false) throw new Error(JSON.stringify(d));
+  });
+  test('가입 코드 — 입력 이메일 대소문자 섞임(Auth 는 소문자) 통과', () =>
+    assertSucceeds(signupCode(U('new2', 'mixed.case@example.com', false).firestore(), 'new2', 'Mixed.Case@Example.com')));
+  test('가입 재시도 — 첫 저장이 반영된 뒤 같은 코드로 다시 저장(5분 안) 통과', async () => {
+    const db = U('new3', 'new3@example.com', false).firestore();
+    await assertSucceeds(signupCode(db, 'new3', 'new3@example.com'));
+    await assertSucceeds(signupCode(db, 'new3', 'new3@example.com'));
+  });
+  test('로그인 merge — 인증된 토큰 · 문서 있음 통과', async () => { await seedOld(); await assertSucceeds(loginMerge(U('old', 'old@example.com', true).firestore(), 'old')); });
+  test('로그인 merge — 인증된 토큰 · 문서 없음(생성) 통과', () => assertSucceeds(loginMerge(U('nodoc', 'nodoc@example.com', true).firestore(), 'nodoc')));
+  test('로그인 merge — 미인증 토큰 · 문서 있음 거부', async () => { await seedOld(); await assertFails(loginMerge(U('old', 'old@example.com', false).firestore(), 'old')); });
+  test('로그인 merge — 미인증 토큰 · 문서 없음 거부', () => assertFails(loginMerge(U('nodoc2', 'nodoc2@example.com', false).firestore(), 'nodoc2')));
+  test('로그인 merge — 이미 true 인 문서는 바뀌는 값이 없어 미인증 토큰도 통과', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'vt'), { nickname: 'v', emailVerified: true }));
+    await assertSucceeds(loginMerge(U('vt', 'vt@example.com', false).firestore(), 'vt'));
+  });
+  test('emailVerified false 쓰기 허용', async () => { await seedOld(); await assertSucceeds(updateDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { emailVerified: false })); });
+  test('emailVerified 에 true/false 외 값 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { emailVerified: 'yes' })); });
+  test('서버 전용 필드 있는 기존 문서 — 회원이 닉네임만 수정 통과', async () => { await seedOld(); await assertSucceeds(updateDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { nickname: '새닉' })); });
+  test('서버 전용 필드 있는 기존 문서 — 회원 merge 저장(닉네임) 통과', async () => { await seedOld(); await assertSucceeds(setDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old'), { nickname: '새닉' }, { merge: true })); });
+  for (const f of ['completedByAdmin', 'createdByAdmin', 'updatedAt', 'profileReminderSentAt', 'profileReminderCount']) {
+    test(`서버 전용 필드 ${f} 생성 시 포함 거부`, () => assertFails(setDoc(doc(U('sf', 'sf@example.com', true).firestore(), 'users', 'sf'), { nickname: 'x', [f]: f === 'completedByAdmin' || f === 'createdByAdmin' ? true : 1 })));
+    test(`서버 전용 필드 ${f} 수정 거부`, async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { [f]: f === 'completedByAdmin' || f === 'createdByAdmin' ? false : 2 })); });
+  }
+  test('서버 전용 필드 삭제(덮어쓰기로 빠짐) 거부', async () => { await seedOld(); await assertFails(setDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { nickname: 'x' })); });
+  test('다른 email 로 생성 거부', () => assertFails(signupCode(U('new4', 'new4@example.com', false).firestore(), 'new4', 'other@example.com')));
+  test('다른 email 로 수정 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { email: 'evil@example.com' })); });
+  test('createdAt 변경(가입 하루 뒤) 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { createdAt: serverTimestamp() })); });
+  test('createdAt 임의 과거 값으로 변경 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('old', 'old@example.com', true).firestore(), 'users', 'old'), { createdAt: new Date(0) })); });
+  test('createdAt 임의 값으로 생성 거부', () => assertFails(setDoc(doc(U('new5', 'new5@example.com', false).firestore(), 'users', 'new5'), { nickname: 'x', createdAt: new Date(0) })));
+  test('createdAt 없는 문서에 회원이 createdAt 추가 거부', async () => {
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'users', 'noc'), { emailVerified: true }));
+    await assertFails(updateDoc(doc(U('noc', 'noc@example.com', true).firestore(), 'users', 'noc'), { createdAt: serverTimestamp() }));
+  });
+  test('타인 문서 생성 거부', () => assertFails(signupCode(U('bob', 'bob@example.com', true).firestore(), 'victim', 'bob@example.com')));
+  test('타인 문서 수정 거부', async () => { await seedOld(); await assertFails(updateDoc(doc(U('bob', 'bob@example.com', true).firestore(), 'users', 'old'), { nickname: 'x' })); });
+  test('비로그인 쓰기 거부', () => assertFails(setDoc(doc(anon().firestore(), 'users', 'x'), { nickname: 'x' })));
+  test('관리자 회원 목록·단건 읽기 유지', async () => {
+    await seedOld();
+    await assertSucceeds(getDocs(collection(admin().firestore(), 'users')));
+    await assertSucceeds(getDoc(doc(admin().firestore(), 'users', 'old')));
+  });
+  test('본인 읽기 유지 · 타인 읽기 거부', async () => {
+    await seedOld();
+    await assertSucceeds(getDoc(doc(U('old', 'old@example.com', false).firestore(), 'users', 'old')));
+    await assertFails(getDoc(doc(U('bob', 'bob@example.com', true).firestore(), 'users', 'old')));
+  });
+});
+
 // ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────
 // 관리 화면이 브라우저에서 직접 하는 읽기·쓰기 전부. API(Admin SDK) 경유 작업
 // (회원 정지/삭제, 코칭 지식 확정·보류, 인터뷰 진행, 퀴즈 등)은 규칙 영향 없음.

@@ -6,6 +6,7 @@ serviceAccount*.json
 outputs/node_modules/
 outputs/package*.json
 %TEMP%/
+/더 스텝퍼 AI 코치 프로그램/
 
 # 비밀번호 화면 캡처 — 절대 커밋 금지
 입시 센터/앱 비밀번호.png

@@ -110,7 +110,6 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('users 본인 쓰기 허용', () => assertSucceeds(setDoc(doc(alice().firestore(), 'users', 'alice'), { nickname: 'a' })));
   test('users 타인 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'users', 'alice'))));
   test('users 관리자 읽기 허용', () => assertSucceeds(getDoc(doc(admin().firestore(), 'users', 'alice'))));
-  test('ai_interview 일반회원 생성 허용', () => assertSucceeds(addDoc(collection(alice().firestore(), 'ai_interview'), { q: 1 })));
   test('ai_interview 일반회원 읽기 거부', () => assertFails(getDocs(collection(alice().firestore(), 'ai_interview'))));
   test('ai_interview 관리자 읽기 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_interview'))));
   test('ai_coaching 본인 생성 허용', () => assertSucceeds(addDoc(collection(alice().firestore(), 'ai_coaching'), { userId: 'alice' })));
@@ -194,6 +193,49 @@ describe('2단계 stats/visitors', () => {
     await assertFails(addDoc(collection(alice().firestore(), 'visitors'), { a: 1 }));
   });
   test('visitors 컬렉션 관리자 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'visitors'), { a: 1 })));
+});
+
+
+// ───────────── 3단계: ai_interview 생성 = motion-legacy SOS 만 ─────────────
+// motion-legacy.html submitSOS() 의 add() 와 같은 필드·값 (compat 의 FieldValue.serverTimestamp() 와 같은 의미)
+function sosPayload(uid, overrides = {}) {
+  return Object.assign({
+    trackType: 'sos', userId: uid, userEmail: uid + '@example.com', userName: '홍길동',
+    question: '[SOS] 1장 앞차기 동작 분석 추가 피드백 요청', chapter: '1장 앞차기',
+    videoUrl: '', videoPath: '',
+    measurements: { rightKnee: { value: 150, time: 1.2 }, leftKnee: { value: 140, time: 1.4 },
+      hip: { value: 30, time: 1.3 }, totalFrames: 90, videoDuration: 3.0 },
+    aiFeedback: '무릎을 더 펴세요', status: '대기중', adminAnswer: '',
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  }, overrides);
+}
+describe('3단계 ai_interview 생성', () => {
+  const C = c => collection(c.firestore(), 'ai_interview');
+  test('SOS 요청(영상 없음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice'))));
+  test('SOS 요청(영상 있음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice', {
+    videoUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/sos_videos%2Falice%2Fabc.mp4', videoPath: 'sos_videos/alice/abc.mp4' }))));
+  test('SOS 요청 미리 만든 문서 ID 로 set 도 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'preid'), sosPayload('alice'))));
+  test('비로그인 거부', () => assertFails(addDoc(C(anon()), sosPayload('alice'))));
+  test('필드 추가 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { extra: 1 }))));
+  test('필드 누락 거부', async () => { const d = sosPayload('alice'); delete d.aiFeedback; await assertFails(addDoc(C(alice()), d)); });
+  test('다른 uid 거부', () => assertFails(addDoc(C(alice()), sosPayload('bob'))));
+  test('다른 status(답변완료) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { status: '답변완료' }))));
+  test('다른 status(인터뷰중) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { status: '인터뷰중' }))));
+  test('다른 trackType 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { trackType: 'scenario' }))));
+  test('adminAnswer 미리 채우기 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { adminAnswer: '답변' }))));
+  test('createdAt 임의 시각 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { createdAt: new Date(0) }))));
+  test('measurements 가 map 아니면 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { measurements: 'x' }))));
+  test('임의 문서(옛 규칙에선 허용) 거부', () => assertFails(addDoc(C(alice()), { q: 1 })));
+  test('하위 컬렉션 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'ai_interview', 'i1', 'sub'), sosPayload('alice'))));
+  test('일반회원 본인 문서 수정 거부', () => assertFails(updateDoc(doc(alice().firestore(), 'ai_interview', 'i1'), { status: '답변완료' })));
+  test('일반회원 본인 문서 삭제 거부', () => assertFails(deleteDoc(doc(alice().firestore(), 'ai_interview', 'i1'))));
+  test('일반회원 본인 문서 읽기 거부(기존과 같음)', () => assertFails(getDoc(doc(alice().firestore(), 'ai_interview', 'i1'))));
+  test('관리자 임의 필드 생성 허용', () => assertSucceeds(addDoc(C(admin()), { question: 'q', status: '인터뷰중', turns: [] })));
+  test('관리자 SOS 형식 생성 허용', () => assertSucceeds(addDoc(C(admin()), sosPayload('alice'))));
+  test('관리자 수정·삭제 허용', async () => {
+    await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_interview', 'i1'), { adminAnswer: '답변', status: '답변완료' }));
+    await assertSucceeds(deleteDoc(doc(admin().firestore(), 'ai_interview', 'i1')));
+  });
 });
 
 // ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────

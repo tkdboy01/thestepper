@@ -87,10 +87,36 @@ service cloud.firestore {
     match /coaching_knowledge/{docId} {
       allow read, write: if isAdmin();
     }
-    match /ai_interview/{doc=**} {
+    // 회원 브라우저의 생성은 motion-legacy.html SOS 요청 하나뿐 — 그 14개 필드와 정확히 같아야 한다.
+    // 본인 uid, status '대기중', adminAnswer '' 로만. 그 밖의 생성·수정·삭제는 관리자만. (2026-10-19 3단계)
+    match /ai_interview/{docId} {
       allow read: if isAdmin();
-      allow create: if request.auth != null;
+      allow create: if isAdmin() || (request.auth != null
+        && request.resource.data.keys().hasOnly(['trackType', 'userId', 'userEmail', 'userName',
+             'question', 'chapter', 'videoUrl', 'videoPath', 'measurements', 'aiFeedback',
+             'status', 'adminAnswer', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['trackType', 'userId', 'userEmail', 'userName',
+             'question', 'chapter', 'videoUrl', 'videoPath', 'measurements', 'aiFeedback',
+             'status', 'adminAnswer', 'createdAt', 'updatedAt'])
+        && request.resource.data.trackType == 'sos'
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == '대기중'
+        && request.resource.data.adminAnswer == ''
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.userEmail is string
+        && request.resource.data.userName is string
+        && request.resource.data.question is string
+        && request.resource.data.chapter is string
+        && request.resource.data.videoUrl is string
+        && request.resource.data.videoPath is string
+        && request.resource.data.measurements is map
+        && request.resource.data.aiFeedback is string);
       allow update, delete: if isAdmin();
+    }
+    // ai_interview 하위 컬렉션 — 쓰는 코드 없음, 관리자만
+    match /ai_interview/{docId}/{sub=**} {
+      allow read, write: if isAdmin();
     }
     match /voice_drafts/{docId} {
       allow read, write: if isAdmin();

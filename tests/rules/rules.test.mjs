@@ -57,6 +57,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'quiz_questions', 'confirmed1'), { status: 'confirmed' });
     await setDoc(doc(db, 'quiz_questions', 'draft1'), { status: 'draft' });
     await setDoc(doc(db, 'ai_coaching', 'c-alice'), { userId: 'alice', viewed: false });
+    await setDoc(doc(db, 'expertUsage', 'alice'), { date: '2026-10-19', count: 1 });
     await setDoc(doc(db, 'movement_data', 'm1'), { x: 1 });
     await setDoc(doc(db, 'coaching_knowledge', 'k1'), { status: 'confirmed', title: '지식' });
     await setDoc(doc(db, 'ai_interview', 'i1'), { trackType: 'sos', userId: 'alice', status: '대기중' });
@@ -112,7 +113,6 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('users 관리자 읽기 허용', () => assertSucceeds(getDoc(doc(admin().firestore(), 'users', 'alice'))));
   test('ai_interview 일반회원 읽기 거부', () => assertFails(getDocs(collection(alice().firestore(), 'ai_interview'))));
   test('ai_interview 관리자 읽기 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_interview'))));
-  test('ai_coaching 본인 생성 허용', () => assertSucceeds(addDoc(collection(alice().firestore(), 'ai_coaching'), { userId: 'alice' })));
   test('ai_coaching 본인 읽기 허용', () => assertSucceeds(getDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'))));
   test('ai_coaching 본인 viewed 수정 허용', () => assertSucceeds(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { viewed: true })));
   test('ai_coaching 관리자 전체 목록 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'ai_coaching'))));
@@ -236,6 +236,30 @@ describe('3단계 ai_interview 생성', () => {
     await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_interview', 'i1'), { adminAnswer: '답변', status: '답변완료' }));
     await assertSucceeds(deleteDoc(doc(admin().firestore(), 'ai_interview', 'i1')));
   });
+});
+
+
+// ───────────── 4단계: 전문가 질문은 서버만 쓴다 ─────────────
+describe('4단계 ai_coaching·expertUsage', () => {
+  const oldAdd = c => addDoc(collection(c.firestore(), 'ai_coaching'), { userId: 'alice', question: 'q', videoData: null, status: '대기중',
+    masterFeedback: '', finalAiResponse: '', viewed: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  test('회원 ai_coaching 직접 생성(예전 ai.html 코드) 거부', () => assertFails(oldAdd(alice())));
+  test('비로그인 ai_coaching 생성 거부', () => assertFails(addDoc(collection(anon().firestore(), 'ai_coaching'), { userId: 'x' })));
+  test('회원 ai_coaching 본인 읽기 유지', () => assertSucceeds(getDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'))));
+  test('회원 ai_coaching 본인 목록(받은함 where userId) 유지', () => assertSucceeds(getDocs(query(collection(alice().firestore(), 'ai_coaching'), where('userId', '==', 'alice')))));
+  test('회원 ai_coaching 읽음 표시(viewed) 수정 유지', () => assertSucceeds(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { viewed: true })));
+  test('회원 ai_coaching 다른 필드 수정 거부', () => assertFails(updateDoc(doc(alice().firestore(), 'ai_coaching', 'c-alice'), { status: '답변완료' })));
+  test('타인 ai_coaching 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'ai_coaching', 'c-alice'))));
+  test('관리자 ai_coaching 읽기·수정 유지', async () => {
+    await assertSucceeds(getDocs(collection(admin().firestore(), 'ai_coaching')));
+    await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_coaching', 'c-alice'), { status: '검토대기' }));
+  });
+  test('회원 expertUsage 본인 읽기 유지', () => assertSucceeds(getDoc(doc(alice().firestore(), 'expertUsage', 'alice'))));
+  test('회원 expertUsage 본인 쓰기(예전 ai.html set) 거부', () => assertFails(setDoc(doc(alice().firestore(), 'expertUsage', 'alice'), { date: '2026-10-19', count: 0 })));
+  test('회원 expertUsage 본인 삭제 거부', () => assertFails(deleteDoc(doc(alice().firestore(), 'expertUsage', 'alice'))));
+  test('회원 expertUsage 문서 없을 때 생성 거부', () => assertFails(setDoc(doc(bob().firestore(), 'expertUsage', 'bob'), { date: '2026-10-19', count: 0 })));
+  test('타인 expertUsage 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'expertUsage', 'alice'))));
+  test('비로그인 expertUsage 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'expertUsage', 'alice'))));
 });
 
 // ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────

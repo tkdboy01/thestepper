@@ -8,7 +8,7 @@
 
    - 메뉴 7개는 아래 MENU 한 곳에서만 관리한다.
    - 현재 페이지 메뉴(해시 없는 링크가 현재 파일과 같을 때)는 빨강 밑줄.
-   - 관리자 전용 링크(동작 분석·음성 답변)는 기존 페이지와 같은 방식으로
+   - 관리자 전용 링크(동작 분석·음성 답변·ADMIN)는 기존 페이지와 같은 방식으로
      class="admin-only-nav" + display:none 으로 넣고, admin-nav.js 가
      관리자 로그인일 때만 보이게 한다(기존 index.html 동작 그대로).
    ══════════════════════════════════════════════════════════════════ */
@@ -33,7 +33,9 @@
   // 관리자 전용 (기존 index.html 메뉴의 admin-only-nav 링크를 그대로 옮김)
   var ADMIN_LINKS = [
     { id: 'navMotionLink', label: '동작 분석', href: 'motion.html' },
-    { id: 'navVoiceLink',  label: '음성 답변', href: 'voice.html' }
+    { id: 'navVoiceLink',  label: '음성 답변', href: 'voice.html' },
+    // 관리자 페이지 — 기존 index.html 의 "⚙ ADMIN"(맨 아래). 리뉴얼은 이모지·기호를 쓰지 않아 "ADMIN"
+    { id: 'navAdminLink',  label: 'ADMIN',    href: 'admin.html' }
   ];
 
   var CHANNELS = [

@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "thestepper-c9bfb"
+  },
+  "targets": {},
+  "etags": {
+    "thestepper-c9bfb": {
+      "extensionInstances": {
+        "firestore-send-email": "b128996f2d63d1c670a6be18002ab7d0bb72835b4b861ed00c7aab12cb648892"
+      }
+    }
   }
 }

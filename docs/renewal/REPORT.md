@@ -444,3 +444,93 @@ Firestore 실데이터 수정·삭제 없음. admin.html·index.html 수정 없�
 - center.html:171은 Firebase Storage의 `center/center_04_m.jpg`를 쓰고, 그 URL은 200으로 정상 응답한다.
 - 같은 로컬 폴더에는 이름이 다른 `center_04_m.jpg`(미추적)가 새로 있다. 이름을 바꾼 것으로 보인다.
 - 판단: 이 삭제를 나중에 커밋해도 **실서버에 깨지는 이미지는 생기지 않는다.** 지금 그 경로(`/입시 센터/새로형 이미지1/center_04_m_2.jpg`)는 main에 파일이 있어 200으로 열리지만, 어떤 페이지도 링크하지 않는다.
+
+---
+
+## 보완 3차 (2026-10-19) — 세미나 중복 정리 + 재발 방지
+
+운영 Firestore 를 바꾼 작업은 **schedules 9건 삭제** 하나뿐이다. 순서: 백업 → 백업 검증 → 드라이런 → 삭제 → 검증.
+
+### 1. 전체 백업
+
+- 경로: `C:\Users\Vivobook Pro 16X\thestepper-backups\schedules-20261019-1503.json` (레포 밖, 커밋 안 함)
+- 내용: 문서 ID, 모든 필드, createTime/updateTime (Admin SDK)
+- 문서 수: 백업 26건 = Firestore `get()` 26건 = 서버 집계 `count()` 26건, 고유 ID 26개 → 일치
+
+### 2. 9건 삭제 (시간 충돌 2쌍 2026-05-19·2026-03-18 은 보류)
+
+삭제 스크립트는 지울 ID 9개와 남길 짝 ID 를 상단 상수로 고정하고 **ID 로만** 지웠다(날짜·제목 검색 없음). 상수는 seminar-duplicates.md 의 제안과 대조해 일치를 확인했다. 기본 실행은 드라이런이며, 한 항목이라도 어긋나면 종료 코드 2 로 멈추게 했다.
+
+**드라이런** — 시작 시 문서 수 26건(예상과 일치), 9건 모두 "통과"
+
+| # | 지울 ID | 날짜 | 제목 | detail 앞부분 | 남길 짝 ID | 짝 제목 | 확인 |
+|---|---|---|---|---|---|---|---|
+| 1 | iSP1yWj1AyaC7IWkuBdc | 2026-05-31 | THE STEPPER × 고수회 MOU 체결 | 경기도 수원 &#124; 더스텝퍼와 고수회(태권도 사범회)… | 96QowfxdFvPtXfXKrVqf | THE STEPPER × 고수회(태권도 사범회) MOU 체결 | 통과 |
+| 2 | q8M1Kn65iefnhF0i7CzL | 2026-05-16 | THE STEPPER 주니어 합동훈련 | 오전 10시~12시 전술 훈련 / 오후 2시~4시… | xjtrU5mC0A6LJG44gfDG | THE STEPPER 주니어 합동훈련 | 통과 |
+| 3 | BEohEaYTR6daUfK0otpf | 2026-04-29 | THE STEPPER 충북 청주 정기 세미나 | 오전 10:00~12:00 · 📍 경희대 명품꿈나… | G4Vs1p2rya7cT22Td49p | THE STEPPER 충북 청주 정기 세미나 | 통과 |
+| 4 | ZLE9G7tMwGK2nMWxJuIu | 2026-04-06 | THE STEPPER 부산·경남 지역 정기 세미나 | 오후 11시~1시 &#124; 태백 태권도 &#124; 경남 김해시… | GhBX7qOHE2MA1hbSLebf | THE STEPPER 부산·경남 지역 정기 세미나 | 통과 |
+| 5 | VA6mkMldbOLeDJMVeOao | 2026-02-28 | THE STEPPER 범태권도장 성인반 특강 | 오후 8:30~9:30 · 📍 대구 범태권도장 ·… | 5oq7cTwWj6Qh3AcI0t5y | THE STEPPER 범 태권도장 성인반 특강 | 통과 |
+| 6 | GHR4F0RONGOCHUtHSw34 | 2026-02-09 | THE STEPPER 부산·경남 지역 정기 세미나 | 밤 11:00~1:00 · 📍 품 태권도장(진영점… | W2zT6UANYZU5Q894Ti3W | THE STEPPER 부산·경남 지역 정기 세미나 | 통과 |
+| 7 | X0gDCtz0AraA1YVQpDv8 | 2026-01-30 | THE STEPPER 대구 지역 정기 세미나 | 오전 10:00~12:00 · 📍 대구 범태권도장… | LR8hsvmT00LLtkxy8kti | THE STEPPER 대구 지역 정기 세미나 | 통과 |
+| 8 | etovbpGz3DSkuwwEiCLK | 2026-01-29 | THE STEPPER 주니어 친선 경기 | 오후 1:30~4:00 · 📍 박종우 태권도장(화… | hnrN0PBF9rhcCW75GF7C | THE STEPPER 주니어 친선 경기 | 통과 |
+| 9 | kk5xu8VEomB4xO48h5Fm | 2026-01-28 | THE STEPPER 충북 청주 정기 세미나 | 오전 10:00~12:00 · 📍 경희대 명품꿈나… | qYvkO0F4nh4Mf5gaI9wX | THE STEPPER 충북 청주 정기 세미나 | 통과 |
+
+(짝 날짜는 9건 모두 지울 문서와 같은 날짜로 확인)
+
+**삭제**: `--apply` 로 batch 1회, 9건 삭제 완료.
+
+**삭제 후 검증 (Admin SDK)**
+- (1) 전체 문서 수 **17** = 백업 26 − 9 → 일치 (`get()`·`count()` 모두 17)
+- (2) 같은 날짜·제목(공백 무시)으로 겹치는 쌍: **정확히 2쌍** — 2026-03-18(`6g2rwUoN3hK7e4Wp2XJe`/`RnQ5fq7EePB71yAYCksa`), 2026-05-19(`TbzYMG48vR75Mz7tjLNN`/`idkhPlGcl9I2ULPjmJFo`). 날짜만 기준으로 봐도 같은 2쌍뿐.
+- (3) 남긴 짝 9건: 9/9 존재, 필드와 updateTime 이 백업과 **완전히 같음**(9/9). 지운 9건은 0건 남음. 지우지 않은 17건 모두 updateTime 이 백업과 같음(다른 문서는 건드리지 않음).
+
+**화면 확인 (Playwright)**
+- 운영 www.thestepper.co.kr/schedule.html "지난 일정" 탭: 두 번 나오는 일정은 5월 19일·3월 18일(보류 2쌍)뿐. 다른 날짜는 모두 1번씩. 스크린샷 `docs/renewal/schedule-past-after-dedupe.png`.
+- 리뉴얼 index "지난 세미나" 3건: 2026.08.08 하계 훈련 캠프 / 07.21 대구 정기 세미나 / 07.04 유소년 합동훈련 — 중복 없음. 스크린샷 `docs/renewal/seminar-1440-after-dedupe.png`.
+  - 미리보기 주소는 Vercel 로그인 화면으로 넘어가 자동화로 열 수 없었다. 그래서 같은 renewal-a 코드를 로컬에서 운영 Firestore 데이터로 띄워 확인했다(방문자 집계 쓰기는 차단).
+
+### 3. 일괄 등록 스크립트 격리
+
+- 디스크 전체 검색(Temp, OneDrive, Desktop, Downloads, Documents, ~/.claude): `seed_schedules.js` **1개만 존재** — 이전 Claude Code 세션 `0fdd5c80` scratchpad.
+- `add_schedules.js`·`fix_type.js` 는 **어디에도 없음**(이미 지워진 상태).
+- 이동: `C:\Users\Vivobook Pro 16X\thestepper-backups\retired-scripts\seed_schedules.js`
+  - 맨 위에 "⛔ 실행 금지 — 2026-07-04 세미나 중복 등록의 원인. 중복 확인 없이 추가만 함" 주석과 원래 위치를 추가했다.
+  - 본문은 원본과 바이트 비교로 같음을 확인한 뒤 원래 위치에서 제거했다.
+- 레포 이력의 seed_schedules.html 은 그대로 둠.
+
+### 4. 관리자 폼 중복 경고 — 브랜치 `fix-schedule-dup` (main 기준), 커밋 `ffa39bf`
+
+- admin.html `submitSchedule()` 의 **새로 추가** 경로에만 적용했다. 저장 직전에 같은 날짜 문서를 `where('date','==',date)` 로 다시 읽어, 제목이 공백·띄어쓰기를 무시하고 같으면 확인 창을 띄운다: "같은 날짜·제목의 일정이 이미 있습니다: [제목, 시간]. 그래도 추가하시겠습니까?"
+  - 취소하면 저장하지 않고 "추가를 취소했습니다." 토스트를 띄운다.
+  - 조회가 실패하면 화면에 불러 둔 목록(`schedData`)으로 검사한다.
+  - "시간" 자리에는 `detail` 을 그대로 넣었다(시간·장소가 detail 에 함께 있다).
+- 수정(`updateDoc`) 경로와 버튼 비활성화(처리 중 잠금)는 그대로다.
+- **검증**: Playwright 가 Firebase SDK 4개(app·auth·firestore·storage)를 가짜 모듈로 바꿔 admin.html 을 로컬에서 실행했다. 가짜 데이터 2건을 넣고, Google 쪽 요청은 모두 차단했다(운영 Firestore 접근 0).
+
+| 경우 | 입력 | 확인 창 | 저장 |
+|---|---|---|---|
+| (a)(b) 중복 + 취소 | 2026-11-20, "  THE STEPPER 대구  정기세미나 " (띄어쓰기만 다름) | 표시: "…[THE STEPPER 대구 정기 세미나, 오전 10:00~12:00 · 대구 범태권도장]. 그래도 추가하시겠습니까?" | 0건 |
+| (c) 중복 + 확인 | 2026-11-20, "THE STEPPER 대구 정기 세미나" | 표시 | 1건 |
+| (d) 날짜만 같고 제목 다름 | 2026-12-05, "THE STEPPER 울산 세미나" | 없음 | 1건 |
+| (e) 수정 경로 | 기존 문서를 같은 날짜·제목으로 편집 | 없음 | update 1건 |
+
+  - 모든 경우 처리 후 저장 버튼 다시 활성화. 페이지 오류 0건.
+- 미리보기: https://thestepper-knkwamlkg-tkdboykms0007-5463s-projects.vercel.app · https://thestepper-7mwx-by7fb2f99-tkdboykms0007-5463s-projects.vercel.app (Vercel 로그인 필요). main 병합 안 함.
+
+### 5. 리뉴얼 메인 세미나 목록 detail 표시 — renewal-a, 커밋 `aedc560`
+
+- index 세미나 목록은 `detail` 을 **화면에 표시한다**(제목 아래 회색 글씨). 그래서 표시 단계에서만 정리한다(`cleanDetail()`):
+  - 이모지 제거
+  - "|" 와 앞뒤 공백이 있는 "·" 를 " · " 로 통일
+  - "부산·경남"처럼 붙여 쓴 가운뎃점과 "/" 는 유지
+  - Firestore 데이터는 수정하지 않았다.
+- 검증:
+  - 백업 26건 전부에 적용 → 이모지 0건, "|" 0건 남음.
+  - 페이지에서 실제 날짜(지난 3건)와 2026-05-20 KST 주입 날짜(📍가 든 05-31 문서가 표시되는 경우)로 확인 → 화면 detail 에 이모지·"|" 없음. 가로 스크롤 없음(1440·390). 콘솔 에러 0 — 페이지당 `ERR_FAILED` 2건은 테스트가 막은 방문자 집계 쓰기.
+  - 스크린샷 `docs/renewal/seminar-1440-detail-clean.png`.
+
+### 6. 커밋 안 된 기존 변경 정리 — 브랜치 `chore-cleanup` (main 기준), 커밋 `d0505a9`
+
+- "chore: Firebase CLI 기록 반영 및 미사용 이미지 삭제" — `git diff --cached` 로 `.firebaserc`(M)·`입시 센터/새로형 이미지1/center_04_m_2.jpg`(D) 2개만 포함됨을 확인했다. AI 코치 폴더 서브모듈 포인터는 넣지 않았다(작업 트리에 그대로 남음).
+- 푸시만 함. 미리보기: https://thestepper-kok1y5ss7-tkdboykms0007-5463s-projects.vercel.app · https://thestepper-7mwx-xxf8eylue-tkdboykms0007-5463s-projects.vercel.app
+- 참고: 이 두 변경은 이제 chore-cleanup 커밋에만 있다. main 기준 브랜치로 체크아웃하면 작업 트리의 `.firebaserc` 는 main 내용으로, 삭제했던 이미지는 다시 파일로 보인다(되돌린 것이 아니라 브랜치 차이).

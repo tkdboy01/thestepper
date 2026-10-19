@@ -115,6 +115,21 @@ function todayISO() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
+// 세미나 detail 화면 표시용 정리 (Firestore 데이터는 그대로 둔다)
+//  - 이모지 제거(예: "📍")
+//  - 구분자 "|" 와 앞뒤에 공백이 있는 "·" 를 " · " 하나로 통일
+//    ("부산·경남"처럼 붙어 쓴 가운뎃점과 "/" 는 그대로)
+function cleanDetail(s) {
+  return String(s || '')
+    .replace(/[\p{Extended_Pictographic}️‍]/gu, '')
+    .replace(/\s*[|｜]\s*/g, ' · ')
+    .replace(/\s+·\s+/g, ' · ')
+    .replace(/(?:\s·\s){2,}/g, ' · ')
+    .replace(/^\s*·\s*|\s*·\s*$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function scheduleList(items) {
   var list = document.createElement('ul');
   list.className = 'ix-schedule';
@@ -122,7 +137,7 @@ function scheduleList(items) {
     var li = document.createElement('li');
     var date = document.createElement('span'); date.className = 'ix-schedule__date'; date.textContent = x.date.replace(/-/g, '.');
     var title = document.createElement('span'); title.className = 'ix-schedule__title'; title.textContent = x.title || '';
-    if (x.detail) { var det = document.createElement('span'); det.className = 'ix-schedule__detail'; det.textContent = x.detail; title.appendChild(det); }
+    if (x.detail) { var det = document.createElement('span'); det.className = 'ix-schedule__detail'; det.textContent = cleanDetail(x.detail); title.appendChild(det); }
     li.appendChild(date); li.appendChild(title); list.appendChild(li);
   });
   return list;

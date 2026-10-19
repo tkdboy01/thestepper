@@ -8,11 +8,23 @@ service cloud.firestore {
         && request.auth.token.email == 'tkdboykms0007@gmail.com';
     }
 
+    // 쓰는 코드가 없는 옛 컬렉션 — 관리자만 (2026-10-19 2단계)
     match /visitors/{doc=**} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
+    // 방문자 집계 stats/visitors — index.html 이 { count: 1 } 생성 또는 count increment(1) 만 한다.
+    // 누구나 읽기, 생성은 count=1 하나만, 수정은 count 를 정확히 +1 만, 삭제 금지. (2026-10-19 2단계)
+    match /stats/visitors {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+    // stats 아래 다른 문서 — 관리자만
     match /stats/{doc=**} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
     match /movement_data/{doc=**} {
       allow read, write: if isAdmin();

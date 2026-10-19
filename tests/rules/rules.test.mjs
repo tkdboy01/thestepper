@@ -9,7 +9,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, getDocs,
-  query, where, orderBy, serverTimestamp,
+  query, where, orderBy, serverTimestamp, increment,
 } from 'firebase/firestore';
 import {
   ref, uploadBytes, uploadBytesResumable, getMetadata, listAll, deleteObject,
@@ -106,7 +106,6 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('schedules 관리자 쓰기 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'schedules', 's2'), { t: 1 })));
   test('locations 비로그인 읽기 허용', () => assertSucceeds(getDocs(collection(anon().firestore(), 'locations'))));
   test('locations 일반회원 쓰기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'locations', 'l2'), { t: 1 })));
-  test('stats 비로그인 쓰기 허용 (방문자 카운터)', () => assertSucceeds(setDoc(doc(anon().firestore(), 'stats', 'visitors'), { count: 1 })));
   test('users 본인 읽기 허용', () => assertSucceeds(getDoc(doc(alice().firestore(), 'users', 'alice'))));
   test('users 본인 쓰기 허용', () => assertSucceeds(setDoc(doc(alice().firestore(), 'users', 'alice'), { nickname: 'a' })));
   test('users 타인 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'users', 'alice'))));
@@ -133,6 +132,68 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('voice_drafts 관리자 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'voice_drafts'))));
   test('comparison_results 관리자 쓰기 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'comparison_results'), { a: 1 })));
   test('user_messages 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'user_messages'), { userId: 'alice' })));
+});
+
+
+// ───────────── 2단계: 방문자 집계 stats/visitors ─────────────
+// index.html(리뉴얼 전)·js/stepper-index.js(리뉴얼) 의 updateVisitor() 와 같은 순서·값
+async function visitorCounterCode(db) {
+  const r = doc(db, 'stats', 'visitors');
+  const snap = await getDoc(r);
+  if (!snap.exists()) await setDoc(r, { count: 1 });
+  else await updateDoc(r, { count: increment(1) });
+}
+async function visitorCount() {
+  let v; await env.withSecurityRulesDisabled(async c => { v = (await getDoc(doc(c.firestore(), 'stats', 'visitors'))).data().count; });
+  return v;
+}
+describe('2단계 stats/visitors', () => {
+  const V = c => doc(c.firestore(), 'stats', 'visitors');
+  const removeVisitors = () => env.withSecurityRulesDisabled(c => deleteDoc(V(c)));
+  test('비로그인 읽기 허용', () => assertSucceeds(getDoc(V(anon()))));
+  test('집계 코드(문서 있음 → increment 1) 비로그인 통과, 정확히 +1', async () => {
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 101) throw new Error('count != 101');
+  });
+  test('집계 코드 일반회원 통과', () => assertSucceeds(visitorCounterCode(alice().firestore())));
+  test('집계 코드(문서 없음 → count 1 생성) 통과', async () => {
+    await removeVisitors();
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 1) throw new Error('count != 1');
+  });
+  test('집계 코드 2번 연속 → 정확히 +2', async () => {
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    await assertSucceeds(visitorCounterCode(anon().firestore()));
+    if (await visitorCount() !== 102) throw new Error('count != 102');
+  });
+  test('집계 코드 동시 2건 → 정확히 +2', async () => {
+    await Promise.all([visitorCounterCode(anon().firestore()), visitorCounterCode(alice().firestore())]);
+    if (await visitorCount() !== 102) throw new Error('count != 102');
+  });
+  test('count 를 명시적으로 기존+1 로 수정 허용', () => assertSucceeds(updateDoc(V(anon()), { count: 101 })));
+  test('increment(2) 거부', () => assertFails(updateDoc(V(anon()), { count: increment(2) })));
+  test('임의 값(+2) 거부', () => assertFails(updateDoc(V(anon()), { count: 102 })));
+  test('임의 값(감소) 거부', () => assertFails(updateDoc(V(anon()), { count: 0 })));
+  test('setDoc 덮어쓰기(임의 값) 거부', () => assertFails(setDoc(V(anon()), { count: 999999 })));
+  test('필드 추가 거부', () => assertFails(updateDoc(V(anon()), { count: increment(1), hacked: true })));
+  test('삭제 거부 (비로그인)', () => assertFails(deleteDoc(V(anon()))));
+  test('삭제 거부 (일반회원)', () => assertFails(deleteDoc(V(alice()))));
+  test('문서 없을 때 count 5 로 생성 거부', async () => { await removeVisitors(); await assertFails(setDoc(V(anon()), { count: 5 })); });
+  test('문서 없을 때 필드 추가 생성 거부', async () => { await removeVisitors(); await assertFails(setDoc(V(anon()), { count: 1, x: 1 })); });
+  test('stats 다른 문서 비로그인 읽기·쓰기 거부', async () => {
+    await assertFails(getDoc(doc(anon().firestore(), 'stats', 'other')));
+    await assertFails(setDoc(doc(anon().firestore(), 'stats', 'other'), { a: 1 }));
+  });
+  test('stats 다른 문서 일반회원 읽기·쓰기 거부', async () => {
+    await assertFails(getDoc(doc(alice().firestore(), 'stats', 'other')));
+    await assertFails(setDoc(doc(alice().firestore(), 'stats', 'other'), { a: 1 }));
+  });
+  test('stats 다른 문서 관리자 허용', () => assertSucceeds(setDoc(doc(admin().firestore(), 'stats', 'other'), { a: 1 })));
+  test('visitors 컬렉션 비로그인·회원 거부', async () => {
+    await assertFails(getDocs(collection(anon().firestore(), 'visitors')));
+    await assertFails(addDoc(collection(alice().firestore(), 'visitors'), { a: 1 }));
+  });
+  test('visitors 컬렉션 관리자 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'visitors'), { a: 1 })));
 });
 
 // ─────────── 관리자 화면 작업 (admin.html·voice.html·motion.html 의 직접 Firestore 호출) ───────────

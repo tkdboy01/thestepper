@@ -1,0 +1,15 @@
+# Vercel 배포에서 제외 — 사이트가 쓰지 않는 원본 자료 (이미지는 Firebase Storage에서 서빙)
+# git 에는 그대로 남고, 배포본에만 안 들어감
+입시 센터/
+THE STEPPER 스텝 사진/
+채팅창 옮길 아티팩트/
+*_files/
+docs/
+tests/
+outputs/node_modules/
+
+# 바이너리·원본 파일 (THE STEPPER 가맹점 마크/files.zip 도 여기서 걸러짐 — 폴더 자체는 index.html 이 사용)
+*.zip
+*.pdf
+*.mp4
+*.ai

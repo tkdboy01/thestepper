@@ -530,6 +530,7 @@ select.form-control{cursor:pointer}
             <video id="sosVideoPlayer" controls playsinline
               style="width:100%;border-radius:10px;background:#000;max-height:220px;object-fit:contain"></video>
           </div>
+          <div id="sosVideoMissing" style="display:none;margin-bottom:10px;font-size:12px;color:#ffb3b3"></div>
 
           <!-- 측정 수치 표 -->
           <div id="sosMeasurementsWrap" style="display:none;margin-bottom:10px">
@@ -3632,14 +3633,31 @@ function renderSosItem(idx) {
   document.getElementById('sosChapter').textContent   = '챕터: ' + (item.chapter || '미지정');
 
   // 영상 플레이어
-  const videoWrap   = document.getElementById('sosVideoWrap');
-  const videoPlayer = document.getElementById('sosVideoPlayer');
+  // 2026-10-20 이후 SOS 는 videoUrl 이 비어 있고 videoPath(sos_videos/{uid}/{문서 ID}.mp4)만 있다
+  // → 볼 때마다 Storage 에서 재생 주소를 받는다(관리자 읽기 허용). 예전 문서는 저장된 videoUrl 사용.
+  const videoWrap    = document.getElementById('sosVideoWrap');
+  const videoPlayer  = document.getElementById('sosVideoPlayer');
+  const videoMissing = document.getElementById('sosVideoMissing');
+  videoMissing.style.display = 'none';
   if (item.videoUrl) {
     videoPlayer.src         = item.videoUrl;
     videoWrap.style.display = 'block';
   } else {
     videoWrap.style.display = 'none';
     videoPlayer.src         = '';
+    if (item.videoPath) {
+      getDownloadURL(ref(storage, item.videoPath)).then(url => {
+        if (currentSosDocId !== item.id) return;
+        videoPlayer.src         = url;
+        videoWrap.style.display = 'block';
+      }).catch(e => {
+        if (currentSosDocId !== item.id) return;
+        videoMissing.textContent   = e.code === 'storage/object-not-found'
+          ? '영상 파일이 없습니다 — 회원이 업로드 중이거나 업로드에 실패했습니다.'
+          : '영상을 불러오지 못했습니다: ' + (e.code || e.message);
+        videoMissing.style.display = 'block';
+      });
+    }
   }
 
   // 측정 수치 표
@@ -3687,6 +3705,8 @@ function moveSos(dir) {
   if (next < 0 || next >= pendingSosList.length) return;
   renderSosItem(next);
 }
+// 이전/다음 버튼 onclick 이 부른다 — 모듈 스크립트라 window 에 올려야 한다 (2026-07-16 추가 때 빠짐)
+window.moveSos = moveSos;
 
 window.submitSosAnswer = async () => {
   const answer = document.getElementById('sosAnswerInput').value.trim();

@@ -2,51 +2,82 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     // 관리자 판별 — firestore.rules 의 isAdmin() 과 같은 조건.
+    // 이메일 문자열만으로는 미인증 토큰도 통과하므로 email_verified 를 함께 본다. (2026-10-20)
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+        && request.auth.token.email == 'tkdboykms0007@gmail.com'
+        && request.auth.token.email_verified == true;
     }
 
-    // 공개 이미지 폴더 — 누구나 읽고, 쓰기는 관리자만.
-    // (배포본 2026-07-20 은 "로그인한 누구나" 쓰기였다)
-    // 코드에서 이 경로에 쓰는 곳은 admin.html 로고 업로드(logos/)뿐이고,
+    // 공개 이미지 폴더 관리자 업로드 — 이미지 형식, 10MB 미만.
+    // 2026-10-20 기준 6개 폴더의 기존 파일은 전부 이미지(최대 6.19MB, gallery/)이고,
+    // 이미지가 아닌 것은 콘솔이 만든 0바이트 폴더 표시 객체뿐이다.
+    function isAdminImageUpload() {
+      return isAdmin()
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // 공개 이미지 폴더 — 누구나 파일 하나씩 읽기(get), 업로드는 관리자 이미지만, 삭제는 관리자.
+    // 목록 조회(list)는 실제로 쓰는 gallery/ 만 허용한다
+    // (gallery.html·index.html(리뉴얼 전) listAll('gallery/')).
+    // 코드에서 이 경로에 쓰는 곳은 admin.html 로고 업로드·삭제(logos/)뿐이고,
     // 나머지는 콘솔/Admin SDK 업로드라 규칙의 영향을 받지 않는다.
     match /assets/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
     match /center/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
     match /gallery/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get, list: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
     match /guide/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
     match /logos/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
     match /staff/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow get: if true;
+      allow create, update: if isAdminImageUpload();
+      allow delete: if isAdmin();
     }
 
-    // SOS 영상 (motion-legacy.html) — 본인 폴더에만 영상 파일을 올린다.
-    // 상한 250MB: 업로드 화면 안내 "최대 200MB"(motion-legacy.html:300)에
-    // 여유 25%. 클라이언트 코드에는 크기 검사가 없고, 2026-10-16 기준
-    // 버킷에 남은 파일은 0개(서버가 답변 후 삭제)라 실측 상한은 없다.
-    // 영상 외 형식을 올리는 코드는 없다.
-    match /sos_videos/{userId}/{allPaths=**} {
-      allow create, update: if request.auth != null && request.auth.uid == userId
-        && request.resource.size < 250 * 1024 * 1024
-        && request.resource.contentType.matches('video/.*');
-      allow delete: if request.auth != null && request.auth.uid == userId;
-      allow read:  if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    // SOS 영상 (motion-legacy.html) — sos_videos/{uid}/{ai_interview 문서 ID}.mp4 한 단계만.
+    // 회원은 새 파일 생성(create)만 한다. 덮어쓰기·삭제는 막고, 삭제는 답변 후 서버
+    // (process-interview.js, Admin SDK)가 한다.
+    // 생성 조건: 본인 폴더, 영상 형식, 200MB 미만(업로드 화면 안내 "최대 200MB"),
+    // 그리고 Firestore ai_interview/{문서 ID} 가 이미 있고 본인 SOS 요청이며 답변 전('대기중')이고
+    // 그 문서의 videoPath 가 바로 이 경로일 때만. (motion-legacy.html 은 문서를 먼저 만들고 올린다)
+    // email_verified 는 요구하지 않는다 — 2026-10-20 기준 미인증 이메일 가입 회원 5명.
+    match /sos_videos/{userId}/{fileName} {
+      function sosDoc() {
+        return firestore.get(/databases/(default)/documents/ai_interview/$(fileName.split('[.]')[0]));
+      }
+      // resource == null: 같은 경로에 파일이 이미 있으면 거부 (create 만으로는 덮어쓰기가 통과하는 것을 에뮬레이터에서 확인)
+      allow create: if request.auth != null && request.auth.uid == userId
+        && resource == null
+        && fileName.matches('[A-Za-z0-9]{20}[.]mp4')
+        && request.resource.size < 200 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*')
+        && firestore.exists(/databases/(default)/documents/ai_interview/$(fileName.split('[.]')[0]))
+        && sosDoc().data.trackType == 'sos'
+        && sosDoc().data.userId == userId
+        && sosDoc().data.status == '대기중'
+        && sosDoc().data.videoPath == 'sos_videos/' + userId + '/' + fileName;
+      // 본인(재시도 때 이미 올라갔는지 확인)과 관리자만 파일 하나씩 읽기. 목록 조회 없음.
+      allow get: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
     match /movement_landmarks/{allPaths=**} {

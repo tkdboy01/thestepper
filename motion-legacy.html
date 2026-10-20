@@ -11,7 +11,7 @@
 
      · 사이트 어느 메뉴에서도 링크되지 않으며 검색엔진 색인도 차단한다.
      · 이 페이지에만 있는 기능:
-         - SOS 요청 흐름 (Storage sos_videos/ 업로드 + ai_interview 저장)
+         - SOS 요청 흐름 (ai_interview 저장 → 같은 문서 ID 로 Storage sos_videos/ 업로드)
          - ai.html 전문가 질문 모달로 넘기는 expertVideoData 브릿지
        새 motion.html에는 위 두 기능이 없다. SOS 접수를 다시 열려면
        이 파일을 복구하거나 새 페이지로 흐름을 이식해야 한다.
@@ -455,6 +455,9 @@ let frameData = [];
 let isAnalyzing = false;
 let lastPoseResult = null;
 let currentVideoFile = null;
+// SOS 전송 중인 요청(문서 ID·영상 경로·진행 단계). 같은 영상으로 재시도하면 이어서 쓴다.
+let sosPending = null;
+const SOS_MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 // ── Firebase Auth ──────────────────────────────────────────
 firebase.initializeApp({
@@ -1003,19 +1006,34 @@ async function submitSosModal() {
 
   var aiFeedback = document.getElementById('feedbackText').textContent || '';
 
-  try {
-    // 1. 영상 Storage 업로드
-    var videoUrl  = '';
-    var videoPath = '';
-    if (currentVideoFile) {
-      var newDocRef = db.collection('ai_interview').doc();
-      videoPath     = 'sos_videos/' + currentUser.uid + '/' + newDocRef.id + '.mp4';
-      btn.textContent = '⏳ 영상 업로드 중...';
-      var snapshot  = await storage.ref(videoPath).put(currentVideoFile);
-      videoUrl      = await snapshot.ref.getDownloadURL();
-    }
+  // 영상 용량 — storage.rules 상한(200MB 미만)과 화면 안내 "최대 200MB" 에 맞춘다
+  if (currentVideoFile && currentVideoFile.size >= SOS_MAX_VIDEO_BYTES) {
+    btn.disabled    = false;
+    btn.textContent = 'SOS 요청하기';
+    alert('영상 용량이 200MB를 넘어 전송할 수 없습니다. 길이를 줄인 영상으로 다시 선택해 주세요.');
+    return;
+  }
 
-    // 2. users 컬렉션에서 본명 조회
+  // 같은 영상으로 다시 시도하면 처음 만든 문서 ID 를 그대로 쓴다
+  // (문서 → 영상 순서. 영상 경로는 sos_videos/{uid}/{문서 ID}.mp4 이고,
+  //  storage.rules 는 이 문서가 있어야 업로드를 허용하며 덮어쓰기는 막는다)
+  if (!sosPending || sosPending.file !== currentVideoFile || sosPending.uid !== currentUser.uid) {
+    var newDocRef = db.collection('ai_interview').doc();
+    sosPending = {
+      ref:        newDocRef,
+      file:       currentVideoFile,
+      uid:        currentUser.uid,
+      videoPath:  currentVideoFile ? 'sos_videos/' + currentUser.uid + '/' + newDocRef.id + '.mp4' : '',
+      docTried:   false,
+      docCreated: false,
+      uploadTried: false,
+      uploaded:   false
+    };
+  }
+  var p = sosPending;
+
+  try {
+    // 1. users 컬렉션에서 본명 조회
     var userName = '';
     try {
       var userSnap = await db.collection('users').doc(currentUser.uid).get();
@@ -1025,32 +1043,62 @@ async function submitSosModal() {
       }
     } catch (_) {}
 
-    // 3. ai_interview 저장
-    btn.textContent = '⏳ SOS 등록 중...';
-    var now = firebase.firestore.FieldValue.serverTimestamp();
-    await db.collection('ai_interview').add({
-      trackType:    'sos',
-      userId:       currentUser.uid,
-      userEmail:    currentUser.email || '',
-      userName:     userName,
-      question:     '[SOS] ' + chapter.name + ' ' + chapter.tech + ' 동작 분석 추가 피드백 요청',
-      chapter:      chapter.name + ' ' + chapter.tech,
-      videoUrl:     videoUrl,
-      videoPath:    videoPath,
-      measurements: measurements,
-      aiFeedback:   aiFeedback,
-      status:       '대기중',
-      adminAnswer:  '',
-      createdAt:    now,
-      updatedAt:    now
-    });
+    // 2. ai_interview 문서 먼저 저장 (videoUrl 은 비워 둔다 — 관리자 화면이 videoPath 로 재생)
+    if (!p.docCreated) {
+      btn.textContent = '⏳ SOS 등록 중...';
+      var retryDoc = p.docTried;
+      p.docTried = true;
+      var now = firebase.firestore.FieldValue.serverTimestamp();
+      try {
+        await p.ref.set({
+          trackType:    'sos',
+          userId:       currentUser.uid,
+          userEmail:    currentUser.email || '',
+          userName:     userName,
+          question:     '[SOS] ' + chapter.name + ' ' + chapter.tech + ' 동작 분석 추가 피드백 요청',
+          chapter:      chapter.name + ' ' + chapter.tech,
+          videoUrl:     '',
+          videoPath:    p.videoPath,
+          measurements: measurements,
+          aiFeedback:   aiFeedback,
+          status:       '대기중',
+          adminAnswer:  '',
+          createdAt:    now,
+          updatedAt:    now
+        });
+      } catch (e) {
+        // 재시도에서 permission-denied 면 앞 시도에서 이미 저장된 것(회원은 덮어쓸 수 없음).
+        // 정말 없는 경우는 다음 업로드 단계에서 storage.rules 가 거절한다.
+        if (!retryDoc || e.code !== 'permission-denied') throw e;
+      }
+      p.docCreated = true;
+    }
 
+    // 3. 영상 Storage 업로드 — 같은 문서 ID 경로, 새 파일 생성만
+    if (p.videoPath && !p.uploaded) {
+      btn.textContent = '⏳ 영상 업로드 중...';
+      var vref = storage.ref(p.videoPath);
+      var already = false;
+      if (p.uploadTried) {
+        // 재시도: 앞 시도에서 업로드가 끝났는지 확인(본인 읽기 허용)
+        try { await vref.getMetadata(); already = true; } catch (_) {}
+      }
+      p.uploadTried = true;
+      if (!already) {
+        var ctype = /^video\//.test(p.file.type || '') ? p.file.type : 'video/mp4';
+        await vref.put(p.file, { contentType: ctype });
+      }
+      p.uploaded = true;
+    }
+
+    sosPending = null;
     document.getElementById('sosModalContent').style.display = 'none';
     document.getElementById('sosModalSuccess').style.display = 'block';
   } catch (e) {
     btn.disabled    = false;
     btn.textContent = 'SOS 요청하기';
-    alert('전송 실패: ' + e.message);
+    alert('전송 실패: ' + e.message +
+      (p.docCreated ? '\n\n다시 [SOS 요청하기]를 누르면 같은 요청에 영상만 이어서 올립니다.' : ''));
   }
 }
 

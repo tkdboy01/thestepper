@@ -22,7 +22,9 @@ let env;
 const anon = () => env.unauthenticatedContext();
 const alice = () => env.authenticatedContext('alice', { email: 'alice@example.com' });
 const bob = () => env.authenticatedContext('bob', { email: 'bob@example.com' });
-const admin = () => env.authenticatedContext('admin', { email: ADMIN_EMAIL });
+const admin = () => env.authenticatedContext('admin', { email: ADMIN_EMAIL, email_verified: true });
+// 관리자 이메일이지만 미인증 토큰 — isAdmin() 이 email_verified 를 보므로 관리자가 아니다 (2026-10-20)
+const fakeAdmin = () => env.authenticatedContext('evil', { email: ADMIN_EMAIL, email_verified: false });
 
 // board.html submitInquiry() 가 저장하는 9개 필드와 동일한 형태
 function inquiryPayload(overrides = {}) {
@@ -212,8 +214,19 @@ function sosPayload(uid, overrides = {}) {
 describe('3단계 ai_interview 생성', () => {
   const C = c => collection(c.firestore(), 'ai_interview');
   test('SOS 요청(영상 없음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice'))));
-  test('SOS 요청(영상 있음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice', {
-    videoUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/sos_videos%2Falice%2Fabc.mp4', videoPath: 'sos_videos/alice/abc.mp4' }))));
+  // 2026-10-20: 문서를 먼저 만들고 영상은 sos_videos/{uid}/{문서 ID}.mp4 로 올린다. videoUrl 은 비워 둔다.
+  test('SOS 요청(영상 있음, 미리 만든 ID 경로) 일반회원 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
+    sosPayload('alice', { videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr01.mp4' }))));
+  test('SOS 요청 videoUrl 채우기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
+    sosPayload('alice', { videoUrl: 'https://x/y.mp4', videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr01.mp4' }))));
+  test('SOS 요청 videoPath 가 다른 문서 ID 면 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
+    sosPayload('alice', { videoPath: 'sos_videos/alice/ZZZZZZZZZZZZZZZZZZZZ.mp4' }))));
+  test('SOS 요청 videoPath 가 다른 uid 폴더면 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
+    sosPayload('alice', { videoPath: 'sos_videos/bob/AbCdEfGhIjKlMnOpQr01.mp4' }))));
+  test('SOS 요청 videoPath 옛 형식(임의 이름) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { videoPath: 'sos_videos/alice/abc.mp4' }))));
+  test('미인증 관리자 이메일 토큰은 ai_interview 읽기 거부', () => assertFails(getDoc(doc(fakeAdmin().firestore(), 'ai_interview', 'i1'))));
+  test('미인증 관리자 이메일 토큰은 schedules 쓰기 거부', () => assertFails(setDoc(doc(fakeAdmin().firestore(), 'schedules', 's2'), { title: 'x' })));
+  test('미인증 관리자 이메일 토큰은 inquiries 전체 읽기 거부', () => assertFails(getDocs(collection(fakeAdmin().firestore(), 'inquiries'))));
   test('SOS 요청 미리 만든 문서 ID 로 set 도 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'preid'), sosPayload('alice'))));
   test('비로그인 거부', () => assertFails(addDoc(C(anon()), sosPayload('alice'))));
   test('필드 추가 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { extra: 1 }))));
@@ -378,30 +391,133 @@ describe('관리자 화면 작업 회귀', () => {
 });
 
 // ───────────────────────────── Storage ─────────────────────────────
-describe('Storage', () => {
-  for (const p of ['assets', 'center', 'gallery', 'guide', 'logos', 'staff']) {
-    test(`${p}/ 비로그인 읽기 허용`, () => assertSucceeds(getMetadata(ref(anon().storage(), `${p}/seed.png`))));
-    test(`${p}/ 일반회원 쓰기 거부`, () => assertFails(uploadBytes(ref(alice().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
-    test(`${p}/ 관리자 쓰기 허용`, () => assertSucceeds(uploadBytes(ref(admin().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
+// 2026-10-20 보강: 공개 폴더 관리자 업로드는 이미지·10MB 미만, list 는 gallery/ 만,
+// SOS 는 sos_videos/{uid}/{ai_interview 문서 ID}.mp4 생성만(문서 교차 확인), 관리자는 email_verified 필요.
+const PUBLIC_DIRS = ['assets', 'center', 'gallery', 'guide', 'logos', 'staff'];
+const SOS = {
+  ok:      'SosAliceOk0000000001', // alice, sos, 대기중, videoPath = 이 경로
+  ok2:     'SosAliceOk0000000002', // 위와 같음(mov 용)
+  ok3:     'SosAliceOk0000000003', // 위와 같음(재업로드 시험 전용)
+  big:     'SosAliceBig000000001', // 용량 경계 시험용
+  exists:  'SosAliceHasFile00001', // 이미 영상 파일이 있는 문서 (덮어쓰기 시험)
+  bob:     'SosBobOk000000000001', // bob 의 문서
+  done:    'SosAliceDone00000001', // alice, status 답변완료
+  noPath:  'SosAliceNoPath000001', // alice, videoPath ''
+  scen:    'SosAliceScenario0001', // alice, trackType scenario
+  missing: 'SosMissingDoc0000001', // 문서 없음
+};
+const sosPath = (uid, id) => `sos_videos/${uid}/${id}.mp4`;
+async function seedSosDocs() {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    const put = (id, uid, extra = {}) => setDoc(doc(db, 'ai_interview', id),
+      { ...sosPayload(uid), createdAt: new Date(), updatedAt: new Date(), videoPath: sosPath(uid, id), ...extra });
+    await put(SOS.ok, 'alice');
+    await put(SOS.ok2, 'alice');
+    await put(SOS.ok3, 'alice');
+    await put(SOS.big, 'alice');
+    await put(SOS.exists, 'alice');
+    await put(SOS.bob, 'bob');
+    await put(SOS.done, 'alice', { status: '답변완료' });
+    await put(SOS.noPath, 'alice', { videoPath: '' });
+    await put(SOS.scen, 'alice', { trackType: 'scenario' });
+    await uploadBytes(ref(ctx.storage(), sosPath('alice', SOS.exists)), bytes(10), { contentType: 'video/mp4' });
+  });
+}
+const vid = (c, path, n = 1024, type = 'video/mp4') => uploadBytes(ref(c.storage(), path), bytes(n), { contentType: type });
+
+describe('Storage 공개 이미지 폴더', () => {
+  for (const p of PUBLIC_DIRS) {
+    test(`${p}/ 비로그인 파일 읽기 허용`, () => assertSucceeds(getMetadata(ref(anon().storage(), `${p}/seed.png`))));
+    test(`${p}/ 일반회원 파일 읽기 허용`, () => assertSucceeds(getMetadata(ref(alice().storage(), `${p}/seed.png`))));
+    test(`${p}/ 비로그인 업로드 거부`, () => assertFails(uploadBytes(ref(anon().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
+    test(`${p}/ 일반회원 업로드 거부`, () => assertFails(uploadBytes(ref(alice().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
+    test(`${p}/ 관리자 이미지 업로드 허용`, () => assertSucceeds(uploadBytes(ref(admin().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
+    test(`${p}/ 관리자 기존 이미지 교체 허용`, () => assertSucceeds(uploadBytes(ref(admin().storage(), `${p}/seed.png`), bytes(20), { contentType: 'image/webp' })));
+    test(`${p}/ 관리자 비이미지(text/html) 업로드 거부`, () => assertFails(uploadBytes(ref(admin().storage(), `${p}/x.html`), bytes(10), { contentType: 'text/html' })));
+    test(`${p}/ 관리자 비이미지(application/pdf) 업로드 거부`, () => assertFails(uploadBytes(ref(admin().storage(), `${p}/x.pdf`), bytes(10), { contentType: 'application/pdf' })));
+    test(`${p}/ 미인증 관리자 이메일 업로드 거부`, () => assertFails(uploadBytes(ref(fakeAdmin().storage(), `${p}/x.png`), bytes(10), { contentType: 'image/png' })));
+    test(`${p}/ 일반회원 삭제 거부`, () => assertFails(deleteObject(ref(alice().storage(), `${p}/seed.png`))));
+    test(`${p}/ 비로그인 삭제 거부`, () => assertFails(deleteObject(ref(anon().storage(), `${p}/seed.png`))));
+    test(`${p}/ 미인증 관리자 이메일 삭제 거부`, () => assertFails(deleteObject(ref(fakeAdmin().storage(), `${p}/seed.png`))));
+    test(`${p}/ 관리자 삭제 허용`, () => assertSucceeds(deleteObject(ref(admin().storage(), `${p}/seed.png`))));
   }
-  test('logos/ 일반회원 삭제 거부', () => assertFails(deleteObject(ref(alice().storage(), 'logos/seed.png'))));
-  test('logos/ 관리자 삭제 허용 (admin.html 도장 삭제)', () => assertSucceeds(deleteObject(ref(admin().storage(), 'logos/seed.png'))));
+  // 에뮬레이터는 단일 요청 본문 크기를 제한하므로 큰 파일은 분할(resumable) 업로드로 보낸다.
+  test('logos/ 관리자 10MB 미만 이미지 허용', () => assertSucceeds(uploadBytesResumable(ref(admin().storage(), 'logos/near10.png'), bytes(10 * MB - 1), { contentType: 'image/png' })));
+  test('logos/ 관리자 10MB 이미지 거부', () => assertFails(uploadBytesResumable(ref(admin().storage(), 'logos/ten.png'), bytes(10 * MB), { contentType: 'image/png' })));
+  test('gallery/ 관리자 10MB 초과 이미지 거부', () => assertFails(uploadBytesResumable(ref(admin().storage(), 'gallery/big.jpg'), bytes(12 * MB), { contentType: 'image/jpeg' })));
+  // 목록 조회는 gallery/ 만 (gallery.html·리뉴얼 전 index.html listAll)
   test('gallery/ 비로그인 목록 조회 허용', () => assertSucceeds(listAll(ref(anon().storage(), 'gallery/'))));
-  test('sos_videos 본인 영상 업로드 허용', () => assertSucceeds(uploadBytes(ref(alice().storage(), 'sos_videos/alice/v.mp4'), bytes(1024), { contentType: 'video/mp4' })));
-  test('sos_videos 본인 mov 업로드 허용', () => assertSucceeds(uploadBytes(ref(alice().storage(), 'sos_videos/alice/v2.mp4'), bytes(1024), { contentType: 'video/quicktime' })));
-  test('sos_videos 타인 폴더 업로드 거부', () => assertFails(uploadBytes(ref(bob().storage(), 'sos_videos/alice/v.mp4'), bytes(1024), { contentType: 'video/mp4' })));
-  test('sos_videos 비로그인 업로드 거부', () => assertFails(uploadBytes(ref(anon().storage(), 'sos_videos/alice/v.mp4'), bytes(1024), { contentType: 'video/mp4' })));
-  test('sos_videos 비영상 형식 거부', () => assertFails(uploadBytes(ref(alice().storage(), 'sos_videos/alice/a.json'), bytes(10), { contentType: 'application/json' })));
-  // 에뮬레이터는 단일 요청 본문 크기를 제한하므로 실제 앱과 같은 분할(resumable) 업로드로 보낸다.
-  test('sos_videos 상한(250MB) 초과 거부', () => assertFails(uploadBytesResumable(ref(alice().storage(), 'sos_videos/alice/big.mp4'), bytes(250 * MB + 1), { contentType: 'video/mp4' })));
-  test('sos_videos 상한 이하 대용량(200MB) 허용', () => assertSucceeds(uploadBytesResumable(ref(alice().storage(), 'sos_videos/alice/ok200.mp4'), bytes(200 * MB), { contentType: 'video/mp4' })));
-  test('sos_videos 본인 읽기 허용', () => assertSucceeds(getMetadata(ref(alice().storage(), 'sos_videos/alice/seed.mp4'))));
-  test('sos_videos 관리자 읽기 허용', () => assertSucceeds(getMetadata(ref(admin().storage(), 'sos_videos/alice/seed.mp4'))));
-  test('sos_videos 타인 읽기 거부', () => assertFails(getMetadata(ref(bob().storage(), 'sos_videos/alice/seed.mp4'))));
+  test('gallery/ 일반회원 목록 조회 허용', () => assertSucceeds(listAll(ref(alice().storage(), 'gallery/'))));
+  for (const p of PUBLIC_DIRS.filter(d => d !== 'gallery')) {
+    test(`${p}/ 비로그인 목록 조회 거부`, () => assertFails(listAll(ref(anon().storage(), `${p}/`))));
+    test(`${p}/ 관리자 목록 조회도 거부 (코드에 없음)`, () => assertFails(listAll(ref(admin().storage(), `${p}/`))));
+  }
+});
+
+describe('Storage SOS 영상', () => {
+  beforeEach(seedSosDocs);
+  // 정상 흐름 — motion-legacy.html: 문서 생성 → 같은 ID 경로로 업로드
+  test('본인 문서(대기중) 경로로 mp4 업로드 허용', () => assertSucceeds(vid(alice(), sosPath('alice', SOS.ok))));
+  test('본인 문서 경로로 mov(video/quicktime) 업로드 허용', () => assertSucceeds(vid(alice(), sosPath('alice', SOS.ok2), 1024, 'video/quicktime')));
+  test('클라이언트 흐름 그대로: 회원이 문서 set → 업로드 허용', async () => {
+    const id = 'ClientFlowDoc0000001';
+    await assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', id), sosPayload('alice', { videoPath: sosPath('alice', id) })));
+    await assertSucceeds(vid(alice(), sosPath('alice', id)));
+  });
+  // 교차 규칙 거부
+  test('문서 없는 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.missing))));
+  test('남의 문서 ID 로 내 폴더에 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.bob))));
+  test('남의 폴더·남의 문서로 업로드 거부', () => assertFails(vid(alice(), sosPath('bob', SOS.bob))));
+  test('남(bob)이 내 폴더·내 문서로 업로드 거부', () => assertFails(vid(bob(), sosPath('alice', SOS.ok))));
+  test('답변완료 문서로 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.done))));
+  test('videoPath 가 빈 문서로 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.noPath))));
+  test('SOS 가 아닌 문서(scenario)로 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.scen))));
+  test('비로그인 업로드 거부', () => assertFails(vid(anon(), sosPath('alice', SOS.ok))));
+  test('관리자도 클라이언트 업로드 거부 (서버 Admin SDK 전용)', () => assertFails(vid(admin(), sosPath('alice', SOS.ok))));
+  // 경로·형식·크기
+  test('파일명이 문서 ID 형식이 아니면 거부', () => assertFails(vid(alice(), 'sos_videos/alice/v.mp4')));
+  test('확장자 .mov 경로 거부 (항상 .mp4)', () => assertFails(vid(alice(), `sos_videos/alice/${SOS.ok}.mov`)));
+  test('하위 폴더 거부', () => assertFails(vid(alice(), `sos_videos/alice/sub/${SOS.ok}.mp4`)));
+  test('비영상 형식 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.ok), 10, 'application/json')));
+  test('200MB 거부 (상한 200MB 미만)', () => assertFails(uploadBytesResumable(ref(alice().storage(), sosPath('alice', SOS.big)), bytes(200 * MB), { contentType: 'video/mp4' })));
+  test('200MB 미만 대용량 허용', () => assertSucceeds(uploadBytesResumable(ref(alice().storage(), sosPath('alice', SOS.big)), bytes(200 * MB - 1), { contentType: 'video/mp4' })));
+  // 덮어쓰기·삭제
+  test('이미 있는 영상 덮어쓰기 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.exists))));
+  test('업로드 성공 후 같은 경로 재업로드 거부', async () => {
+    await assertSucceeds(vid(alice(), sosPath('alice', SOS.ok3)));
+    await assertFails(vid(alice(), sosPath('alice', SOS.ok3)));
+  });
+  test('본인 영상 삭제 거부', () => assertFails(deleteObject(ref(alice().storage(), sosPath('alice', SOS.exists)))));
+  test('타인 영상 삭제 거부', () => assertFails(deleteObject(ref(bob().storage(), sosPath('alice', SOS.exists)))));
+  test('비로그인 삭제 거부', () => assertFails(deleteObject(ref(anon().storage(), sosPath('alice', SOS.exists)))));
+  test('관리자 클라이언트 삭제 거부 (서버 Admin SDK 가 삭제)', () => assertFails(deleteObject(ref(admin().storage(), sosPath('alice', SOS.exists)))));
+  // 읽기
+  test('본인 읽기 허용', () => assertSucceeds(getMetadata(ref(alice().storage(), sosPath('alice', SOS.exists)))));
+  test('관리자 읽기 허용', () => assertSucceeds(getMetadata(ref(admin().storage(), sosPath('alice', SOS.exists)))));
+  test('타인 읽기 거부', () => assertFails(getMetadata(ref(bob().storage(), sosPath('alice', SOS.exists)))));
+  test('비로그인 읽기 거부', () => assertFails(getMetadata(ref(anon().storage(), sosPath('alice', SOS.exists)))));
+  test('미인증 관리자 이메일 읽기 거부', () => assertFails(getMetadata(ref(fakeAdmin().storage(), sosPath('alice', SOS.exists)))));
+  // 목록
+  test('본인 폴더 목록 조회 거부', () => assertFails(listAll(ref(alice().storage(), 'sos_videos/alice/'))));
+  test('관리자 전체 목록 조회 거부', () => assertFails(listAll(ref(admin().storage(), 'sos_videos/'))));
+  test('타인 폴더 목록 조회 거부', () => assertFails(listAll(ref(bob().storage(), 'sos_videos/alice/'))));
+});
+
+describe('Storage 동작 분석·기타 경로', () => {
+  test('movement_videos 비로그인 읽기 거부', () => assertFails(getMetadata(ref(anon().storage(), 'movement_videos/m1.mp4'))));
   test('movement_videos 일반회원 읽기 거부', () => assertFails(getMetadata(ref(alice().storage(), 'movement_videos/m1.mp4'))));
+  test('movement_videos 관리자 읽기 허용', () => assertSucceeds(getMetadata(ref(admin().storage(), 'movement_videos/m1.mp4'))));
+  test('movement_videos 미인증 관리자 이메일 읽기 거부', () => assertFails(getMetadata(ref(fakeAdmin().storage(), 'movement_videos/m1.mp4'))));
   test('movement_videos 일반회원 쓰기 거부', () => assertFails(uploadBytes(ref(alice().storage(), 'movement_videos/x.mp4'), bytes(10), { contentType: 'video/mp4' })));
   test('movement_landmarks 일반회원 쓰기 거부', () => assertFails(uploadBytes(ref(alice().storage(), 'movement_landmarks/x.json'), bytes(10), { contentType: 'application/json' })));
   test('movement_videos 관리자 쓰기 허용', () => assertSucceeds(uploadBytes(ref(admin().storage(), 'movement_videos/x.mp4'), bytes(10), { contentType: 'video/mp4' })));
   test('movement_landmarks 관리자 쓰기 허용 (gzip)', () => assertSucceeds(uploadBytes(ref(admin().storage(), 'movement_landmarks/x.json.gz'), bytes(10), { contentType: 'application/gzip' })));
-  test('지정되지 않은 경로 거부 (관리자 포함)', () => assertFails(uploadBytes(ref(admin().storage(), 'other/x.png'), bytes(10), { contentType: 'image/png' })));
+  test('movement_videos 미인증 관리자 이메일 쓰기 거부', () => assertFails(uploadBytes(ref(fakeAdmin().storage(), 'movement_videos/x.mp4'), bytes(10), { contentType: 'video/mp4' })));
+  test('지정되지 않은 경로 쓰기 거부 (관리자 포함)', () => assertFails(uploadBytes(ref(admin().storage(), 'other/x.png'), bytes(10), { contentType: 'image/png' })));
+  test('지정되지 않은 경로 읽기 거부 (관리자 포함)', async () => {
+    await env.withSecurityRulesDisabled(c => uploadBytes(ref(c.storage(), 'other/seed.png'), bytes(10), { contentType: 'image/png' }));
+    await assertFails(getMetadata(ref(admin().storage(), 'other/seed.png')));
+    await assertFails(getMetadata(ref(anon().storage(), 'other/seed.png')));
+  });
 });

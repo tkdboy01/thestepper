@@ -3,9 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // 관리자 판별 — 배포본(2026-10-16 스냅샷)에 반복되던
     // request.auth != null && request.auth.token.email == '...' 를 묶은 것.
+    // 이메일 문자열만으로는 미인증 토큰도 통과하므로 email_verified 를 함께 본다. (2026-10-20)
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'tkdboykms0007@gmail.com';
+        && request.auth.token.email == 'tkdboykms0007@gmail.com'
+        && request.auth.token.email_verified == true;
     }
 
     // 쓰는 코드가 없는 옛 컬렉션 — 관리자만 (2026-10-19 2단계)
@@ -135,8 +137,12 @@ service cloud.firestore {
         && request.resource.data.userName is string
         && request.resource.data.question is string
         && request.resource.data.chapter is string
-        && request.resource.data.videoUrl is string
-        && request.resource.data.videoPath is string
+        // 영상은 이 문서를 만든 뒤 sos_videos/{uid}/{문서 ID}.mp4 로 올린다(storage.rules 가 이 문서를 확인).
+        // 회원은 문서를 수정할 수 없으므로 videoUrl 은 비워 두고, 관리자 화면이 videoPath 로 재생 주소를 받는다.
+        // (2026-10-20)
+        && request.resource.data.videoUrl == ''
+        && (request.resource.data.videoPath == ''
+            || request.resource.data.videoPath == 'sos_videos/' + request.auth.uid + '/' + docId + '.mp4')
         && request.resource.data.measurements is map
         && request.resource.data.aiFeedback is string);
       allow update, delete: if isAdmin();

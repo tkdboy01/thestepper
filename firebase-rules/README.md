@@ -15,6 +15,7 @@
 | `deployed/2026-10-16-before/` (이번 배포 직전) | `8800f8e2-3648-41fd-b781-ef7fe5d10236` (2026-08-13 생성) | `cac0c3d0-1c8d-4256-a265-b13cd5e18a66` (2026-07-20 생성) |
 | `deployed/2026-10-16-after/` (이번 배포 직후) | `4487afb1-46b0-4892-8a68-43f7f8762183` (2026-10-16 09:01:34 GMT) | `09599645-7914-4ee3-9a31-367dc9cb6050` (2026-10-16 09:01:32 GMT) |
 | `deployed/2026-10-19-after/` (규칙 강화 1~6단계 후, Firestore 만 — 직전 상태는 2026-10-16-after 와 같음) | `c9cbaad0-67ab-4d78-8612-d48e03c20ed9` (2026-10-19 12:00:29 GMT) | (변경 없음) |
+| `deployed/2026-10-21-after/` (Storage 보강 — SOS 교차 규칙 · isAdmin email_verified. 직전 상태는 2026-10-19-after / 2026-10-16-after 와 같음) | `7911bd9f-0e38-4926-83f2-1ada48e3a3f8` (2026-10-21 08:21:29 GMT) | `aeb5ebb8-f4b0-4034-aef1-bf5066150d3f` (2026-10-21 08:21:25 GMT) |
 
 ## 권한 원칙
 
@@ -35,11 +36,27 @@
 ### 배포
 
 4. `firebase deploy --only firestore:rules,storage --project thestepper-c9bfb` (루트 2개 파일 전체 교체)
+   - **실제 터미널(TTY)에서 실행한다** — 앱의 Terminal 패널이나 직접 연 PowerShell. 아래 「Storage 교차 규칙과 IAM」 참고.
+
+### Storage 교차 규칙과 IAM 역할
+
+- `storage.rules` 가 `firestore.get()` / `firestore.exists()` 를 쓰면(현재 `sos_videos/`), Firebase Storage 서비스 에이전트
+  `service-787224576231@gcp-sa-firebasestorage.iam.gserviceaccount.com` 에 **`roles/firebaserules.firestoreServiceAgent`** 역할이 있어야 한다.
+  없으면 규칙은 배포되지만 운영에서 해당 경로 업로드가 모두 `storage/unauthorized` 가 된다. 에뮬레이터 테스트는 IAM 을 검사하지 않아 통과한다.
+- 이 역할은 **2026-10-21 부여됨** (프로젝트 IAM etag `BwZbqOLYoJ4=` → `BwZeVW7QYYo=`). 이후 배포에서는 다시 부여할 필요가 없다.
+- `firebase deploy` 는 **실제 터미널(TTY)에서 실행될 때만** 역할을 확인·부여한다. TTY 가 없는 셸(자동화 도구, CI 등)에서는 CLI 가
+  스스로 non-interactive 가 되어 `--force` 를 붙여도 이 단계를 건너뛰고 경고도 없다
+  (firebase-tools `lib/rulesDeploy.js` `checkStorageRulesIamPermissions()` 의 `if (this.options.nonInteractive) return;`).
+  `--non-interactive` 를 명시한 경우도 같다. TTY 에서 `--force` 면 질문 없이 부여하고 `storage: updated service account for cross-service rules...` 를 출력한다.
+- 역할이 있는지는 배포 전에 Cloud Resource Manager `projects/thestepper-c9bfb:getIamPolicy` 로 확인한다(서비스 계정 토큰으로 읽기 가능).
+- **역할 부여 직후 약 1분간 반영 지연**이 있다. 2026-10-21 배포 직후 첫 업로드는 `storage/unauthorized`, 1분 뒤 재시도는 성공했다.
+  배포 후 스모크 테스트는 실패해도 바로 롤백하지 말고 1분 간격으로 몇 번 재시도한 뒤 판단한다.
 
 ### 배포 후 확인
 
 5. **배포본 재취득 후 diff** — 2번 방법으로 다시 가져와 루트 파일과 완전히 같은지 diff 한다. 새 ruleset 이름·생성시각과 원문을 `deployed/<날짜>-after/` 에 저장하고, 직전 스냅샷은 `deployed/<날짜>-before/` 로 남긴다.
 6. **운영 확인** (비로그인 REST 호출로 충분) — 공개 읽기 컬렉션(schedules, locations)과 공개 이미지(logos/, gallery/ 등)가 200으로 열리고, 막아야 할 컬렉션(inquiries 등)이 403인지 확인한다.
+7. **Storage 규칙을 바꿨으면 SOS 업로드 스모크** — 회원 계정으로 SOS 문서 생성 → 같은 문서 ID 경로 영상 업로드 → admin.html 재생 확인 → 테스트 데이터 삭제. (기록: `docs/storage-rules-2026-10-21.md`)
 
 ## 원칙
 

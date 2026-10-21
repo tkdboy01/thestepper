@@ -149,6 +149,13 @@ select.form-control{cursor:pointer}
   .admin-header{padding:0 16px}
   .header-email{display:none}
   .tab-btn{padding:12px 14px;font-size:13px}
+  /* 상단 관리 탭 — 탭 8개가 화면보다 넓어 버튼이 한 글자 폭까지 줄어 이름이 세로로 쪼개졌다.
+     탭은 제 폭을 유지(한 줄)하고, 탭 바 안에서만 가로로 밀어 본다(페이지 전체 가로 스크롤 없음) (2026-10-22) */
+  .admin-tabs{overflow-x:auto;overflow-y:hidden;padding:0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .admin-tabs::-webkit-scrollbar{display:none}
+  .admin-tabs .tab-btn{flex:0 0 auto;white-space:nowrap}
+  /* 탭 바가 위아래로 넘치는 것을 자르므로 알림 배지(top:-4px)를 탭 안쪽으로 */
+  .admin-tabs .tab-btn>span[id$="Badge"]{top:3px!important;right:2px!important}
   .admin-nav-top{padding:0 14px}
   .nav-menu{right:10px;width:200px}
 }
@@ -1054,10 +1061,21 @@ let locLoaded = false;
 let membersLoaded = false;
 let coachingLoaded = false;
 let compareLoaded = false;
+// 모바일에서 탭 바가 가로로 넘칠 때, 고른 탭이 탭 바 밖에 있으면 탭 바만 밀어서 보이게 한다(페이지는 움직이지 않음)
+function ensureTabVisible(btn) {
+  const bar = btn && btn.parentElement;
+  if (!bar || bar.scrollWidth <= bar.clientWidth) return;
+  const br = bar.getBoundingClientRect(), r = btn.getBoundingClientRect(), pad = 24;
+  const left = r.left - br.left + bar.scrollLeft, right = left + r.width;   // 탭 바 내용 기준 위치
+  if (left - pad < bar.scrollLeft) bar.scrollTo({ left: Math.max(0, left - pad), behavior: 'smooth' });
+  else if (right + pad > bar.scrollLeft + bar.clientWidth) bar.scrollTo({ left: right + pad - bar.clientWidth, behavior: 'smooth' });
+}
+
 window.switchTab = (tab) => {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
   document.getElementById('tab-' + tab + '-btn').classList.add('active');
+  ensureTabVisible(document.getElementById('tab-' + tab + '-btn'));
   document.getElementById('tab-' + tab).style.display = 'block';
   if (tab === 'locations' && !locLoaded) { locLoaded = true; loadLocations(); }
   if (tab === 'members' && !membersLoaded) { membersLoaded = true; loadMembers(); }

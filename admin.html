@@ -130,6 +130,18 @@ select.form-control{cursor:pointer}
 .nav-menu a:last-child{border-bottom:none}
 .nav-menu a:hover{color:var(--red);background:rgba(200,16,46,0.04);padding-left:26px}
 
+/* 상단 관리 탭 — 1024px 이하 (2026-10-22)
+   탭 8개가 화면보다 넓으면 버튼이 최소 내용 폭(한글은 한 글자 폭)까지 줄어 이름이 세로·두 줄로 쪼개졌다.
+   탭은 제 폭을 유지(한 줄)하고, 넘칠 때만 탭 바 안에서 가로로 밀어 본다(overflow-x:auto — 다 들어가면 스크롤 없음).
+   페이지 전체 가로 스크롤은 생기지 않는다. */
+@media(max-width:1024px){
+  .admin-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .admin-tabs::-webkit-scrollbar{display:none}
+  .admin-tabs .tab-btn{flex:0 0 auto;white-space:nowrap}
+  /* 탭 바가 위아래 넘침을 자르므로 알림 배지(top:-4px)를 탭 안쪽으로 */
+  .admin-tabs .tab-btn>span[id$="Badge"]{top:3px!important;right:2px!important}
+}
+
 /* RESPONSIVE */
 @media(max-width:640px){
   .login-box{padding:36px 24px}
@@ -149,13 +161,7 @@ select.form-control{cursor:pointer}
   .admin-header{padding:0 16px}
   .header-email{display:none}
   .tab-btn{padding:12px 14px;font-size:13px}
-  /* 상단 관리 탭 — 탭 8개가 화면보다 넓어 버튼이 한 글자 폭까지 줄어 이름이 세로로 쪼개졌다.
-     탭은 제 폭을 유지(한 줄)하고, 탭 바 안에서만 가로로 밀어 본다(페이지 전체 가로 스크롤 없음) (2026-10-22) */
-  .admin-tabs{overflow-x:auto;overflow-y:hidden;padding:0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-  .admin-tabs::-webkit-scrollbar{display:none}
-  .admin-tabs .tab-btn{flex:0 0 auto;white-space:nowrap}
-  /* 탭 바가 위아래로 넘치는 것을 자르므로 알림 배지(top:-4px)를 탭 안쪽으로 */
-  .admin-tabs .tab-btn>span[id$="Badge"]{top:3px!important;right:2px!important}
+  .admin-tabs{padding:0 8px}   /* 한 줄·가로 스크롤 규칙은 아래 1024px 이하 블록 */
   .admin-nav-top{padding:0 14px}
   .nav-menu{right:10px;width:200px}
 }

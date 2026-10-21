@@ -138,6 +138,10 @@ select.form-control{cursor:pointer}
   .list-head{grid-template-columns:70px 1fr 56px 56px}
   .list-row{grid-template-columns:70px 1fr 56px 56px}
   .list-head>div:nth-child(3),.list-row>div:nth-child(3){display:none}
+  /* 코칭 관리 목록은 3번째 칸이 "답변 작성·검토 확인" 버튼이라 모바일에서도 보여야 한다 (2026-10-22) */
+  .list-row.coach-row{grid-template-columns:1fr 84px!important}
+  .list-row.coach-row>div:nth-child(2){display:none}
+  .list-row.coach-row>div:nth-child(3){display:block}
   .loc-grid{grid-template-columns:1fr}
   .admin-header{padding:0 16px}
   .header-email{display:none}
@@ -629,7 +633,8 @@ select.form-control{cursor:pointer}
             <div id="detailVideoDataContent" style="font-size:12px;line-height:1.7;color:#555;background:#f0f4ff;border-radius:8px;padding:12px;font-family:monospace;white-space:pre-wrap;overflow-x:auto;max-height:200px;overflow-y:auto"></div>
           </div>
           <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">핵심 피드백 입력 <span style="color:#C8102E">*</span></div>
-          <textarea id="masterFeedbackInput" placeholder="이 수련생에게 전달할 핵심 포인트를 간략히 입력하세요. AI가 커리큘럼 원리로 살을 붙여 최종 답변을 생성합니다." style="width:100%;min-height:100px;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;outline:none;line-height:1.6;color:#1d1d1f"></textarea>
+          <textarea id="masterFeedbackInput" oninput="updateMfCount()" placeholder="이 수련생에게 전달할 핵심 포인트를 간략히 입력하세요. AI가 커리큘럼 원리로 살을 붙여 최종 답변을 생성합니다." style="width:100%;min-height:100px;border:1.5px solid #e5e5e7;border-radius:10px;padding:12px;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:vertical;outline:none;line-height:1.6;color:#1d1d1f"></textarea>
+          <div id="mfCount" style="font-size:12px;color:#888;margin-top:4px;text-align:right"></div>
           <div id="coachingSubmitErr" style="font-size:12px;color:#C8102E;margin-top:6px;min-height:18px"></div>
           <button id="coachingSubmitBtn" onclick="submitCoachingFeedback()" style="background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s">🤖 AI 검토 요청</button>
         </div>
@@ -649,11 +654,28 @@ select.form-control{cursor:pointer}
         .rv-text:disabled{background:#f0f0f2;color:#999}
         .rv-warn{display:none;font-size:12px;line-height:1.6;color:#b3261e;background:#fdecea;border-radius:8px;padding:8px 10px;margin-bottom:8px}
         .rv-diff{display:none;font-size:12.5px;line-height:1.8;background:#fafafa;border:1px dashed #ccc;border-radius:8px;padding:8px 10px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto}
-        .rv-diff del{color:#b3261e;background:#fdecea;text-decoration:line-through}
-        .rv-diff ins{color:#1a7f37;background:#e6f4ea;text-decoration:none;font-weight:700}
+        .rv-diff del{text-decoration:line-through}
+        .rv-diff ins{text-decoration:none}
+        .rv-diff .rv-sp del,.rv-diff .rv-sp ins{color:#8a8a8e;background:#f0f0f2;font-weight:400}           /* (가) 띄어쓰기·문장부호 — 옅게 */
+        .rv-diff .rv-wd{background:#ffd6d6;border-radius:3px;padding:0 1px;outline:1px solid #e0a0a0}       /* (나) 글자 변경 — 강하게 */
+        .rv-diff .rv-wd del{color:#b3261e;font-weight:700}
+        .rv-diff .rv-wd ins{color:#7a0000;font-weight:800}
+        .rv-diff .rv-rev{background:#eef6ee;outline:1px dashed #8bc48b;border-radius:3px}
+        .rv-diff .rv-flash{animation:rvFlash 1.6s ease-out}
+        @keyframes rvFlash{0%{box-shadow:0 0 0 4px #ffb300}100%{box-shadow:0 0 0 0 transparent}}
+        .rv-words{display:none;margin-bottom:8px;border:1.5px solid #e0a0a0;background:#fff5f5;border-radius:8px;padding:8px 10px;font-size:12px}
+        .rv-words-head{font-weight:800;color:#b3261e;cursor:pointer;margin-bottom:4px}
+        .rv-word{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0;border-top:1px dashed #f0c0c0}
+        .rv-word code{font-family:inherit;background:#fff;border:1px solid #f0c0c0;border-radius:4px;padding:0 4px}
+        .rv-word button{font-size:11px;border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit;border:1px solid #bbb;background:#fff}
+        .rv-word.done{opacity:0.55}
+        .rv-checks{margin-top:10px;border:1.5px solid #e0a0a0;background:#fff5f5;border-radius:8px;padding:8px 10px;font-size:12.5px;max-height:30vh;overflow-y:auto}
+        .rv-checks label{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer;line-height:1.5}
+        .rv-checks input{margin-top:3px;flex-shrink:0}
         .rv-difftoggle{font-size:11px;color:#0055b3;background:none;border:none;padding:0;margin-bottom:6px;cursor:pointer;text-align:left;font-family:inherit}
         .rv-btns{display:flex;gap:8px;flex-wrap:wrap}
         .rv-btns button{flex:1 1 160px;border-radius:10px;padding:12px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+        .rv-btns button:disabled{opacity:0.4;cursor:not-allowed}
         #rvConfirmOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
         #rvConfirmBox{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:18px;box-sizing:border-box}
         #rvConfirmPreview{flex:1;overflow-y:auto;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;background:#f7f7f9;border-radius:8px;padding:12px;margin:10px 0 14px;min-height:120px}
@@ -679,6 +701,7 @@ select.form-control{cursor:pointer}
               <label class="rv-head"><input type="radio" name="rvVersion" value="typo" id="rvRadioTypo" onchange="rvSelect('typo')">(B) 오타 교정본</label>
               <div class="rv-sub">원본에서 오타·띄어쓰기·명백한 맞춤법만 고친 글. <span id="rvTypoReused"></span></div>
               <div class="rv-warn" id="rvTypoWarn"></div>
+              <div class="rv-words" id="rvWords"><div class="rv-words-head" id="rvWordsHead" onclick="rvJumpHunk(-1)"></div><div id="rvWordList"></div></div>
               <div class="rv-count" id="rvCountTypo"></div>
               <button type="button" class="rv-difftoggle" id="rvDiffToggle" onclick="rvToggleDiff()">▼ 원본 대비 바뀐 부분 보기</button>
               <div class="rv-diff" id="rvTypoDiff"></div>
@@ -706,6 +729,7 @@ select.form-control{cursor:pointer}
           <div style="font-size:16px;font-weight:800;color:#1d1d1f">이 내용으로 회원에게 보낼까요?</div>
           <div id="rvConfirmVersion" style="font-size:13px;color:#2e7d32;font-weight:700;margin-top:6px"></div>
           <div id="rvConfirmPreview"></div>
+          <div class="rv-checks" id="rvConfirmChecks" style="display:none"></div>
           <div class="rv-btns">
             <button id="rvConfirmSendBtn" onclick="confirmCoaching()" style="background:#2e7d32;color:#fff;border:none">✅ 전송</button>
             <button onclick="closeRvConfirm()" style="background:#f0f0f2;color:#555;border:none">취소</button>
@@ -1933,7 +1957,7 @@ async function initCoachingTab() {
       pendingList.innerHTML = '';
       pending.forEach(d => {
         const row = document.createElement('div');
-        row.className = 'list-row';
+        row.className = 'list-row coach-row';
         row.style.cssText = 'grid-template-columns:1fr 110px 90px;cursor:pointer';
         row.id = 'crow-' + d.id;
         const dateStr = d.createdAt?.toDate
@@ -1960,7 +1984,7 @@ async function initCoachingTab() {
       reviewWaitList.innerHTML = '';
       reviewWait.forEach(d => {
         const row = document.createElement('div');
-        row.className = 'list-row';
+        row.className = 'list-row coach-row';
         row.style.cssText = 'grid-template-columns:1fr 110px 110px;background:#fffde7;border-left:3px solid #b07600';
         const dateStr = d.updatedAt?.toDate
           ? d.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
@@ -2012,8 +2036,9 @@ window.openCoachingDetail = (docId) => {
     const d = snap.data();
     document.getElementById('detailRequester').textContent = coachingProfileFullText(d.userId);
     document.getElementById('detailQuestion').textContent = d.question || '';
-    // 재검토 시 correctedFeedback 우선 표시, 없으면 원본
-    document.getElementById('masterFeedbackInput').value = d.correctedFeedback || d.masterFeedback || '';
+    // 다시 열 때도 관리자 원본을 그대로(예전엔 AI 교정본이 들어가 재검토할수록 원본이 AI 문장으로 바뀌었다)
+    document.getElementById('masterFeedbackInput').value = d.masterFeedback || d.correctedFeedback || '';
+    updateMfCount();
     document.getElementById('coachingSubmitErr').textContent = '';
 
     const videoSection = document.getElementById('detailVideoData');
@@ -2060,22 +2085,141 @@ window.rvSelect = (v) => {
 window.rvToggleDiff = () => {
   const el = document.getElementById('rvTypoDiff'), open = el.style.display !== 'block';
   el.style.display = open ? 'block' : 'none';
-  document.getElementById('rvDiffToggle').textContent = (open ? '▲' : '▼') + ' 원본 대비 바뀐 부분 보기';
+  rvRenderTypo();   // 버튼 글자(펼침 표시·변경 개수) 갱신
 };
 
-// 바뀐 부분 — 삭제는 취소선, 추가는 강조색. 띄어쓰기만 바뀐 곳은 ␣ 로 보이게 한다.
-function rvRenderDiff(segments) {
-  if (!Array.isArray(segments) || !segments.length) return '';
-  let changes = 0;
-  const html = segments.map(sg => {
-    const s = String(sg.s || '');
-    if (sg.t === '=') return esc(s);
-    changes++;
-    const shown = /^\s+$/.test(s) ? s.replace(/[^\n]/g, '␣') : s;
-    return sg.t === '-' ? `<del>${esc(shown)}</del>` : `<ins>${esc(shown)}</ins>`;
-  }).join('');
-  return changes ? html : '<span style="color:#888">바뀐 곳이 없습니다(원본과 같음).</span>';
+// ── (B) 오타 교정본: 변경 묶음 분류·표시·되돌리기 (2026-10-22 보완) ─────────────
+// 차이 조각(typoDiff)을 묶음으로 나눠 (가) 띄어쓰기·문장부호만 바뀐 곳은 옅게,
+// (나) 글자 자체가 바뀐 곳(예: "찰때"→"칠 때")은 빨간 배경으로 강하게 보여 준다.
+// 묶음 규칙은 서버 _typoCheck.js groupTypoHunks() 와 같다(예전에 저장된 typoDiff 도 같은 결과).
+const rvNorm = s => String(s || '').replace(/[\s\p{P}\p{S}]/gu, '');
+function rvGroupHunks(segments) {
+  const segs = (Array.isArray(segments) ? segments : []).map(x => ({ t: x.t, s: String(x.s || '') }));
+  const raw = []; let cur = null;
+  segs.forEach((sg, i) => {
+    if (sg.t === '=') { cur = null; return; }
+    if (!cur) { cur = { del: '', ins: '', idx: [] }; raw.push(cur); }
+    if (sg.t === '-') cur.del += sg.s; else cur.ins += sg.s;
+    cur.idx.push(i);
+  });
+  const merged = [];
+  for (const h of raw) {
+    const prev = merged[merged.length - 1];
+    if (prev) {
+      const gapIdx = [];
+      for (let i = prev.idx[prev.idx.length - 1] + 1; i < h.idx[0]; i++) gapIdx.push(i);
+      const gap = gapIdx.map(i => segs[i].s).join('');
+      const gapIsSpace = gapIdx.length > 0 && gapIdx.every(i => segs[i].t === '=') && /^\s+$/.test(gap);
+      const becomesSpace = rvNorm(prev.del + gap + h.del) === rvNorm(prev.ins + gap + h.ins)
+        && !(rvNorm(prev.del) === rvNorm(prev.ins) && rvNorm(h.del) === rvNorm(h.ins));
+      const oneSided = !prev.del || !prev.ins || !h.del || !h.ins;
+      if (gapIsSpace && (becomesSpace || oneSided)) { prev.del += gap + h.del; prev.ins += gap + h.ins; prev.idx.push(...gapIdx, ...h.idx); continue; }
+    }
+    merged.push({ del: h.del, ins: h.ins, idx: h.idx.slice() });
+  }
+  const hunks = merged.map((h, n) => { h.idx.forEach(i => { segs[i].h = n; }); return { h: n, del: h.del, ins: h.ins, kind: rvNorm(h.del) === rvNorm(h.ins) ? 'space' : 'word' }; });
+  return { segments: segs, hunks };
 }
+
+// 상태: 묶음·되돌린 묶음·마지막으로 만든 (B) 글(직접 고쳤는지 비교용)
+let rvTypo = { segments: [], hunks: [], reverted: new Set(), built: '' };
+const rvShow = s => { const t = String(s || '').replace(/\n/g, '↵'); return t.trim() ? t.trim() : t.replace(/ /g, '␣'); };
+
+function rvBuildTypo() {
+  return rvTypo.segments.map(sg => {
+    if (sg.h == null) return sg.t === '=' ? sg.s : '';
+    const back = rvTypo.reverted.has(sg.h);
+    if (sg.t === '=') return sg.s;
+    return (sg.t === '-') === back ? sg.s : '';
+  }).join('');
+}
+function rvActiveWordHunks() { return rvTypo.hunks.filter(h => h.kind === 'word' && !rvTypo.reverted.has(h.h)); }
+
+function rvInitTypo(typoText, typoDiff) {
+  const g = rvGroupHunks(typoDiff || []);
+  rvTypo = { segments: g.segments, hunks: g.hunks, reverted: new Set(), built: typoText || '' };
+  rvRenderTypo();
+}
+
+function rvRenderTypo() {
+  const diffEl = document.getElementById('rvTypoDiff'), words = document.getElementById('rvWords');
+  const { segments, hunks, reverted } = rvTypo;
+  if (!segments.length) { diffEl.innerHTML = ''; words.style.display = 'none'; return; }
+  let html = '', open = null;
+  const close = () => { if (open !== null) { html += '</span>'; open = null; } };
+  segments.forEach(sg => {
+    if (sg.h !== open) {
+      close();
+      if (sg.h != null) {
+        const hk = hunks[sg.h], cls = reverted.has(sg.h) ? 'rv-rev' : (hk.kind === 'word' ? 'rv-wd' : 'rv-sp');
+        html += `<span class="${cls}" id="rvHunk-${sg.h}">`; open = sg.h;
+      }
+    }
+    const s = sg.s;
+    if (sg.t === '=') { html += esc(s); return; }
+    if (sg.h != null && reverted.has(sg.h)) { if (sg.t === '-') html += esc(s); return; }   // 되돌린 곳은 원본 글자만
+    const shown = /^\s+$/.test(s) ? s.replace(/[^\n]/g, '␣') : s;
+    html += sg.t === '-' ? `<del>${esc(shown)}</del>` : `<ins>${esc(shown)}</ins>`;
+  });
+  close();
+  diffEl.innerHTML = hunks.length ? html : '<span style="color:#888">바뀐 곳이 없습니다(원본과 같음).</span>';
+  // (나) 목록
+  const wordHunks = hunks.filter(h => h.kind === 'word');
+  const active = wordHunks.filter(h => !reverted.has(h.h)).length;
+  const spaceN = hunks.length - wordHunks.length;
+  if (wordHunks.length) {
+    document.getElementById('rvWordsHead').textContent = `⚠ 단어 변경 ${active}곳` + (active !== wordHunks.length ? ` (되돌림 ${wordHunks.length - active}곳)` : '') + ` · 띄어쓰기·문장부호 ${spaceN}곳 — 눌러서 위치 보기`;
+    document.getElementById('rvWordList').innerHTML = wordHunks.map(h => {
+      const done = reverted.has(h.h);
+      return `<div class="rv-word${done ? ' done' : ''}"><span>원본 <code>${esc(rvShow(h.del))}</code> → 교정 <code>${esc(rvShow(h.ins))}</code></span>` +
+        `<button type="button" onclick="rvJumpHunk(${h.h})">위치</button>` +
+        (done ? '<span style="color:#1a7f37;font-weight:700">원본으로 되돌림</span>' : `<button type="button" onclick="rvRevertHunk(${h.h})">원본으로 되돌리기</button>`) + '</div>';
+    }).join('');
+    words.style.display = 'block';
+  } else {
+    words.style.display = 'none';
+  }
+  document.getElementById('rvDiffToggle').textContent = (diffEl.style.display === 'block' ? '▲' : '▼') + ` 원본 대비 바뀐 부분 보기 (단어 ${active}곳 · 띄어쓰기·문장부호 ${spaceN}곳)`;
+}
+
+// 해당 변경 위치로 이동(차이 보기를 펼치고 깜빡임). h = -1 이면 첫 단어 변경.
+window.rvJumpHunk = (h) => {
+  if (h < 0) { const first = rvActiveWordHunks()[0] || rvTypo.hunks.find(x => x.kind === 'word'); if (!first) return; h = first.h; }
+  const diffEl = document.getElementById('rvTypoDiff');
+  if (diffEl.style.display !== 'block') rvToggleDiff();
+  const el = document.getElementById('rvHunk-' + h);
+  if (!el) return;
+  diffEl.scrollTop = Math.max(0, el.offsetTop - diffEl.offsetTop - 40);
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('rv-flash'); void el.offsetWidth; el.classList.add('rv-flash');
+};
+
+// 해당 부분만 원본으로 — 칸을 직접 고쳤으면 그 고친 내용은 살리고 그 자리만 바꾼다
+window.rvRevertHunk = (h) => {
+  const ta = document.getElementById('rvTextTypo'), hk = rvTypo.hunks[h];
+  if (!hk || rvTypo.reverted.has(h)) return;
+  if (ta.value === rvTypo.built) {
+    rvTypo.reverted.add(h);
+    rvTypo.built = rvBuildTypo();
+    ta.value = rvTypo.built;
+  } else {
+    // 앞뒤 같은 글자(최대 12자)까지 붙여 칸 안에서 한 곳만 찾아 바꾼다
+    const idx = rvTypo.segments.map((x, i) => x.h === h ? i : -1).filter(i => i >= 0);
+    const before = rvTypo.segments.slice(0, idx[0]).filter(x => x.t !== '-').map(x => x.s).join('').slice(-12);
+    const after = rvTypo.segments.slice(idx[idx.length - 1] + 1).filter(x => x.t !== '-').map(x => x.s).join('').slice(0, 12);
+    const from = before + hk.ins + after, to = before + hk.del + after;
+    const first = ta.value.indexOf(from);
+    if (first < 0 || ta.value.indexOf(from, first + 1) >= 0) {
+      alert('이 부분을 칸에서 직접 고쳐서 자동으로 되돌릴 수 없습니다. 칸에서 직접 고쳐주세요.\n원본: ' + rvShow(hk.del) + '\n교정: ' + rvShow(hk.ins));
+      return;
+    }
+    ta.value = ta.value.slice(0, first) + to + ta.value.slice(first + from.length);
+    rvTypo.reverted.add(h);
+    rvTypo.built = rvBuildTypo();
+  }
+  rvRenderTypo();
+  rvUpdateCount('typo');
+};
 
 window.openReviewPanelFromDoc = async (docId) => {
   try {
@@ -2123,7 +2267,7 @@ function showReviewPanel(docId, { question, original, corrected, finalResponse, 
   document.getElementById('rvDiffToggle').style.display = typoOk ? 'block' : 'none';
   document.getElementById('rvTypoDiff').style.display = 'none';
   document.getElementById('rvDiffToggle').textContent = '▼ 원본 대비 바뀐 부분 보기';
-  document.getElementById('rvTypoDiff').innerHTML = typoOk ? rvRenderDiff(typoDiff) : '';
+  rvInitTypo(typoOk ? typo : '', typoOk ? typoDiff : []);
   document.getElementById('rvTypoReused').textContent = typoOk && typoReused ? '(원본이 그대로라 지난 교정본을 다시 씀)' : '';
   // (C)
   const oTa = document.getElementById('rvTextOriginal'), oRadio = document.getElementById('rvRadioOriginal');
@@ -2154,11 +2298,25 @@ window.reEditCoaching = () => {
   activeCoachingDocId = docId;
   document.getElementById('detailQuestion').textContent = question;
   document.getElementById('masterFeedbackInput').value = original || corrected || '';
+  updateMfCount();
   document.getElementById('coachingSubmitErr').textContent = '';
   document.getElementById('detailVideoData').style.display = 'none';
   const panel = document.getElementById('coachingDetailPanel');
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+// 핵심 피드백 입력창 글자 수 — 서버 한도(generate-feedback FEEDBACK_MAX)와 같다. 넘으면 경고하고 검토 요청을 막는다(잘라서 보내지 않음).
+const MF_MAX = 12000;
+window.updateMfCount = () => {
+  const ta = document.getElementById('masterFeedbackInput'), el = document.getElementById('mfCount'), btn = document.getElementById('coachingSubmitBtn');
+  if (!ta || !el) return;
+  const n = ta.value.trim().length, over = n > MF_MAX;
+  el.textContent = over ? `⚠ ${n.toLocaleString()} / ${MF_MAX.toLocaleString()}자 — ${(n - MF_MAX).toLocaleString()}자 초과. 줄여야 검토를 요청할 수 있습니다.`
+                        : `${n.toLocaleString()} / ${MF_MAX.toLocaleString()}자`;
+  el.style.color = over ? '#C8102E' : (n > MF_MAX * 0.9 ? '#b07600' : '#888');
+  el.style.fontWeight = over ? '700' : '400';
+  if (btn && !btn.textContent.includes('검토 중')) btn.disabled = over;
 };
 
 // generate-feedback 호출 — 원본이 지난 검토와 같으면 서버가 (B) 를 다시 만들지 않고 (A) 만 새로 만든다
@@ -2191,9 +2349,10 @@ window.submitCoachingFeedback = async () => {
   const masterFeedback = document.getElementById('masterFeedbackInput').value.trim();
   const errEl = document.getElementById('coachingSubmitErr');
   if (!masterFeedback) { errEl.textContent = '핵심 피드백을 입력해주세요.'; return; }
+  if (masterFeedback.length > MF_MAX) { errEl.textContent = `핵심 피드백이 ${MF_MAX.toLocaleString()}자를 넘습니다(현재 ${masterFeedback.length.toLocaleString()}자). 줄여서 다시 요청하세요.`; return; }
 
   const btn = document.getElementById('coachingSubmitBtn');
-  btn.disabled = true; btn.textContent = '🤖 검토 중... (AI 정리본·오타 교정본, 약 20~40초)';
+  btn.disabled = true; btn.textContent = '🤖 검토 중... (AI 정리본·오타 교정본, 약 15~40초)';
   errEl.textContent = '';
 
   const docIdSnapshot = activeCoachingDocId;
@@ -2215,6 +2374,7 @@ window.submitCoachingFeedback = async () => {
     errEl.textContent = '오류: ' + e.message;
   } finally {
     btn.disabled = false; btn.textContent = '🤖 AI 검토 요청';
+    updateMfCount();
   }
 };
 
@@ -2247,7 +2407,21 @@ window.openRvConfirm = () => {
   document.getElementById('rvConfirmVersion').textContent =
     `보내는 버전: ${RV_LABEL[v]} · ${text.length.toLocaleString()}자` + (base ? ` (원본 대비 ${Math.round(text.length / base * 100)}%)` : '');
   document.getElementById('rvConfirmPreview').textContent = text;
+  // (B) 에 글자 자체가 바뀐 곳(되돌리지 않은 것)이 있으면 하나씩 확인해야 전송할 수 있다
+  const checks = document.getElementById('rvConfirmChecks'), sendBtn = document.getElementById('rvConfirmSendBtn');
+  const pending = v === 'typo' ? rvActiveWordHunks() : [];
+  if (pending.length) {
+    checks.innerHTML = '<div style="font-weight:800;color:#b3261e;margin-bottom:4px">단어가 바뀐 곳 ' + pending.length + '곳 — 하나씩 확인해야 전송됩니다</div>' +
+      pending.map(h => '<label><input type="checkbox" class="rv-chk" onchange="rvUpdateSendGate()"><span>원본 <code>' + esc(rvShow(h.del)) + '</code> → 교정 <code>' + esc(rvShow(h.ins)) + '</code></span></label>').join('');
+    checks.style.display = 'block';
+  } else { checks.innerHTML = ''; checks.style.display = 'none'; }
+  rvUpdateSendGate();
   document.getElementById('rvConfirmOverlay').style.display = 'flex';
+};
+
+window.rvUpdateSendGate = () => {
+  const boxes = [...document.querySelectorAll('#rvConfirmChecks .rv-chk')];
+  document.getElementById('rvConfirmSendBtn').disabled = boxes.some(b => !b.checked);
 };
 
 window.closeRvConfirm = () => { document.getElementById('rvConfirmOverlay').style.display = 'none'; };
@@ -2282,7 +2456,7 @@ window.confirmCoaching = async () => {
     closeRvConfirm();
     errEl.textContent = '오류: ' + e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '✅ 전송';
+    btn.textContent = '✅ 전송'; rvUpdateSendGate();
   }
 };
 

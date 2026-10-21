@@ -135,13 +135,16 @@ select.form-control{cursor:pointer}
   .login-box{padding:36px 24px}
   .tab-content{padding:20px 16px}
   .form-grid{grid-template-columns:1fr}
-  .list-head{grid-template-columns:70px 1fr 56px 56px}
-  .list-row{grid-template-columns:70px 1fr 56px 56px}
-  .list-head>div:nth-child(3),.list-row>div:nth-child(3){display:none}
-  /* 코칭 관리 목록은 3번째 칸이 "답변 작성·검토 확인" 버튼이라 모바일에서도 보여야 한다 (2026-10-22) */
-  .list-row.coach-row{grid-template-columns:1fr 84px!important}
-  .list-row.coach-row>div:nth-child(2){display:none}
-  .list-row.coach-row>div:nth-child(3){display:block}
+  /* 일정 목록만 — 모바일에서 3번째 칸(구분 배지)을 숨기고 4칸으로. 예전엔 .list-row 전체에 걸려
+     회원·가입 미완료·코칭 목록의 3번째 칸(닉네임, 관리 버튼, 답변 작성/검토 확인 버튼)까지 숨겨졌다 (2026-10-22) */
+  .sched-list .list-head,.sched-list .list-row{grid-template-columns:70px 1fr 56px 56px}
+  .sched-list .list-head>div:nth-child(3),.sched-list .list-row>div:nth-child(3){display:none}
+  /* 칸이 많은 목록(회원·가입 미완료)은 고정 칸 폭이 화면보다 넓어 글자가 세로로 쪼개지고 관리 버튼이 잘렸다 —
+     모바일에서는 칸 제목을 숨기고 칸을 줄바꿈해 흘려 놓으며, 마지막 칸(관리 버튼)은 한 줄을 통째로 쓴다 (2026-10-22) */
+  .wide-list .list-head{display:none}
+  .wide-list .list-row{display:flex!important;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+  .wide-list .list-row>div{min-width:0;max-width:100%}
+  .wide-list .list-row>div:last-child{flex-basis:100%;text-align:left!important;margin-top:4px}
   .loc-grid{grid-template-columns:1fr}
   .admin-header{padding:0 16px}
   .header-email{display:none}
@@ -250,7 +253,7 @@ select.form-control{cursor:pointer}
     </div>
 
     <div class="section-title">📋 등록된 일정 (<span id="schedCount">0</span>개)</div>
-    <div class="list-wrap">
+    <div class="list-wrap sched-list">
       <div class="list-head">
         <div>날짜</div>
         <div>제목 / 상세</div>
@@ -320,7 +323,7 @@ select.form-control{cursor:pointer}
       <div style="margin-bottom:12px">
         <input type="text" class="form-control" id="memberSearch" placeholder="이름 또는 이메일 검색..." oninput="applyMembersFilter()" style="max-width:320px">
       </div>
-      <div class="list-wrap">
+      <div class="list-wrap wide-list">
         <div class="list-head" style="grid-template-columns:36px 1fr 1fr 1.5fr 88px 52px 150px">
           <div>#</div>
           <div>본명</div>
@@ -339,7 +342,7 @@ select.form-control{cursor:pointer}
     <div id="incompleteMembersCard" class="form-card" style="display:none;margin-top:16px;border:1.5px solid #ffbe00">
       <div class="form-card-title" style="color:#b87a00">⚠️ 가입 미완료 계정 <span id="incompleteMembersCount" style="font-size:13px;font-weight:400"></span></div>
       <div style="font-size:12px;color:#888;margin-bottom:10px">Firebase Auth에는 등록됐지만 Firestore users 문서가 없는 계정입니다. (이메일 인증 전 이탈, 가입 도중 오류 등)</div>
-      <div class="list-wrap">
+      <div class="list-wrap wide-list">
         <div class="list-head" style="grid-template-columns:1fr 100px 240px">
           <div>이메일 / 인증상태</div>
           <div>Auth 가입일</div>
@@ -1957,7 +1960,7 @@ async function initCoachingTab() {
       pendingList.innerHTML = '';
       pending.forEach(d => {
         const row = document.createElement('div');
-        row.className = 'list-row coach-row';
+        row.className = 'list-row';
         row.style.cssText = 'grid-template-columns:1fr 110px 90px;cursor:pointer';
         row.id = 'crow-' + d.id;
         const dateStr = d.createdAt?.toDate
@@ -1984,7 +1987,7 @@ async function initCoachingTab() {
       reviewWaitList.innerHTML = '';
       reviewWait.forEach(d => {
         const row = document.createElement('div');
-        row.className = 'list-row coach-row';
+        row.className = 'list-row';
         row.style.cssText = 'grid-template-columns:1fr 110px 110px;background:#fffde7;border-left:3px solid #b07600';
         const dateStr = d.updatedAt?.toDate
           ? d.updatedAt.toDate().toLocaleString('ko-KR', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'})
@@ -2444,7 +2447,9 @@ window.confirmCoaching = async () => {
     const res = await fetch(CONFIRM_COACHING_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ docId, sentVersion: selected, sentText })
+      // (B) 는 확인 창에서 체크한 단어 변경 목록을 함께 보낸다 — 서버가 남은 AI 변경과 다시 대조한다
+      body: JSON.stringify({ docId, sentVersion: selected, sentText,
+        acknowledgedHunks: selected === 'typo' ? rvActiveWordHunks().map(h => ({ del: h.del, ins: h.ins })) : [] })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '서버 오류');

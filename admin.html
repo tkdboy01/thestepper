@@ -635,35 +635,80 @@ select.form-control{cursor:pointer}
         </div>
       </div>
 
-      <!-- 검토 패널 (AI 교정 비교 + 확정) -->
+      <!-- 검토 패널 — 발송 버전 선택 (2026-10-22): (A) AI 정리본 / (B) 오타 교정본 / (C) 원본 -->
+      <style>
+        .rv-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px}
+        .rv-card{border:2px solid #e5e5e7;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;min-width:0}
+        .rv-card.selected{border-color:#2e7d32;box-shadow:0 0 0 3px rgba(46,125,50,0.12)}
+        .rv-card.disabled{background:#f7f7f9}
+        .rv-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#1d1d1f;cursor:pointer;margin-bottom:4px}
+        .rv-head input{width:18px;height:18px;margin:0;flex-shrink:0}
+        .rv-sub{font-size:11px;color:#888;margin-bottom:6px;line-height:1.5}
+        .rv-count{font-size:11px;font-weight:700;color:#0055b3;margin-bottom:6px}
+        .rv-text{width:100%;min-height:180px;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:13px;line-height:1.7;font-family:'Noto Sans KR',sans-serif;resize:vertical;box-sizing:border-box}
+        .rv-text:disabled{background:#f0f0f2;color:#999}
+        .rv-warn{display:none;font-size:12px;line-height:1.6;color:#b3261e;background:#fdecea;border-radius:8px;padding:8px 10px;margin-bottom:8px}
+        .rv-diff{display:none;font-size:12.5px;line-height:1.8;background:#fafafa;border:1px dashed #ccc;border-radius:8px;padding:8px 10px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto}
+        .rv-diff del{color:#b3261e;background:#fdecea;text-decoration:line-through}
+        .rv-diff ins{color:#1a7f37;background:#e6f4ea;text-decoration:none;font-weight:700}
+        .rv-difftoggle{font-size:11px;color:#0055b3;background:none;border:none;padding:0;margin-bottom:6px;cursor:pointer;text-align:left;font-family:inherit}
+        .rv-btns{display:flex;gap:8px;flex-wrap:wrap}
+        .rv-btns button{flex:1 1 160px;border-radius:10px;padding:12px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+        #rvConfirmOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+        #rvConfirmBox{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:18px;box-sizing:border-box}
+        #rvConfirmPreview{flex:1;overflow-y:auto;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;background:#f7f7f9;border-radius:8px;padding:12px;margin:10px 0 14px;min-height:120px}
+      </style>
       <div id="coachingReviewPanel" style="display:none;margin-top:20px;border:2px solid #b07600;border-radius:12px;overflow:hidden">
         <div style="background:#b07600;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-weight:700;font-size:14px">🔍 AI 검토 결과 확인</span>
+          <span style="font-weight:700;font-size:14px">🔍 검토 결과 — 보낼 버전 선택</span>
           <button onclick="closeReviewPanel()" style="background:transparent;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
         </div>
         <div style="padding:16px;background:#fff">
           <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:6px">수련생 질문</div>
           <div id="reviewQuestion" style="font-size:13px;line-height:1.6;color:#555;background:#f7f7f9;border-radius:8px;padding:10px;margin-bottom:14px;white-space:pre-wrap;word-break:break-word"></div>
 
-          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:8px">핵심 피드백 비교 (원본 vs AI 교정)</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#999;margin-bottom:4px">원본 (관리자 입력)</div>
-              <div id="reviewOriginalFeedback" style="font-size:13px;line-height:1.6;background:#fff8f8;border:1px solid rgba(200,16,46,0.2);border-radius:8px;padding:10px;min-height:60px;white-space:pre-wrap;word-break:break-word;color:#333"></div>
+          <div style="font-size:12px;color:#555;line-height:1.6;margin-bottom:10px">세 버전 중 하나를 골라 보냅니다. 각 버전은 보내기 전에 아래 칸에서 직접 고칠 수 있습니다. <span id="rvOrigInfo" style="color:#888"></span></div>
+          <div class="rv-cards">
+            <div class="rv-card" id="rvCardAi">
+              <label class="rv-head"><input type="radio" name="rvVersion" value="ai" onchange="rvSelect('ai')">(A) AI 정리본</label>
+              <div class="rv-sub">AI가 커리큘럼 원리로 다시 정리한 글(300~500자 내외).</div>
+              <div class="rv-count" id="rvCountAi"></div>
+              <textarea class="rv-text" id="rvTextAi" oninput="rvUpdateCount('ai')"></textarea>
             </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#1a7f37;margin-bottom:4px">AI 교정본</div>
-              <div id="reviewCorrectedFeedback" style="font-size:13px;line-height:1.6;background:#f0fff4;border:1px solid rgba(52,199,89,0.3);border-radius:8px;padding:10px;min-height:60px;white-space:pre-wrap;word-break:break-word;color:#333"></div>
+            <div class="rv-card" id="rvCardTypo">
+              <label class="rv-head"><input type="radio" name="rvVersion" value="typo" id="rvRadioTypo" onchange="rvSelect('typo')">(B) 오타 교정본</label>
+              <div class="rv-sub">원본에서 오타·띄어쓰기·명백한 맞춤법만 고친 글. <span id="rvTypoReused"></span></div>
+              <div class="rv-warn" id="rvTypoWarn"></div>
+              <div class="rv-count" id="rvCountTypo"></div>
+              <button type="button" class="rv-difftoggle" id="rvDiffToggle" onclick="rvToggleDiff()">▼ 원본 대비 바뀐 부분 보기</button>
+              <div class="rv-diff" id="rvTypoDiff"></div>
+              <textarea class="rv-text" id="rvTextTypo" oninput="rvUpdateCount('typo')"></textarea>
+            </div>
+            <div class="rv-card" id="rvCardOriginal">
+              <label class="rv-head"><input type="radio" name="rvVersion" value="original" id="rvRadioOriginal" onchange="rvSelect('original')">(C) 원본 그대로</label>
+              <div class="rv-sub">작성한 글 그대로(AI 처리 없음).</div>
+              <div class="rv-count" id="rvCountOriginal"></div>
+              <textarea class="rv-text" id="rvTextOriginal" oninput="rvUpdateCount('original')"></textarea>
             </div>
           </div>
 
-          <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:1px;margin-bottom:8px">최종 AI 답변 미리보기 (수련생에게 전달될 내용)</div>
-          <div id="reviewFinalResponse" style="font-size:13px;line-height:1.7;background:#f0f4ff;border:1px solid rgba(0,113,227,0.2);border-radius:8px;padding:12px;margin-bottom:16px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto"></div>
-
           <div id="reviewPanelErr" style="font-size:12px;color:#C8102E;margin-bottom:8px;min-height:18px"></div>
-          <div style="display:flex;gap:10px">
-            <button id="confirmCoachingBtn" onclick="confirmCoaching()" style="flex:2;background:#2e7d32;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✅ 확정 및 전송</button>
-            <button onclick="reEditCoaching()" style="flex:1;background:transparent;border:1.5px solid #888;color:#555;border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✏️ 수정 후 다시 검토</button>
+          <div class="rv-btns">
+            <button id="confirmCoachingBtn" onclick="openRvConfirm()" disabled style="background:#2e7d32;color:#fff;border:none">✅ 선택한 버전 확정 및 전송</button>
+            <button id="rvRegenAiBtn" onclick="regenAiVersion()" style="background:transparent;border:1.5px solid #b07600;color:#b07600">🔄 AI 정리본만 다시 만들기</button>
+            <button onclick="reEditCoaching()" style="background:transparent;border:1.5px solid #888;color:#555">✏️ 원본 고쳐서 다시 검토</button>
+          </div>
+        </div>
+      </div>
+      <!-- 전송 전 최종 확인 -->
+      <div id="rvConfirmOverlay" onclick="if(event.target===this)closeRvConfirm()">
+        <div id="rvConfirmBox">
+          <div style="font-size:16px;font-weight:800;color:#1d1d1f">이 내용으로 회원에게 보낼까요?</div>
+          <div id="rvConfirmVersion" style="font-size:13px;color:#2e7d32;font-weight:700;margin-top:6px"></div>
+          <div id="rvConfirmPreview"></div>
+          <div class="rv-btns">
+            <button id="rvConfirmSendBtn" onclick="confirmCoaching()" style="background:#2e7d32;color:#fff;border:none">✅ 전송</button>
+            <button onclick="closeRvConfirm()" style="background:#f0f0f2;color:#555;border:none">취소</button>
           </div>
         </div>
       </div>
@@ -1990,28 +2035,106 @@ window.closeCoachingDetail = () => {
   document.getElementById('coachingDetailPanel').style.display = 'none';
 };
 
+// ── 검토 패널 — 발송 버전 선택 (2026-10-22) ─────────────────────────
+// generate-feedback 가 (A) AI 정리본과 (B) 오타 교정본을 함께 만들고, (C) 는 원본 그대로.
+// (B) 는 서버가 원본과 비교해(길이 비율·유사도·잘림) 통과했을 때만 고를 수 있다.
+// 보낼 때는 고른 버전의 텍스트(화면에서 고친 것 포함)를 confirm-coaching 에 보낸다.
+const RV_LABEL = { ai: '(A) AI 정리본', typo: '(B) 오타 교정본', original: '(C) 원본 그대로' };
+const RV_ID = { ai: 'Ai', typo: 'Typo', original: 'Original' };
+
+function rvText(v) { return document.getElementById('rvText' + RV_ID[v]).value; }
+
+window.rvUpdateCount = (v) => {
+  const len = rvText(v).trim().length;
+  const base = (reviewPanelData.original || '').trim().length;
+  const pct = base ? Math.round(len / base * 100) : 0;
+  document.getElementById('rvCount' + RV_ID[v]).textContent = `${len.toLocaleString()}자` + (base ? ` · 원본 대비 ${pct}%` : '');
+};
+
+window.rvSelect = (v) => {
+  reviewPanelData.selected = v;
+  ['ai', 'typo', 'original'].forEach(x => document.getElementById('rvCard' + RV_ID[x]).classList.toggle('selected', x === v));
+  document.getElementById('confirmCoachingBtn').disabled = !v;
+};
+
+window.rvToggleDiff = () => {
+  const el = document.getElementById('rvTypoDiff'), open = el.style.display !== 'block';
+  el.style.display = open ? 'block' : 'none';
+  document.getElementById('rvDiffToggle').textContent = (open ? '▲' : '▼') + ' 원본 대비 바뀐 부분 보기';
+};
+
+// 바뀐 부분 — 삭제는 취소선, 추가는 강조색. 띄어쓰기만 바뀐 곳은 ␣ 로 보이게 한다.
+function rvRenderDiff(segments) {
+  if (!Array.isArray(segments) || !segments.length) return '';
+  let changes = 0;
+  const html = segments.map(sg => {
+    const s = String(sg.s || '');
+    if (sg.t === '=') return esc(s);
+    changes++;
+    const shown = /^\s+$/.test(s) ? s.replace(/[^\n]/g, '␣') : s;
+    return sg.t === '-' ? `<del>${esc(shown)}</del>` : `<ins>${esc(shown)}</ins>`;
+  }).join('');
+  return changes ? html : '<span style="color:#888">바뀐 곳이 없습니다(원본과 같음).</span>';
+}
+
 window.openReviewPanelFromDoc = async (docId) => {
   try {
     const snap = await getDoc(doc(db, 'ai_coaching', docId));
     if (!snap.exists()) { showToast('문서를 찾을 수 없습니다.', 'error'); return; }
     const d = snap.data();
+    // 필드가 없는 예전 문서도 열린다 — (B) 는 없음으로 표시
     showReviewPanel(docId, {
       question: d.question || '',
       original: d.masterFeedback || '',
       corrected: d.correctedFeedback || '',
-      finalResponse: d.finalAiResponse || ''
+      finalResponse: d.aiDraftResponse || d.finalAiResponse || '',
+      typo: typeof d.typoFeedback === 'string' ? d.typoFeedback : null,
+      typoCheck: d.typoCheck || null,
+      typoDiff: d.typoDiff || [],
+      typoReused: false
     });
   } catch(e) { showToast('오류: ' + e.message, 'error'); }
 };
 
-function showReviewPanel(docId, { question, original, corrected, finalResponse }) {
-  reviewPanelData = { docId, question, original, corrected, finalResponse };
+function showReviewPanel(docId, { question, original, corrected, finalResponse, typo = null, typoCheck = null, typoDiff = [], typoReused = false }) {
+  reviewPanelData = { docId, question, original, corrected, finalResponse, typo, typoCheck, typoDiff, selected: null };
   document.getElementById('coachingDetailPanel').style.display = 'none';
   document.getElementById('reviewQuestion').textContent = question;
-  document.getElementById('reviewOriginalFeedback').textContent = original;
-  document.getElementById('reviewCorrectedFeedback').textContent = corrected;
-  document.getElementById('reviewFinalResponse').textContent = finalResponse;
   document.getElementById('reviewPanelErr').textContent = '';
+  const origLen = (original || '').trim().length;
+  document.getElementById('rvOrigInfo').textContent = origLen ? `(원본 ${origLen.toLocaleString()}자)` : '';
+
+  // (A)
+  document.getElementById('rvTextAi').value = finalResponse || '';
+  // (B)
+  const typoOk = !!(typo && typoCheck && typoCheck.ok);
+  const warn = document.getElementById('rvTypoWarn');
+  const tTa = document.getElementById('rvTextTypo'), tRadio = document.getElementById('rvRadioTypo');
+  tTa.value = typoOk ? typo : '';
+  tTa.disabled = !typoOk; tRadio.disabled = !typoOk;
+  document.getElementById('rvCardTypo').classList.toggle('disabled', !typoOk);
+  if (typo === null) {
+    warn.textContent = '이 문서는 예전 방식으로 검토되어 오타 교정본이 없습니다. "✏️ 원본 고쳐서 다시 검토"로 다시 검토하면 만들어집니다.';
+  } else if (!typoOk) {
+    const c = typoCheck || {};
+    warn.textContent = '⚠ 교정 과정에서 내용이 변형되어 이 버전은 보낼 수 없습니다 — ' + (c.reason || '검증 실패') + '. (A) 또는 (C)를 선택하세요.';
+  }
+  warn.style.display = typoOk ? 'none' : 'block';
+  document.getElementById('rvDiffToggle').style.display = typoOk ? 'block' : 'none';
+  document.getElementById('rvTypoDiff').style.display = 'none';
+  document.getElementById('rvDiffToggle').textContent = '▼ 원본 대비 바뀐 부분 보기';
+  document.getElementById('rvTypoDiff').innerHTML = typoOk ? rvRenderDiff(typoDiff) : '';
+  document.getElementById('rvTypoReused').textContent = typoOk && typoReused ? '(원본이 그대로라 지난 교정본을 다시 씀)' : '';
+  // (C)
+  const oTa = document.getElementById('rvTextOriginal'), oRadio = document.getElementById('rvRadioOriginal');
+  oTa.value = original || '';
+  oTa.disabled = !original; oRadio.disabled = !original;
+  document.getElementById('rvCardOriginal').classList.toggle('disabled', !original);
+
+  document.querySelectorAll('input[name="rvVersion"]').forEach(r => { r.checked = false; });
+  rvSelect(null);
+  ['ai', 'typo', 'original'].forEach(v => rvUpdateCount(v));
+  if (!typoOk) document.getElementById('rvCountTypo').textContent = '';
   const panel = document.getElementById('coachingReviewPanel');
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2020,21 +2143,48 @@ function showReviewPanel(docId, { question, original, corrected, finalResponse }
 window.closeReviewPanel = () => {
   reviewPanelData = { docId: null, question: '', original: '', corrected: '', finalResponse: '' };
   document.getElementById('coachingReviewPanel').style.display = 'none';
+  closeRvConfirm();
 };
 
+// 원본을 고쳐 다시 검토 — 입력란에는 관리자 원본을 그대로 넣는다(예전처럼 AI 교정본으로 바뀌지 않게)
 window.reEditCoaching = () => {
-  const { docId, question, corrected } = reviewPanelData;
+  const { docId, question, original, corrected } = reviewPanelData;
   document.getElementById('coachingReviewPanel').style.display = 'none';
   if (!docId) return;
   activeCoachingDocId = docId;
   document.getElementById('detailQuestion').textContent = question;
-  document.getElementById('masterFeedbackInput').value = corrected;
+  document.getElementById('masterFeedbackInput').value = original || corrected || '';
   document.getElementById('coachingSubmitErr').textContent = '';
   document.getElementById('detailVideoData').style.display = 'none';
   const panel = document.getElementById('coachingDetailPanel');
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };
+
+// generate-feedback 호출 — 원본이 지난 검토와 같으면 서버가 (B) 를 다시 만들지 않고 (A) 만 새로 만든다
+async function requestCoachingReview(docId, masterFeedback) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('로그인이 필요합니다.');
+  const token = await user.getIdToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 65000);
+  let res;
+  try {
+    res = await fetch('https://thestepper-api.vercel.app/api/generate-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ docId, masterFeedback }),
+      signal: controller.signal
+    });
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? '시간이 너무 오래 걸려 중단했습니다. 잠시 후 다시 시도해주세요.' : e.message);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || '서버 오류');
+  return data;
+}
 
 window.submitCoachingFeedback = async () => {
   if (!activeCoachingDocId) return;
@@ -2043,39 +2193,23 @@ window.submitCoachingFeedback = async () => {
   if (!masterFeedback) { errEl.textContent = '핵심 피드백을 입력해주세요.'; return; }
 
   const btn = document.getElementById('coachingSubmitBtn');
-  btn.disabled = true; btn.textContent = '🤖 AI 검토 중... (약 15초 소요)';
+  btn.disabled = true; btn.textContent = '🤖 검토 중... (AI 정리본·오타 교정본, 약 20~40초)';
   errEl.textContent = '';
 
   const docIdSnapshot = activeCoachingDocId;
   const questionText = document.getElementById('detailQuestion').textContent;
-
   try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('로그인이 필요합니다.');
-    const token = await user.getIdToken();
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 50000);
-    let res;
-    try {
-      res = await fetch('https://thestepper-api.vercel.app/api/generate-feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ docId: docIdSnapshot, masterFeedback }),
-        signal: controller.signal
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '서버 오류');
-
+    const data = await requestCoachingReview(docIdSnapshot, masterFeedback);
     closeCoachingDetail();
     showReviewPanel(docIdSnapshot, {
       question: questionText,
-      original: masterFeedback,
+      original: data.masterFeedback || masterFeedback,
       corrected: data.correctedFeedback || masterFeedback,
-      finalResponse: data.finalAiResponse || ''
+      finalResponse: data.finalAiResponse || '',
+      typo: typeof data.typoFeedback === 'string' ? data.typoFeedback : null,
+      typoCheck: data.typoCheck || null,
+      typoDiff: data.typoDiff || [],
+      typoReused: !!data.typoReused
     });
   } catch(e) {
     errEl.textContent = '오류: ' + e.message;
@@ -2084,11 +2218,46 @@ window.submitCoachingFeedback = async () => {
   }
 };
 
-window.confirmCoaching = async () => {
-  const { docId } = reviewPanelData;
-  if (!docId) return;
+// 재검토 — (A) 만 다시 만든다. (B)·(C) 칸에서 고친 내용은 그대로 둔다.
+window.regenAiVersion = async () => {
+  const { docId, original } = reviewPanelData;
+  if (!docId || !original) return;
+  const btn = document.getElementById('rvRegenAiBtn'), errEl = document.getElementById('reviewPanelErr');
+  btn.disabled = true; btn.textContent = '🔄 AI 정리본 다시 만드는 중...';
+  errEl.textContent = '';
+  try {
+    const data = await requestCoachingReview(docId, original);
+    document.getElementById('rvTextAi').value = data.finalAiResponse || '';
+    reviewPanelData.finalResponse = data.finalAiResponse || '';
+    rvUpdateCount('ai');
+    showToast('AI 정리본을 다시 만들었습니다.');
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 AI 정리본만 다시 만들기';
+  }
+};
 
-  const btn = document.getElementById('confirmCoachingBtn');
+window.openRvConfirm = () => {
+  const v = reviewPanelData.selected, errEl = document.getElementById('reviewPanelErr');
+  if (!v) { errEl.textContent = '보낼 버전을 선택하세요.'; return; }
+  const text = rvText(v).trim();
+  if (!text) { errEl.textContent = '선택한 버전의 내용이 비어 있습니다.'; return; }
+  const base = (reviewPanelData.original || '').trim().length;
+  document.getElementById('rvConfirmVersion').textContent =
+    `보내는 버전: ${RV_LABEL[v]} · ${text.length.toLocaleString()}자` + (base ? ` (원본 대비 ${Math.round(text.length / base * 100)}%)` : '');
+  document.getElementById('rvConfirmPreview').textContent = text;
+  document.getElementById('rvConfirmOverlay').style.display = 'flex';
+};
+
+window.closeRvConfirm = () => { document.getElementById('rvConfirmOverlay').style.display = 'none'; };
+
+window.confirmCoaching = async () => {
+  const { docId, selected } = reviewPanelData;
+  if (!docId || !selected) return;
+  const sentText = rvText(selected).trim();
+
+  const btn = document.getElementById('rvConfirmSendBtn');
   const errEl = document.getElementById('reviewPanelErr');
   btn.disabled = true; btn.textContent = '전송 중...';
   errEl.textContent = '';
@@ -2101,18 +2270,19 @@ window.confirmCoaching = async () => {
     const res = await fetch(CONFIRM_COACHING_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ docId })
+      body: JSON.stringify({ docId, sentVersion: selected, sentText })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '서버 오류');
 
-    showToast('확정 완료! 수련생에게 답변이 전달되었습니다. ✅');
+    showToast(`확정 완료! ${RV_LABEL[selected]}을(를) 수련생에게 전달했습니다. ✅`);
     closeReviewPanel();
     loadKnowledgeLibrary();
   } catch(e) {
+    closeRvConfirm();
     errEl.textContent = '오류: ' + e.message;
   } finally {
-    btn.disabled = false; btn.textContent = '✅ 확정 및 전송';
+    btn.disabled = false; btn.textContent = '✅ 전송';
   }
 };
 

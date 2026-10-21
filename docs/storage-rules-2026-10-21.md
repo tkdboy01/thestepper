@@ -56,6 +56,23 @@
   - 미인증 회원: SOS 문서 생성 거부(permission-denied), 본인 SOS 문서 경로 업로드 거부(storage/unauthorized), motion-legacy 진입 시 ai.html 로 이동
   - 토큰만 미인증 값인 경우(화면 흉내): 위 안내 문구 표시, 문서 생성 없음
 
+## 추가 변경 — SOS 접수 서버 이전·하루 3회 제한 (2026-10-21 10:13 UTC)
+
+- 문제: 인증 회원이 SOS 문서를 무제한 만들 수 있었고, 그만큼 영상도 올릴 수 있었다.
+- API(thestepper-api `c6871b9`): `manage-member` 에 `action: "submit-sos"` (새 함수 없음, 11개 유지).
+  ID 토큰 검증 → `email_verified` 아니면 403(규칙과 같은 정책) → 입력 형식 검사(400) →
+  트랜잭션에서 `sosUsage/{uid}`(`{date: KST, count, lastRequestId, lastDocId, lastVideoPath}`) 확인, 하루 3회(`SOS_DAILY_LIMIT`) 넘으면 429 →
+  `ai_interview` SOS 문서(예전 클라이언트와 같은 14개 필드, 본명은 서버가 users 문서에서, 상태·서버 시각은 서버) 생성 + 횟수 증가 → `docId` 반환.
+  관리자 제한 없음·기록 안 함. 본문의 남의 uid 는 403. 같은 `requestId` 재전송은 처음 문서를 돌려준다(응답 유실 재시도 중복 방지). 회원 완전 삭제 시 sosUsage 도 삭제.
+- 사이트(`0a42d15`): motion-legacy.html 이 문서를 직접 만들지 않고 submit-sos 를 부른 뒤 받은 docId 경로로 업로드.
+  403 → 미인증 안내, 429 → "오늘 SOS 요청 횟수를 모두 사용했습니다. 내일 다시 이용해주세요." 업로드 실패 재시도(같은 문서 ID)는 그대로.
+- 규칙: `ai_interview` create 는 관리자만(회원 직접 생성 금지), `sosUsage` 는 회원 읽기·쓰기 모두 금지. Storage 교차 규칙은 변경 없음 — 서버 문서도 소유자·대기중·videoPath 조건을 통과.
+- 고아 정리 스크립트 (C)(24시간 지나도 영상 없는 대기중 SOS 문서)는 서버 생성 문서도 대상(에뮬레이터 확인).
+- 순서: API 배포(엔드포인트 11개 인증 없는 응답 배포 전과 동일) → 사이트 배포 → 구 규칙에서 새 클라이언트 운영 스모크 통과 → 규칙 백업(`*-20261021-1911.rules`) → 규칙 배포(Terminal 패널).
+- 테스트: 규칙 319개, 에뮬레이터 API·E2E 45개 통과. 운영 스모크(임시 인증·미인증 회원, 끝나고 전부 삭제·0건): 화면 접수 1건(문서·영상 ID 일치), 2·3번째 API, 4번째 화면 429 안내,
+  회원 직접 SOS 생성 거부, sosUsage 읽기·쓰기 거부, 미인증 403, admin.html 재생.
+- 규칙만 되돌릴 때는 `2026-10-21-2-after` 본문으로 — 새 클라이언트는 구 규칙에서도 동작한다(운영 확인).
+
 ## 롤백 방법
 
 `firebase-rules/deployed/2026-10-19-after/firestore.rules` 와 `2026-10-16-after/storage.rules` 본문(헤더 아래)

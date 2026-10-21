@@ -217,13 +217,14 @@ function sosPayload(uid, overrides = {}) {
 }
 describe('3단계 ai_interview 생성', () => {
   const C = c => collection(c.firestore(), 'ai_interview');
-  test('SOS 요청(영상 없음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice'))));
+  // 2026-10-21: SOS 문서는 서버(manage-member submit-sos, Admin SDK)만 만든다 — 회원 직접 생성은 형식이 맞아도 거부
+  test('회원 직접 SOS 생성(예전 motion-legacy 코드, 영상 없음) 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice'))));
   test('SOS 요청 이메일 미인증 토큰 거부', () => assertFails(addDoc(C(aliceUnverified()), sosPayload('alice'))));
   test('SOS 요청 email_verified 없는 토큰 거부', () => assertFails(addDoc(C(aliceNoClaim()), sosPayload('alice'))));
   test('SOS 요청(영상 경로) 이메일 미인증 토큰 거부', () => assertFails(setDoc(doc(aliceUnverified().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr02'),
     sosPayload('alice', { videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr02.mp4' }))));
   // 2026-10-20: 문서를 먼저 만들고 영상은 sos_videos/{uid}/{문서 ID}.mp4 로 올린다. videoUrl 은 비워 둔다.
-  test('SOS 요청(영상 있음, 미리 만든 ID 경로) 일반회원 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
+  test('회원 직접 SOS 생성(영상 있음, 미리 만든 ID 경로) 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
     sosPayload('alice', { videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr01.mp4' }))));
   test('SOS 요청 videoUrl 채우기 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
     sosPayload('alice', { videoUrl: 'https://x/y.mp4', videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr01.mp4' }))));
@@ -235,7 +236,7 @@ describe('3단계 ai_interview 생성', () => {
   test('미인증 관리자 이메일 토큰은 ai_interview 읽기 거부', () => assertFails(getDoc(doc(fakeAdmin().firestore(), 'ai_interview', 'i1'))));
   test('미인증 관리자 이메일 토큰은 schedules 쓰기 거부', () => assertFails(setDoc(doc(fakeAdmin().firestore(), 'schedules', 's2'), { title: 'x' })));
   test('미인증 관리자 이메일 토큰은 inquiries 전체 읽기 거부', () => assertFails(getDocs(collection(fakeAdmin().firestore(), 'inquiries'))));
-  test('SOS 요청 미리 만든 문서 ID 로 set 도 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'preid'), sosPayload('alice'))));
+  test('회원 직접 SOS 생성(미리 만든 문서 ID 로 set) 거부', () => assertFails(setDoc(doc(alice().firestore(), 'ai_interview', 'preid'), sosPayload('alice'))));
   test('비로그인 거부', () => assertFails(addDoc(C(anon()), sosPayload('alice'))));
   test('필드 추가 거부', () => assertFails(addDoc(C(alice()), sosPayload('alice', { extra: 1 }))));
   test('필드 누락 거부', async () => { const d = sosPayload('alice'); delete d.aiFeedback; await assertFails(addDoc(C(alice()), d)); });
@@ -256,6 +257,22 @@ describe('3단계 ai_interview 생성', () => {
   test('관리자 수정·삭제 허용', async () => {
     await assertSucceeds(updateDoc(doc(admin().firestore(), 'ai_interview', 'i1'), { adminAnswer: '답변', status: '답변완료' }));
     await assertSucceeds(deleteDoc(doc(admin().firestore(), 'ai_interview', 'i1')));
+  });
+});
+
+// ───────────── SOS 하루 횟수 기록 sosUsage — 서버만 (2026-10-21) ─────────────
+describe('sosUsage', () => {
+  const U = c => doc(c.firestore(), 'sosUsage', 'alice');
+  beforeEach(() => env.withSecurityRulesDisabled(c => setDoc(U(c), { date: '2026-10-21', count: 1 })));
+  test('회원 본인 읽기 거부', () => assertFails(getDoc(U(alice()))));
+  test('회원 본인 쓰기(횟수 되돌리기) 거부', () => assertFails(setDoc(U(alice()), { date: '2026-10-21', count: 0 })));
+  test('회원 본인 삭제 거부', () => assertFails(deleteDoc(U(alice()))));
+  test('회원 문서 없을 때 생성 거부', () => assertFails(setDoc(doc(bob().firestore(), 'sosUsage', 'bob'), { date: '2026-10-21', count: 0 })));
+  test('다른 회원 읽기 거부', () => assertFails(getDoc(doc(bob().firestore(), 'sosUsage', 'alice'))));
+  test('비로그인 읽기 거부', () => assertFails(getDoc(U(anon()))));
+  test('관리자 브라우저 읽기·쓰기도 거부(서버 Admin SDK 만)', async () => {
+    await assertFails(getDoc(U(admin())));
+    await assertFails(setDoc(U(admin()), { date: '2026-10-21', count: 0 }));
   });
 });
 
@@ -468,10 +485,18 @@ describe('Storage SOS 영상', () => {
   // 정상 흐름 — motion-legacy.html: 문서 생성 → 같은 ID 경로로 업로드
   test('본인 문서(대기중) 경로로 mp4 업로드 허용', () => assertSucceeds(vid(alice(), sosPath('alice', SOS.ok))));
   test('본인 문서 경로로 mov(video/quicktime) 업로드 허용', () => assertSucceeds(vid(alice(), sosPath('alice', SOS.ok2), 1024, 'video/quicktime')));
-  test('클라이언트 흐름 그대로: 회원이 문서 set → 업로드 허용', async () => {
-    const id = 'ClientFlowDoc0000001';
-    await assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', id), sosPayload('alice', { videoPath: sosPath('alice', id) })));
+  test('클라이언트 흐름 그대로: 서버(Admin SDK)가 문서 생성 → 회원이 같은 ID 경로 업로드 허용', async () => {
+    const id = 'ServerFlowDoc0000001';
+    // manage-member submit-sos 가 만드는 문서와 같은 필드(서버 시각)
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'ai_interview', id), sosPayload('alice', { videoPath: sosPath('alice', id) })));
     await assertSucceeds(vid(alice(), sosPath('alice', id)));
+    await assertFails(vid(alice(), sosPath('alice', id)));   // 같은 경로 재업로드(덮어쓰기)는 거부
+  });
+  test('서버 문서라도 남의 uid 폴더 업로드 거부', async () => {
+    const id = 'ServerFlowDoc0000002';
+    await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'ai_interview', id), sosPayload('alice', { videoPath: sosPath('alice', id) })));
+    await assertFails(vid(bob(), sosPath('bob', id)));
+    await assertFails(vid(bob(), sosPath('alice', id)));
   });
   // 이메일 인증 (2026-10-21)
   test('이메일 미인증 토큰 — 본인 문서(대기중) 경로라도 업로드 거부', () => assertFails(vid(aliceUnverified(), sosPath('alice', SOS.ok))));

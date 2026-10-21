@@ -430,6 +430,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 <script>
 // ── Constants ──────────────────────────────────────────────
 const API_URL = 'https://thestepper-api.vercel.app/api/coach';
+// SOS 접수(문서 생성·하루 횟수 제한)는 서버 manage-member 의 submit-sos 가 한다 (2026-10-21)
+const MANAGE_MEMBER_URL = 'https://thestepper-api.vercel.app/api/manage-member';
 
 const CHAPTERS = {
   3:  { name: '제3장',  tech: '돌려차기' },
@@ -460,6 +462,7 @@ let sosPending = null;
 const SOS_MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 // SOS 문서·영상 규칙은 이메일 인증된 토큰만 허용(403). 안내는 AI 코치(coach.js)의 미인증 403 문구와 같게.
 const UNVERIFIED_MSG = '이메일 인증 후 이용 가능합니다. 받은 편지함을 확인해주세요.';
+const SOS_LIMIT_MSG  = '오늘 SOS 요청 횟수를 모두 사용했습니다. 내일 다시 이용해주세요.';
 
 // 로그인 정보(user.emailVerified)는 인증 완료인데 토큰만 인증 전 값으로 남아 있을 수 있다
 // (다른 창에서 인증 링크를 누른 직후 등) — 그때는 토큰을 한 번 새로 받아 다시 본다.
@@ -1034,17 +1037,16 @@ async function submitSosModal() {
     return;
   }
 
-  // 같은 영상으로 다시 시도하면 처음 만든 문서 ID 를 그대로 쓴다
-  // (문서 → 영상 순서. 영상 경로는 sos_videos/{uid}/{문서 ID}.mp4 이고,
+  // 같은 영상으로 다시 시도하면 처음 받은 문서 ID 를 그대로 쓴다
+  // (서버가 문서를 만들고 ID 를 돌려준다 → 영상은 sos_videos/{uid}/{문서 ID}.mp4.
   //  storage.rules 는 이 문서가 있어야 업로드를 허용하며 덮어쓰기는 막는다)
   if (!sosPending || sosPending.file !== currentVideoFile || sosPending.uid !== currentUser.uid) {
-    var newDocRef = db.collection('ai_interview').doc();
     sosPending = {
-      ref:        newDocRef,
+      requestId:  'sos-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10),
+      docId:      '',
       file:       currentVideoFile,
       uid:        currentUser.uid,
-      videoPath:  currentVideoFile ? 'sos_videos/' + currentUser.uid + '/' + newDocRef.id + '.mp4' : '',
-      docTried:   false,
+      videoPath:  '',
       docCreated: false,
       uploadTried: false,
       uploaded:   false
@@ -1053,48 +1055,39 @@ async function submitSosModal() {
   var p = sosPending;
 
   try {
-    // 1. users 컬렉션에서 본명 조회
-    var userName = '';
-    try {
-      var userSnap = await db.collection('users').doc(currentUser.uid).get();
-      if (userSnap.exists) {
-        var ud = userSnap.data();
-        userName = ud.name || ud.displayName || ud.realName || '';
-      }
-    } catch (_) {}
-
-    // 2. ai_interview 문서 먼저 저장 (videoUrl 은 비워 둔다 — 관리자 화면이 videoPath 로 재생)
+    // 1. 서버에 SOS 접수 — 오늘 횟수 확인·문서 생성을 서버가 한 번에 하고 문서 ID 를 돌려준다.
+    //    본명(users 문서)·상태·서버 시각은 서버가 채운다. 같은 requestId 로 다시 보내면 처음 문서를 돌려준다.
     if (!p.docCreated) {
       btn.textContent = '⏳ SOS 등록 중...';
-      var retryDoc = p.docTried;
-      p.docTried = true;
-      var now = firebase.firestore.FieldValue.serverTimestamp();
-      try {
-        await p.ref.set({
-          trackType:    'sos',
-          userId:       currentUser.uid,
-          userEmail:    currentUser.email || '',
-          userName:     userName,
+      var token = await currentUser.getIdToken();
+      var res = await fetch(MANAGE_MEMBER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          action:       'submit-sos',
+          requestId:    p.requestId,
           question:     '[SOS] ' + chapter.name + ' ' + chapter.tech + ' 동작 분석 추가 피드백 요청',
           chapter:      chapter.name + ' ' + chapter.tech,
-          videoUrl:     '',
-          videoPath:    p.videoPath,
           measurements: measurements,
           aiFeedback:   aiFeedback,
-          status:       '대기중',
-          adminAnswer:  '',
-          createdAt:    now,
-          updatedAt:    now
-        });
-      } catch (e) {
-        // 재시도에서 permission-denied 면 앞 시도에서 이미 저장된 것(회원은 덮어쓸 수 없음).
-        // 정말 없는 경우는 다음 업로드 단계에서 storage.rules 가 거절한다.
-        if (!retryDoc || e.code !== 'permission-denied') throw e;
+          withVideo:    !!p.file
+        })
+      });
+      var data = {};
+      try { data = await res.json(); } catch (_) {}
+      if (res.status === 403 || res.status === 429) {
+        btn.disabled    = false;
+        btn.textContent = 'SOS 요청하기';
+        alert(res.status === 429 ? SOS_LIMIT_MSG : UNVERIFIED_MSG);
+        return;
       }
+      if (!res.ok || !data.docId) throw new Error(data.error || ('서버 오류 ' + res.status));
+      p.docId      = data.docId;
+      p.videoPath  = data.videoPath || '';
       p.docCreated = true;
     }
 
-    // 3. 영상 Storage 업로드 — 같은 문서 ID 경로, 새 파일 생성만
+    // 2. 영상 Storage 업로드 — 같은 문서 ID 경로, 새 파일 생성만
     if (p.videoPath && !p.uploaded) {
       btn.textContent = '⏳ 영상 업로드 중...';
       var vref = storage.ref(p.videoPath);

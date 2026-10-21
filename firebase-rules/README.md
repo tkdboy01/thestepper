@@ -17,6 +17,7 @@
 | `deployed/2026-10-19-after/` (규칙 강화 1~6단계 후, Firestore 만 — 직전 상태는 2026-10-16-after 와 같음) | `c9cbaad0-67ab-4d78-8612-d48e03c20ed9` (2026-10-19 12:00:29 GMT) | (변경 없음) |
 | `deployed/2026-10-21-after/` (Storage 보강 — SOS 교차 규칙 · isAdmin email_verified. 직전 상태는 2026-10-19-after / 2026-10-16-after 와 같음) | `7911bd9f-0e38-4926-83f2-1ada48e3a3f8` (2026-10-21 08:21:29 GMT) | `aeb5ebb8-f4b0-4034-aef1-bf5066150d3f` (2026-10-21 08:21:25 GMT) |
 | `deployed/2026-10-21-2-after/` (SOS 문서·영상에 이메일 인증 요구. 직전 상태는 2026-10-21-after) | `be070b5c-18ec-4070-9805-66efe8ad56ad` (2026-10-21 09:12:46 GMT) | `093fc575-0316-4b99-8d92-85166722f35f` (2026-10-21 09:12:43 GMT) |
+| `deployed/2026-10-21-3-after/` (SOS 접수 서버 이전 — ai_interview 회원 생성 금지·sosUsage 잠금. Storage 본문은 2-after 와 같고 함께 배포돼 ruleset 만 새로 생김) | `cd946a41-ea96-4a2f-861b-866435acb91f` (2026-10-21 10:13:05 GMT) | `dc95c012-9f0d-4413-9f39-5144d3add47e` (2026-10-21 10:13:02 GMT) |
 
 ## 권한 원칙
 

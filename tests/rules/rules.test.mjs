@@ -20,8 +20,12 @@ const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
 
 let env;
 const anon = () => env.unauthenticatedContext();
-const alice = () => env.authenticatedContext('alice', { email: 'alice@example.com' });
-const bob = () => env.authenticatedContext('bob', { email: 'bob@example.com' });
+// 일반 회원 — 실제 회원 화면(ai.html·motion-legacy.html)은 이메일 인증 후에만 열리므로 인증된 토큰을 기본으로 한다
+const alice = () => env.authenticatedContext('alice', { email: 'alice@example.com', email_verified: true });
+const bob = () => env.authenticatedContext('bob', { email: 'bob@example.com', email_verified: true });
+// 이메일 미인증 회원 — SOS 문서·영상은 거부돼야 한다 (2026-10-21)
+const aliceUnverified = () => env.authenticatedContext('alice', { email: 'alice@example.com', email_verified: false });
+const aliceNoClaim = () => env.authenticatedContext('alice', { email: 'alice@example.com' });
 const admin = () => env.authenticatedContext('admin', { email: ADMIN_EMAIL, email_verified: true });
 // 관리자 이메일이지만 미인증 토큰 — isAdmin() 이 email_verified 를 보므로 관리자가 아니다 (2026-10-20)
 const fakeAdmin = () => env.authenticatedContext('evil', { email: ADMIN_EMAIL, email_verified: false });
@@ -214,6 +218,10 @@ function sosPayload(uid, overrides = {}) {
 describe('3단계 ai_interview 생성', () => {
   const C = c => collection(c.firestore(), 'ai_interview');
   test('SOS 요청(영상 없음) 일반회원 통과', () => assertSucceeds(addDoc(C(alice()), sosPayload('alice'))));
+  test('SOS 요청 이메일 미인증 토큰 거부', () => assertFails(addDoc(C(aliceUnverified()), sosPayload('alice'))));
+  test('SOS 요청 email_verified 없는 토큰 거부', () => assertFails(addDoc(C(aliceNoClaim()), sosPayload('alice'))));
+  test('SOS 요청(영상 경로) 이메일 미인증 토큰 거부', () => assertFails(setDoc(doc(aliceUnverified().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr02'),
+    sosPayload('alice', { videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr02.mp4' }))));
   // 2026-10-20: 문서를 먼저 만들고 영상은 sos_videos/{uid}/{문서 ID}.mp4 로 올린다. videoUrl 은 비워 둔다.
   test('SOS 요청(영상 있음, 미리 만든 ID 경로) 일반회원 통과', () => assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', 'AbCdEfGhIjKlMnOpQr01'),
     sosPayload('alice', { videoPath: 'sos_videos/alice/AbCdEfGhIjKlMnOpQr01.mp4' }))));
@@ -465,6 +473,10 @@ describe('Storage SOS 영상', () => {
     await assertSucceeds(setDoc(doc(alice().firestore(), 'ai_interview', id), sosPayload('alice', { videoPath: sosPath('alice', id) })));
     await assertSucceeds(vid(alice(), sosPath('alice', id)));
   });
+  // 이메일 인증 (2026-10-21)
+  test('이메일 미인증 토큰 — 본인 문서(대기중) 경로라도 업로드 거부', () => assertFails(vid(aliceUnverified(), sosPath('alice', SOS.ok))));
+  test('email_verified 없는 토큰 — 업로드 거부', () => assertFails(vid(aliceNoClaim(), sosPath('alice', SOS.ok))));
+  test('이메일 미인증 토큰 — 본인 파일 읽기는 허용(기존과 같음)', () => assertSucceeds(getMetadata(ref(aliceUnverified().storage(), sosPath('alice', SOS.exists)))));
   // 교차 규칙 거부
   test('문서 없는 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.missing))));
   test('남의 문서 ID 로 내 폴더에 업로드 거부', () => assertFails(vid(alice(), sosPath('alice', SOS.bob))));

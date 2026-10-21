@@ -458,6 +458,16 @@ let currentVideoFile = null;
 // SOS 전송 중인 요청(문서 ID·영상 경로·진행 단계). 같은 영상으로 재시도하면 이어서 쓴다.
 let sosPending = null;
 const SOS_MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+// SOS 문서·영상 규칙은 이메일 인증된 토큰만 허용(403). 안내는 AI 코치(coach.js)의 미인증 403 문구와 같게.
+const UNVERIFIED_MSG = '이메일 인증 후 이용 가능합니다. 받은 편지함을 확인해주세요.';
+
+// 로그인 정보(user.emailVerified)는 인증 완료인데 토큰만 인증 전 값으로 남아 있을 수 있다
+// (다른 창에서 인증 링크를 누른 직후 등) — 그때는 토큰을 한 번 새로 받아 다시 본다.
+async function tokenEmailVerified() {
+  var r = await currentUser.getIdTokenResult();
+  if (r.claims.email_verified !== true) r = await currentUser.getIdTokenResult(true);
+  return r.claims.email_verified === true;
+}
 
 // ── Firebase Auth ──────────────────────────────────────────
 firebase.initializeApp({
@@ -988,6 +998,16 @@ async function submitSosModal() {
   btn.disabled    = true;
   btn.textContent = '⏳ 전송 중...';
 
+  // 이메일 미인증 토큰이면 문서·영상 모두 규칙에서 403 — 보내기 전에 같은 안내로 멈춘다
+  var verified = false;
+  try { verified = await tokenEmailVerified(); } catch (_) {}
+  if (!verified) {
+    btn.disabled    = false;
+    btn.textContent = 'SOS 요청하기';
+    alert(UNVERIFIED_MSG);
+    return;
+  }
+
   var chapterId = parseInt(document.getElementById('chapterSelect').value);
   var chapter   = CHAPTERS[chapterId] || { name: '기타', tech: '' };
   var video     = document.getElementById('videoPlayer');
@@ -1097,6 +1117,12 @@ async function submitSosModal() {
   } catch (e) {
     btn.disabled    = false;
     btn.textContent = 'SOS 요청하기';
+    // 규칙 403(Firestore permission-denied / Storage unauthorized) 이 미인증 토큰 때문이면 미인증 안내
+    if (e.code === 'permission-denied' || e.code === 'storage/unauthorized') {
+      var stillVerified = true;
+      try { stillVerified = await tokenEmailVerified(); } catch (_) {}
+      if (!stillVerified) { alert(UNVERIFIED_MSG); return; }
+    }
     alert('전송 실패: ' + e.message +
       (p.docCreated ? '\n\n다시 [SOS 요청하기]를 누르면 같은 요청에 영상만 이어서 올립니다.' : ''));
   }

@@ -43,6 +43,19 @@
   - admin.html(관리자): 그 건이 SOS 카드 첫 항목으로 보이고 영상 재생(2.0초, readyState 4), 콘솔 에러 0.
   - 정리: 테스트 SOS 문서·영상·다른 회원용 테스트 문서·파일·users 문서·Auth 계정 삭제, 남은 것 0건 확인.
 
+## 추가 변경 — SOS 이메일 인증 요구 (2026-10-21 09:12 UTC, 커밋 `ababbfb`)
+
+- (기존) 이메일 인증은 요구하지 않음 (미인증 이메일 가입 회원 5명 존재).
+- (변경) SOS 문서 생성(firestore.rules)과 영상 업로드(storage.rules) 모두 `request.auth.token.email_verified == true` — 미인증이면 403.
+  motion-legacy.html 이 이미 미인증 회원을 ai.html 로 돌려보내므로 화면 정책과 일치시킨 것. 문서·영상이 같은 조건이라 문서만 남는 일이 없다.
+- motion-legacy.html: 전송 전 토큰의 인증 여부 확인(인증 전 값이면 토큰을 한 번 새로 받음), 미인증이거나 규칙 403 이면
+  AI 코치 미인증 403 과 같은 문구 "이메일 인증 후 이용 가능합니다. 받은 편지함을 확인해주세요." 를 띄운다.
+- 순서: 클라이언트(Vercel) 먼저 반영 확인 → 규칙 배포(Terminal 패널). ruleset Firestore `be070b5c`, Storage `093fc575`. 배포 전 백업 `~/thestepper-backups/*-20261021-1812.rules`.
+- 규칙 테스트 311개 통과. 운영 확인(임시 회원 2명, 끝나고 전부 삭제·0건 확인):
+  - 인증 회원: motion-legacy 화면에서 SOS 접수 성공, 문서·파일 ID 일치, 콘솔 에러 0
+  - 미인증 회원: SOS 문서 생성 거부(permission-denied), 본인 SOS 문서 경로 업로드 거부(storage/unauthorized), motion-legacy 진입 시 ai.html 로 이동
+  - 토큰만 미인증 값인 경우(화면 흉내): 위 안내 문구 표시, 문서 생성 없음
+
 ## 롤백 방법
 
 `firebase-rules/deployed/2026-10-19-after/firestore.rules` 와 `2026-10-16-after/storage.rules` 본문(헤더 아래)

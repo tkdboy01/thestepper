@@ -60,13 +60,15 @@ service firebase.storage {
     // 생성 조건: 본인 폴더, 영상 형식, 200MB 미만(업로드 화면 안내 "최대 200MB"),
     // 그리고 Firestore ai_interview/{문서 ID} 가 이미 있고 본인 SOS 요청이며 답변 전('대기중')이고
     // 그 문서의 videoPath 가 바로 이 경로일 때만. (motion-legacy.html 은 문서를 먼저 만들고 올린다)
-    // email_verified 는 요구하지 않는다 — 2026-10-20 기준 미인증 이메일 가입 회원 5명.
+    // 이메일 인증된 토큰만(email_verified == true) — motion-legacy.html 이 미인증 회원을 ai.html 로
+    // 돌려보내는 화면 정책과 맞춘다. firestore.rules 의 SOS 문서 생성도 같은 조건. (2026-10-21)
     match /sos_videos/{userId}/{fileName} {
       function sosDoc() {
         return firestore.get(/databases/(default)/documents/ai_interview/$(fileName.split('[.]')[0]));
       }
       // resource == null: 같은 경로에 파일이 이미 있으면 거부 (create 만으로는 덮어쓰기가 통과하는 것을 에뮬레이터에서 확인)
       allow create: if request.auth != null && request.auth.uid == userId
+        && request.auth.token.email_verified == true
         && resource == null
         && fileName.matches('[A-Za-z0-9]{20}[.]mp4')
         && request.resource.size < 200 * 1024 * 1024

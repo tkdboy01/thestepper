@@ -120,7 +120,10 @@ service cloud.firestore {
     // 본인 uid, status '대기중', adminAnswer '' 로만. 그 밖의 생성·수정·삭제는 관리자만. (2026-10-19 3단계)
     match /ai_interview/{docId} {
       allow read: if isAdmin();
+      // 회원 SOS 는 이메일 인증된 토큰만 — motion-legacy.html 이 미인증 회원을 ai.html 로 돌려보내는
+      // 화면 정책과 맞춘다. storage.rules 의 SOS 업로드도 같은 조건이라 문서만 남는 일이 없다. (2026-10-21)
       allow create: if isAdmin() || (request.auth != null
+        && request.auth.token.email_verified == true
         && request.resource.data.keys().hasOnly(['trackType', 'userId', 'userEmail', 'userName',
              'question', 'chapter', 'videoUrl', 'videoPath', 'measurements', 'aiFeedback',
              'status', 'adminAnswer', 'createdAt', 'updatedAt'])

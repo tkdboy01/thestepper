@@ -45,9 +45,19 @@ service cloud.firestore {
     match /inquiries/{docId} {
       allow read: if isAdmin()
         || (request.auth != null && resource.data.uid == request.auth.uid);
+      // 스팸·대량 작성 방지 (2026-10-22): 이메일 인증 계정만, 글자 수 상한(board.html TITLE_MAX/CONTENT_MAX/NICKNAME_MAX 와 같은 값)
       allow create: if request.auth != null
+        && request.auth.token.email_verified == true
         && request.resource.data.keys().hasOnly(['title', 'content', 'uid', 'email',
              'nickname', 'createdAt', 'answer', 'answeredAt', 'status'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 5000
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() <= 40
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.status == 'pending'

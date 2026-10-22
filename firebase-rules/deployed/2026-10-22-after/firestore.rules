@@ -1,0 +1,178 @@
+// ══════════════════════════════════════════════════════════════════
+//  배포본 원문 (Firestore) — Firebase Admin SDK securityRules() 로 조회
+//  가져온 시각: 2026-10-22T08:05:41.000Z
+//  ruleset 이름: ade6238a-9518-4bbc-9cc9-689316386b63
+//  ruleset 생성시각: Thu, 22 Oct 2026 08:03:41 GMT
+//  소스 파일명: firestore.rules
+//  ※ 이 주석 블록 아래가 배포본 원문 그대로다. 수정 금지.
+// ══════════════════════════════════════════════════════════════════
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 관리자 판별 — 배포본(2026-10-16 스냅샷)에 반복되던
+    // request.auth != null && request.auth.token.email == '...' 를 묶은 것.
+    // 이메일 문자열만으로는 미인증 토큰도 통과하므로 email_verified 를 함께 본다. (2026-10-20)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'tkdboykms0007@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // 쓰는 코드가 없는 옛 컬렉션 — 관리자만 (2026-10-19 2단계)
+    match /visitors/{doc=**} {
+      allow read, write: if isAdmin();
+    }
+    // 방문자 집계 stats/visitors — index.html 이 { count: 1 } 생성 또는 count increment(1) 만 한다.
+    // 누구나 읽기, 생성은 count=1 하나만, 수정은 count 를 정확히 +1 만, 삭제 금지. (2026-10-19 2단계)
+    match /stats/visitors {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+    // stats 아래 다른 문서 — 관리자만
+    match /stats/{doc=**} {
+      allow read, write: if isAdmin();
+    }
+    match /movement_data/{doc=**} {
+      allow read, write: if isAdmin();
+    }
+    match /schedules/{doc=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /locations/{doc=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // 1:1 문의 (board.html) — 작성자 본인과 관리자만 읽는다.
+    // 생성 필드는 board.html submitInquiry() 가 저장하는 9개와 정확히 같아야 한다.
+    // 작성자 수정·삭제 기능은 코드에 없으므로 막는다.
+    match /inquiries/{docId} {
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+      // 스팸·대량 작성 방지 (2026-10-22): 이메일 인증 계정만, 글자 수 상한(board.html TITLE_MAX/CONTENT_MAX/NICKNAME_MAX 와 같은 값)
+      allow create: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['title', 'content', 'uid', 'email',
+             'nickname', 'createdAt', 'answer', 'answeredAt', 'status'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 5000
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() <= 40
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.answer == ''
+        && request.resource.data.answeredAt == null
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['answer', 'answeredAt', 'status']);
+      allow delete: if isAdmin();
+    }
+    // 회원 프로필 — 본인만 쓴다. 회원이 쓰는 곳은 ai.html 가입(11개 필드)과 로그인 시
+    // { emailVerified: true } merge 두 곳뿐이다. 서버(manage-member)는 Admin SDK 라 규칙과 무관.
+    // 회원이 바꾸는 필드(ks)에 대해서만 검사한다 — 건드리지 않은 기존 필드는 그대로 둬도 된다.
+    // 생성 시 필수 필드는 강제하지 않는다(로그인 merge 가 문서 없는 계정에서 문서를 만들기 때문). (2026-10-19 6단계)
+    function userFieldsOk(ks) {
+      let d = request.resource.data;
+      return !ks.hasAny(['completedByAdmin', 'createdByAdmin', 'updatedAt',
+               'profileReminderSentAt', 'profileReminderCount'])
+        && (!ks.hasAny(['emailVerified']) || d.emailVerified == false
+            || (d.emailVerified == true && request.auth.token.email_verified == true))
+        // Firebase Auth 는 이메일을 소문자로 저장한다 — 가입 폼 입력은 대소문자가 섞일 수 있다.
+        && (!ks.hasAny(['email']) || d.email.lower() == request.auth.token.email.lower());
+    }
+    match /users/{uid} {
+      allow read: if (request.auth != null && request.auth.uid == uid) || isAdmin();
+      allow create: if request.auth != null && request.auth.uid == uid
+        && userFieldsOk(request.resource.data.keys())
+        && (!request.resource.data.keys().hasAny(['createdAt'])
+            || request.resource.data.createdAt == request.time);
+      // createdAt(가입 시각)은 바꿀 수 없다. 단 문서가 생긴 지 5분 안에 같은 가입 코드가
+      // 다시 저장하는 경우(가입 재시도 — 첫 저장이 실제로는 반영됐는데 오류로 보인 경우)는 허용.
+      allow update: if request.auth != null && request.auth.uid == uid
+        && userFieldsOk(request.resource.data.diff(resource.data).affectedKeys())
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt'])
+            || (request.resource.data.createdAt == request.time
+                && resource.data.createdAt is timestamp
+                && resource.data.createdAt > request.time - duration.value(5, 'm')));
+    }
+    match /aiUsage/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    // 전문가 질문은 서버(manage-member submit-expert-question)가 Admin SDK 로 만든다.
+    // 회원 브라우저 직접 생성 금지 — 하루 횟수 제한을 건너뛸 수 없게. (2026-10-19 4단계)
+    match /ai_coaching/{docId} {
+      allow create: if isAdmin();
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (resource.data.userId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']))
+      );
+    }
+    // 전문가 질문 횟수 — 서버만 쓴다(Admin SDK). 본인은 남은 횟수 표시용 읽기만. (2026-10-19 4단계)
+    match /expertUsage/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+    // 코칭 지식 원문 — 관리자만. 회원 브라우저에서 직접 읽는 코드는 없고,
+    // AI 코치(coach.js 등)는 Admin SDK 로 읽어 규칙의 영향을 받지 않는다. (2026-10-19 1단계)
+    match /coaching_knowledge/{docId} {
+      allow read, write: if isAdmin();
+    }
+    // SOS 요청(trackType 'sos')은 서버(manage-member submit-sos, Admin SDK)가 하루 횟수를 확인하고 만든다.
+    // 회원 브라우저 직접 생성은 막는다 — 예전엔 회원이 SOS 문서를 무제한 만들 수 있었다. (2026-10-21)
+    // 관리자 화면의 직접 생성(인터뷰 등)은 그대로 허용.
+    match /ai_interview/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+    // SOS 하루 횟수 기록 — 서버(manage-member submit-sos)만 쓴다. 회원 읽기·쓰기 모두 금지. (2026-10-21)
+    match /sosUsage/{uid} {
+      allow read, write: if false;
+    }
+    // ai_interview 하위 컬렉션 — 쓰는 코드 없음, 관리자만
+    match /ai_interview/{docId}/{sub=**} {
+      allow read, write: if isAdmin();
+    }
+    match /voice_drafts/{docId} {
+      allow read, write: if isAdmin();
+    }
+    // admin.html "⚖️ 품질 비교" 탭(항목 10) — 관리자가 브라우저에서 직접
+    // Firestore 클라이언트 SDK로 읽고 쓴다 (서버 API 를 거치지 않음).
+    match /comparison_questions/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /comparison_results/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /user_messages/{docId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']);
+      allow create, delete: if false;
+    }
+    // quiz.html O/X 퀴즈 게임 — 로그인 없이 누구나 confirmed(승인된) 문제만
+    // 읽는다. draft/discarded 는 관리자(admin.html "OX 퀴즈 관리" 탭, Admin
+    // SDK 경유 manage-quiz.js)만 볼 수 있어야 하므로 공개 읽기에서 제외한다.
+    match /quiz_questions/{docId} {
+      allow read: if resource.data.status == 'confirmed';
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -239,8 +239,8 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       <div class="form-card-title">문의 작성</div>
       <div class="form-err" id="formErr"></div>
       <input type="text" class="form-input" id="titleInput" placeholder="제목을 입력해주세요" maxlength="100">
-      <textarea class="form-textarea" id="contentInput" placeholder="문의 내용을 상세히 입력해주세요..." maxlength="2000" oninput="updateCharCount(this)"></textarea>
-      <div class="char-count"><span id="charCount">0</span> / 2000</div>
+      <textarea class="form-textarea" id="contentInput" placeholder="문의 내용을 상세히 입력해주세요..." maxlength="5000" oninput="updateCharCount(this)"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / 5000</div>
       <div class="form-actions">
         <button class="btn-cancel" onclick="showList()">취소</button>
         <button class="btn-submit" id="submitBtn" onclick="submitInquiry()">등록하기</button>
@@ -292,6 +292,10 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 
 <script>
 const ADMIN_EMAIL = 'tkdboykms0007@gmail.com';
+const MANAGE_MEMBER_URL = 'https://thestepper-api.vercel.app/api/manage-member';
+// 문의 글자 수 상한 — firestore.rules 의 inquiries create 조건과 같은 값
+const TITLE_MAX = 100, CONTENT_MAX = 5000, NICKNAME_MAX = 40;
+const UNVERIFIED_INQUIRY_MSG = '이메일 인증 후 문의를 작성할 수 있습니다. 가입한 이메일의 받은 편지함(스팸함 포함)에서 인증 메일을 확인해주세요.';
 let currentUser = null;
 let isAdmin = false;
 let currentDocId = null;
@@ -426,6 +430,9 @@ function showForm() {
   document.getElementById('contentInput').value = '';
   document.getElementById('charCount').textContent = '0';
   document.getElementById('formErr').style.display = 'none';
+  // 앞 글을 등록한 뒤 버튼이 "등록 중..." 으로 잠긴 채 남아 두 번째 글을 못 쓰던 문제
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = false; btn.textContent = '등록하기';
 }
 
 // ===== 문의 등록 =====
@@ -434,6 +441,8 @@ async function submitInquiry() {
   var content = document.getElementById('contentInput').value.trim();
   if (!title) { showFormErr('제목을 입력해주세요.'); return; }
   if (!content) { showFormErr('내용을 입력해주세요.'); return; }
+  if (title.length > TITLE_MAX) { showFormErr('제목은 ' + TITLE_MAX + '자 이내로 입력해주세요. (현재 ' + title.length + '자)'); return; }
+  if (content.length > CONTENT_MAX) { showFormErr('내용은 ' + CONTENT_MAX.toLocaleString() + '자 이내로 입력해주세요. (현재 ' + content.length.toLocaleString() + '자)'); return; }
 
   var btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '등록 중...';
@@ -444,23 +453,63 @@ async function submitInquiry() {
       var userDoc = await db.collection('users').doc(currentUser.uid).get();
       if (userDoc.exists) nickname = userDoc.data().nickname || nickname;
     } catch(_) {}
+    nickname = String(nickname || '').slice(0, NICKNAME_MAX);
 
-    await db.collection('inquiries').add({
-      title: title,
-      content: content,
-      uid: currentUser.uid,
-      email: currentUser.email || '',
-      nickname: nickname,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      answer: '',
-      answeredAt: null,
-      status: 'pending'
-    });
+    var write = function() {
+      return db.collection('inquiries').add({
+        title: title,
+        content: content,
+        uid: currentUser.uid,
+        email: currentUser.email || '',
+        nickname: nickname,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        answer: '',
+        answeredAt: null,
+        status: 'pending'
+      });
+    };
+    try {
+      await write();
+    } catch(e1) {
+      if (!e1 || e1.code !== 'permission-denied') throw e1;
+      // 규칙에 막혔을 때 — 방금 이메일 인증을 마쳤는데 로그인 토큰이 예전 상태일 수 있어
+      // 최신 상태·토큰을 받아 한 번만 다시 시도한다
+      await currentUser.reload();
+      await currentUser.getIdToken(true);
+      await write();
+    }
 
     showList();
   } catch(e) {
-    showFormErr('등록에 실패했습니다. 다시 시도해주세요.');
+    // 규칙에 막힌 경우(permission-denied) — 이유를 알려 준다
+    if (e && e.code === 'permission-denied') {
+      showFormErr(auth.currentUser && !auth.currentUser.emailVerified
+        ? UNVERIFIED_INQUIRY_MSG
+        : '등록이 거부되었습니다. 이메일 인증 여부와 글자 수(제목 ' + TITLE_MAX + '자, 내용 ' + CONTENT_MAX.toLocaleString() + '자 이내)를 확인한 뒤 다시 시도해주세요.');
+    } else {
+      showFormErr('등록에 실패했습니다. 다시 시도해주세요.');
+    }
     btn.disabled = false; btn.textContent = '등록하기';
+  }
+}
+
+// 관리자가 본문을 열면 admin.html 과 같이 adminReadAt 기록 → 반복 알림이 멈춘다.
+// 회원(작성자)이 자기 글을 열 때는 부르지 않는다. 실패해도 화면에는 영향 없음.
+var readMarked = {};
+async function markInquiryRead(docId) {
+  if (!isAdmin || readMarked[docId]) return;
+  readMarked[docId] = true;
+  try {
+    var token = await currentUser.getIdToken();
+    var r = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'mark-request-read', kind: 'inquiry', id: docId })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch(e) {
+    readMarked[docId] = false;
+    console.warn('[mark-request-read]', e.message);
   }
 }
 
@@ -521,6 +570,8 @@ async function showDetail(docId) {
 
     // 답변 영역
     renderAnswerArea(d, answered, canView);
+
+    if (isAdmin && !answered && !d.adminReadAt) markInquiryRead(docId);
 
   } catch(e) {
     showList();

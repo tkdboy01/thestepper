@@ -7,3 +7,8 @@ outputs/node_modules/
 outputs/package*.json
 %TEMP%/
 /더 스텝퍼 AI 코치 프로그램/
+
+# Cloud Functions(관리자 알림) — 의존성·에뮬레이터용 로컬 비밀값은 커밋 금지
+functions/node_modules/
+functions/.env*
+functions/.secret*

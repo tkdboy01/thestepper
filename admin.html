@@ -35,6 +35,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .admin-tabs{background:#fff;border-bottom:1px solid var(--border);display:flex;padding:0 24px}
 .tab-btn{background:none;border:none;padding:14px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s}
 .tab-btn.active{color:var(--red);border-bottom-color:var(--red)}
+/* 탭 알림 배지는 탭 안쪽에 — 바깥(top:-4px)으로 나가면 위의 고정 헤더(z-index)와 1024px 이하 탭 바 스크롤에 가려 잘렸다 */
+.admin-tabs .tab-btn>span[id$="Badge"]{top:3px!important;right:2px!important}
 
 /* LAYOUT */
 .tab-content{max-width:980px;margin:0 auto;padding:28px 24px}
@@ -138,12 +140,30 @@ select.form-control{cursor:pointer}
   .admin-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   .admin-tabs::-webkit-scrollbar{display:none}
   .admin-tabs .tab-btn{flex:0 0 auto;white-space:nowrap}
-  /* 탭 바가 위아래 넘침을 자르므로 알림 배지(top:-4px)를 탭 안쪽으로 */
-  .admin-tabs .tab-btn>span[id$="Badge"]{top:3px!important;right:2px!important}
 }
+
+/* 회원 요청 배지 — 상단 "미확인 N건 / 미답변 N건" + 경과일 (2026-10-22)
+   미확인 = 아직 본문을 열지 않은 요청, 미답변 = 답변하지 않은 요청 전체(미확인 포함) */
+.req-badges{display:flex;gap:6px;align-items:center;margin-left:auto;margin-right:14px;flex-wrap:wrap}
+.req-badge{border:none;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;background:#f0f0f2;color:#888}
+.req-badge.on.unread{background:#C8102E;color:#fff}
+.req-badge.on.open{background:#fff4dc;color:#8a5a00;border:1px solid #e3b44f}
+.elapsed{display:inline-block;font-size:11px;font-weight:700;color:#888;white-space:nowrap}
+.elapsed.late{color:#C8102E}
+.inq-chip{display:inline-block;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.inq-chip.unread{background:#C8102E;color:#fff}
+.inq-chip.read{background:#fff4dc;color:#8a5a00}
+.inq-chip.done{background:#e8f5e9;color:#2e7d32}
+.inq-filter{display:flex;gap:6px;margin-bottom:12px}
+.inq-filter button{border:1px solid var(--border);background:#fff;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--sub)}
+.inq-filter button.active{border-color:var(--red);color:var(--red)}
 
 /* RESPONSIVE */
 @media(max-width:640px){
+  .header-logo{font-size:15px;letter-spacing:1px;white-space:nowrap}
+  .req-badges{margin-right:8px;flex-direction:column;align-items:flex-end;gap:3px}
+  .req-badge{padding:2px 8px;font-size:11px}
+  .logout-btn{white-space:nowrap;padding:5px 10px}
   .login-box{padding:36px 24px}
   .tab-content{padding:20px 16px}
   .form-grid{grid-template-columns:1fr}
@@ -217,6 +237,10 @@ select.form-control{cursor:pointer}
 <div id="adminSection" style="display:none">
   <header class="admin-header">
     <div class="header-logo">THE STEPPER · ADMIN</div>
+    <div class="req-badges" id="reqBadges" title="1:1 문의 · 코칭 피드백 · SOS 요청 기준. 미확인 = 본문을 아직 열지 않음, 미답변 = 답변하지 않은 전체">
+      <button class="req-badge" id="reqUnreadBadge" onclick="jumpToFirstRequest(true)">미확인 –</button>
+      <button class="req-badge" id="reqOpenBadge" onclick="jumpToFirstRequest(false)">미답변 –</button>
+    </div>
     <div class="header-right">
       <span class="header-email" id="headerEmail"></span>
       <button class="logout-btn" onclick="doLogout()">로그아웃</button>
@@ -227,6 +251,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn active" id="tab-schedule-btn" onclick="switchTab('schedule')">📅 세미나 일정</button>
     <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
+    <button class="tab-btn" id="tab-inquiries-btn" onclick="switchTab('inquiries')" style="position:relative">💬 1:1 문의<span id="inquiryBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:8px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-quiz-btn" onclick="switchTab('quiz')" style="position:relative">🎮 OX 퀴즈 관리<span id="quizBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
@@ -443,6 +468,42 @@ select.form-control{cursor:pointer}
   </div>
 
   <!-- ===== 코칭 관리 탭 ===== -->
+  <!-- 💬 1:1 문의 (2026-10-22) — board.html 1:1 문의(inquiries)를 여기서 열고 답변한다.
+       답변 저장은 board.html 과 같은 {answer, answeredAt, status:'answered'} — 회원 화면은 그대로 동작.
+       본문을 열면 adminReadAt 기록(manage-member mark-request-read) → 반복 알림이 멈추고 09시 요약으로 넘어간다. -->
+  <div id="tab-inquiries" class="tab-content" style="display:none">
+    <div class="form-card" id="inquiryDetailPanel" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+        <div>
+          <div class="form-card-title" id="inqDetailTitle" style="margin-bottom:4px;word-break:break-word"></div>
+          <div style="font-size:12px;color:var(--sub)" id="inqDetailMeta"></div>
+        </div>
+        <button class="btn-secondary" style="padding:6px 12px;flex-shrink:0" onclick="closeInquiryDetail()">닫기</button>
+      </div>
+      <div id="inqDetailContent" style="white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px"></div>
+      <div class="form-group full">
+        <label class="form-label" for="inqAnswerInput">답변 <span id="inqAnswerCount" style="font-weight:400"></span></label>
+        <textarea class="form-control" id="inqAnswerInput" rows="6" maxlength="5000" placeholder="회원에게 보낼 답변을 입력하세요" oninput="updateInqAnswerCount()"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" id="inqAnswerBtn" onclick="submitInquiryAnswer()">답변 전송</button>
+      </div>
+      <div id="inqAnswerErr" style="color:var(--red);font-size:12px;margin-top:6px"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">💬 1:1 문의 <span id="inquiryCountInfo" style="font-size:12px;font-weight:400;color:var(--sub)"></span></div>
+      <div class="inq-filter">
+        <button id="inqFilterOpen" class="active" onclick="setInquiryFilter('open')">미답변</button>
+        <button id="inqFilterAll" onclick="setInquiryFilter('all')">전체</button>
+      </div>
+      <div class="list-wrap wide-list">
+        <div class="list-head" style="grid-template-columns:1fr 110px 90px 80px"><div>제목 · 닉네임</div><div>접수</div><div>상태</div><div style="text-align:right">관리</div></div>
+        <div id="inquiryList"><div class="loading-msg">로딩 중...</div></div>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-coaching" class="tab-content" style="display:none">
 
     <!-- 동작분석 페이지 바로가기 (관리자 전용 · 회원 메뉴에는 노출되지 않음) -->
@@ -1038,6 +1099,13 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('adminSection').style.display = 'block';
     document.getElementById('headerEmail').textContent = user.email;
     loadSchedules();
+    startRequestWatch();   // 탭을 열지 않아도 로그인 직후 배지 계산
+    // 알림 링크로 들어온 경우 — 해당 요청을 바로 연다(한 번만)
+    const qp = new URLSearchParams(location.search);
+    const linkKind = qp.get('kind'), linkId = qp.get('id'), linkTab = qp.get('tab');
+    if (linkKind && linkId && ['inquiry', 'coaching', 'sos'].includes(linkKind)) openRequest(linkKind, linkId);
+    else if (linkTab && document.getElementById('tab-' + linkTab + '-btn')) switchTab(linkTab);
+    if (linkKind || linkId || linkTab) history.replaceState(null, '', location.pathname);
   } else if (user) {
     signOut(auth);
     showLoginError('접근 권한이 없습니다. 관리자 계정만 접근 가능합니다.');
@@ -1096,6 +1164,227 @@ window.switchTab = (tab) => {
   // 지식 탭에서 확정할 때마다 자동 생성되어 계속 쌓이기 때문이다.
   if (tab === 'evalq') { loadEvalQuestionsMgmt(); }
   if (tab === 'compare' && !compareLoaded) { compareLoaded = true; initCompareTab(); }
+  if (tab === 'inquiries' && !inquiriesLoaded) { inquiriesLoaded = true; initInquiriesTab(); }
+};
+
+/* ---- 회원 요청 배지·읽음 기록 (2026-10-22) ----
+   1:1 문의(inquiries) · 코칭 피드백(ai_coaching 대기중/검토대기) · SOS(ai_interview sos 대기중)를
+   로그인 직후 실시간으로 지켜보며 상단 "미확인 N건 / 미답변 N건"과 탭 배지를 같은 기준으로 계산한다.
+     미확인 = adminReadAt 없음(본문을 아직 안 열었음), 미답변 = 답변 안 한 전체(미확인 포함)
+   탭 배지 숫자 = 그 탭의 미답변 수, 빨강 = 미확인이 섞여 있음 / 주황 = 모두 열어 봤음.
+   본문을 열 때만 markRequestRead 로 서버에 adminReadAt 을 남긴다(목록에 보이는 것만으로는 아님). */
+const reqOpen = { inquiry: new Map(), coaching: new Map(), sos: new Map() };
+let reqWatchStarted = false;
+const REQ_LATE_DAYS = 3;
+
+// 접수 후 경과 — 하루 미만은 시간, 그 뒤로는 일. 답변 안 한 채 3일 이상이면 빨강
+function elapsedHtml(createdAt, open = true) {
+  const ms = createdAt?.toMillis?.();
+  if (ms == null) return '';
+  const h = Math.max(0, Math.floor((Date.now() - ms) / 3600000));
+  const days = Math.floor(h / 24);
+  const late = open && days >= REQ_LATE_DAYS;
+  return `<span class="elapsed${late ? ' late' : ''}">${days >= 1 ? days + '일' : h + '시간'} 경과${late ? ' ⚠️' : ''}</span>`;
+}
+
+function startRequestWatch() {
+  if (reqWatchStarted) return;
+  reqWatchStarted = true;
+  const watch = (kind, q) => onSnapshot(q, (snap) => {
+    const m = new Map();
+    snap.docs.forEach(d => { const v = d.data(); if (!v.answeredAt) m.set(d.id, { id: d.id, ...v }); });
+    reqOpen[kind] = m;
+    renderRequestBadges();
+  }, (err) => console.error('[request watch]', kind, err));
+  watch('inquiry', query(collection(db, 'inquiries'), where('status', '==', 'pending')));
+  watch('coaching', query(collection(db, 'ai_coaching'), where('status', 'in', ['대기중', '검토대기'])));
+  watch('sos', query(collection(db, 'ai_interview'), where('trackType', '==', 'sos'), where('status', '==', '대기중')));
+}
+
+function setTabBadge(id, list) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  if (!list.length) { b.style.display = 'none'; return; }
+  const unread = list.filter(d => !d.adminReadAt).length;
+  b.textContent = list.length;
+  b.style.background = unread ? '#C8102E' : '#b07600';
+  b.title = `미답변 ${list.length}건 (미확인 ${unread}건)`;
+  b.style.display = 'flex';
+}
+
+function renderRequestBadges() {
+  const all = [...reqOpen.inquiry.values(), ...reqOpen.coaching.values(), ...reqOpen.sos.values()];
+  const unread = all.filter(d => !d.adminReadAt).length;
+  const u = document.getElementById('reqUnreadBadge'), o = document.getElementById('reqOpenBadge');
+  u.textContent = `미확인 ${unread}건`;
+  o.textContent = `미답변 ${all.length}건`;
+  u.className = 'req-badge unread' + (unread ? ' on' : '');
+  o.className = 'req-badge open' + (all.length ? ' on' : '');
+  setTabBadge('inquiryBadge', [...reqOpen.inquiry.values()]);
+  setTabBadge('coachingBadge', [...reqOpen.coaching.values(), ...reqOpen.sos.values()]);
+}
+
+const readMarking = new Set();
+async function markRequestRead(kind, id) {
+  const key = kind + '/' + id;
+  const cur = reqOpen[kind] && reqOpen[kind].get(id);
+  if ((cur && cur.adminReadAt) || readMarking.has(key)) return;
+  readMarking.add(key);
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'mark-request-read', kind, id })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    readMarking.delete(key);   // 다음에 열 때 다시 시도
+    console.warn('[mark-request-read]', kind, id, e.message);
+  }
+}
+
+// 알림 링크(admin.html?tab=…&kind=…&id=…)·상단 배지에서 요청 하나를 바로 연다
+let sosFocusId = null;
+window.openRequest = async (kind, id) => {
+  if (kind === 'inquiry') { switchTab('inquiries'); return openInquiry(id); }
+  if (kind === 'sos') {
+    sosFocusId = id;   // SOS 카드가 아직 안 불러왔으면 불러온 뒤 이 건부터 보여 준다(loadSosCard)
+    switchTab('coaching');
+    const idx = pendingSosList.findIndex(x => x.id === id);
+    if (idx >= 0) { sosFocusId = null; renderSosItem(idx); }
+    document.getElementById('sosWithQuestion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  if (kind === 'coaching') {
+    switchTab('coaching');
+    const snap = await getDoc(doc(db, 'ai_coaching', id));
+    if (!snap.exists()) { showToast('요청을 찾을 수 없습니다.', 'error'); return; }
+    const st = snap.data().status;
+    if (st === '검토대기') return openReviewPanelFromDoc(id);
+    if (st === '대기중') return openCoachingDetail(id);
+    showToast('이미 답변한 요청입니다.');
+  }
+};
+
+// 상단 배지 — 가장 오래 기다린 요청(미확인 배지는 미확인 중에서)을 연다
+window.jumpToFirstRequest = (unreadOnly) => {
+  const all = [];
+  for (const kind of ['inquiry', 'coaching', 'sos']) reqOpen[kind].forEach(d => all.push({ kind, d }));
+  const list = all.filter(x => !unreadOnly || !x.d.adminReadAt)
+    .sort((a, b) => (a.d.createdAt?.toMillis?.() || 0) - (b.d.createdAt?.toMillis?.() || 0));
+  if (!list.length) { showToast(unreadOnly ? '미확인 요청이 없습니다.' : '미답변 요청이 없습니다.'); return; }
+  openRequest(list[0].kind, list[0].d.id);
+};
+
+/* ---- 💬 1:1 문의 탭 (2026-10-22) ---- */
+let inquiriesLoaded = false;
+let inquiryAll = [];
+let inquiryFilter = 'open';
+let activeInquiryId = null;
+
+function inquiryState(d) {
+  if (d.status === 'answered' || d.answeredAt) return 'done';
+  return d.adminReadAt ? 'read' : 'unread';
+}
+const INQ_CHIP = { unread: '미확인', read: '확인 · 미답변', done: '답변 완료' };
+
+function initInquiriesTab() {
+  onSnapshot(query(collection(db, 'inquiries'), orderBy('createdAt', 'desc')), (snap) => {
+    inquiryAll = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderInquiryList();
+  }, (err) => {
+    document.getElementById('inquiryList').innerHTML = `<div class="empty-msg">오류: ${esc(err.message)}</div>`;
+  });
+}
+
+window.setInquiryFilter = (f) => {
+  inquiryFilter = f;
+  document.getElementById('inqFilterOpen').classList.toggle('active', f === 'open');
+  document.getElementById('inqFilterAll').classList.toggle('active', f === 'all');
+  renderInquiryList();
+};
+
+function renderInquiryList() {
+  const list = document.getElementById('inquiryList');
+  const open = inquiryAll.filter(d => inquiryState(d) !== 'done');
+  document.getElementById('inquiryCountInfo').textContent = `(미답변 ${open.length}건 / 전체 ${inquiryAll.length}건)`;
+  const rows = inquiryFilter === 'open' ? open : inquiryAll;
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-msg" style="padding:12px;font-size:13px">${inquiryFilter === 'open' ? '답변하지 않은 문의가 없습니다. ✅' : '문의가 없습니다.'}</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(d => {
+    const st = inquiryState(d);
+    const dateStr = d.createdAt?.toDate
+      ? d.createdAt.toDate().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+    return `<div class="list-row" style="grid-template-columns:1fr 110px 90px 80px${d.id === activeInquiryId ? ';background:rgba(200,16,46,0.04)' : ''}">` +
+      `<div><div style="font-size:13px;font-weight:700;word-break:break-word">${esc(d.title || '(제목 없음)')}</div>` +
+      `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(d.nickname || '익명')}</div></div>` +
+      `<div style="font-size:11px;color:#888">${dateStr}${st !== 'done' ? '<br>' + elapsedHtml(d.createdAt) : ''}</div>` +
+      `<div><span class="inq-chip ${st}">${INQ_CHIP[st]}</span></div>` +
+      `<div style="text-align:right"><button class="btn-edit" onclick="openInquiry('${d.id}')">${st === 'done' ? '보기' : '열기'}</button></div>` +
+      `</div>`;
+  }).join('');
+}
+
+window.openInquiry = async (id) => {
+  activeInquiryId = id;
+  let d = inquiryAll.find(x => x.id === id);
+  if (!d) {
+    const snap = await getDoc(doc(db, 'inquiries', id));
+    if (!snap.exists()) { showToast('문의를 찾을 수 없습니다.', 'error'); return; }
+    d = { id, ...snap.data() };
+  }
+  const st = inquiryState(d);
+  const dateStr = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleString('ko-KR') : '';
+  document.getElementById('inqDetailTitle').textContent = d.title || '(제목 없음)';
+  document.getElementById('inqDetailMeta').innerHTML =
+    `${esc(d.nickname || '익명')} · ${esc(d.email || '')} · 접수 ${esc(dateStr)} ` +
+    (st === 'done' ? '<span class="inq-chip done">답변 완료</span>' : elapsedHtml(d.createdAt));
+  document.getElementById('inqDetailContent').textContent = d.content || '';
+  document.getElementById('inqAnswerInput').value = d.answer || '';
+  document.getElementById('inqAnswerBtn').textContent = st === 'done' ? '답변 수정 전송' : '답변 전송';
+  document.getElementById('inqAnswerErr').textContent = '';
+  updateInqAnswerCount();
+  const panel = document.getElementById('inquiryDetailPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  renderInquiryList();
+  if (st !== 'done') markRequestRead('inquiry', id);
+};
+
+window.closeInquiryDetail = () => {
+  activeInquiryId = null;
+  document.getElementById('inquiryDetailPanel').style.display = 'none';
+  renderInquiryList();
+};
+
+window.updateInqAnswerCount = () => {
+  const v = document.getElementById('inqAnswerInput').value;
+  document.getElementById('inqAnswerCount').textContent = `(${v.length.toLocaleString()} / 5,000자)`;
+};
+
+// board.html submitAnswer 와 같은 저장 — 회원 쪽 1:1 문의 화면이 그대로 답변을 보여 준다
+window.submitInquiryAnswer = async () => {
+  const id = activeInquiryId;
+  const answer = document.getElementById('inqAnswerInput').value.trim();
+  const errEl = document.getElementById('inqAnswerErr');
+  if (!id) return;
+  if (!answer) { errEl.textContent = '답변을 입력하세요.'; return; }
+  const btn = document.getElementById('inqAnswerBtn');
+  btn.disabled = true;
+  errEl.textContent = '';
+  try {
+    await updateDoc(doc(db, 'inquiries', id), { answer, answeredAt: serverTimestamp(), status: 'answered' });
+    showToast('답변을 저장했습니다. 회원 1:1 문의 화면에 바로 보입니다.');
+    closeInquiryDetail();
+  } catch (e) {
+    errEl.textContent = '저장 실패: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 };
 
 /* ---- SCHEDULE CRUD ---- */
@@ -1964,18 +2253,9 @@ async function initCoachingTab() {
       .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0))
       .slice(0, 10);
 
-    const totalPending = pending.length + reviewWait.length;
-
-    // 탭 배지
-    const badge = document.getElementById('coachingBadge');
+    // 탭 배지(coachingBadge)는 로그인 직후부터 startRequestWatch 가 SOS 와 함께 계산한다
     document.getElementById('coachingPendingCount').textContent =
       `(대기중 ${pending.length}건 / 검토대기 ${reviewWait.length}건 / 전체 ${all.length}건)`;
-    if (totalPending > 0) {
-      badge.textContent = totalPending;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
 
     // 대기중 목록 렌더
     if (pending.length === 0) {
@@ -1997,7 +2277,7 @@ async function initCoachingTab() {
             `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(hasVideo + q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
             `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(coachingProfileShortText(d.userId))}</div>` +
           `</div>` +
-          `<div style="font-size:11px;color:#888">${dateStr}</div>` +
+          `<div style="font-size:11px;color:#888">${dateStr}<br>${elapsedHtml(d.createdAt)}${d.adminReadAt ? '' : ' <span class="inq-chip unread">미확인</span>'}</div>` +
           `<div style="text-align:right"><button class="btn-edit" onclick="openCoachingDetail('${d.id}')">답변 작성</button></div>`;
         pendingList.appendChild(row);
       });
@@ -2022,7 +2302,7 @@ async function initCoachingTab() {
             `<div style="font-size:13px;line-height:1.5;word-break:break-word">${esc(q.slice(0, 60) + (q.length > 60 ? '…' : ''))}</div>` +
             `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc(coachingProfileShortText(d.userId))}</div>` +
           `</div>` +
-          `<div style="font-size:11px;color:#888">${dateStr}</div>` +
+          `<div style="font-size:11px;color:#888">${dateStr}<br>접수 후 ${elapsedHtml(d.createdAt)}</div>` +
           `<div style="text-align:right"><button onclick="openReviewPanelFromDoc('${d.id}')" style="background:#b07600;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">검토 확인</button></div>`;
         reviewWaitList.appendChild(row);
       });
@@ -2061,6 +2341,7 @@ window.openCoachingDetail = (docId) => {
   getDoc(doc(db, 'ai_coaching', docId)).then(snap => {
     if (!snap.exists()) return;
     const d = snap.data();
+    markRequestRead('coaching', docId);
     document.getElementById('detailRequester').textContent = coachingProfileFullText(d.userId);
     document.getElementById('detailQuestion').textContent = d.question || '';
     // 다시 열 때도 관리자 원본을 그대로(예전엔 AI 교정본이 들어가 재검토할수록 원본이 AI 문장으로 바뀌었다)
@@ -2253,6 +2534,7 @@ window.openReviewPanelFromDoc = async (docId) => {
     const snap = await getDoc(doc(db, 'ai_coaching', docId));
     if (!snap.exists()) { showToast('문서를 찾을 수 없습니다.', 'error'); return; }
     const d = snap.data();
+    markRequestRead('coaching', docId);
     // 필드가 없는 예전 문서도 열린다 — (B) 는 없음으로 표시
     showReviewPanel(docId, {
       question: d.question || '',
@@ -3972,8 +4254,11 @@ async function loadSosCard() {
     } else {
       badge.textContent   = pendingSosList.length + '건';
       badge.style.display = 'inline-flex';
-      currentSosIndex     = 0;
-      renderSosItem(0);
+      // 알림 링크로 들어온 SOS 가 있으면 그 건부터(다른 건이 먼저 떠 읽음으로 잘못 남지 않게)
+      const focusIdx = sosFocusId ? pendingSosList.findIndex(x => x.id === sosFocusId) : -1;
+      sosFocusId = null;
+      currentSosIndex     = Math.max(0, focusIdx);
+      renderSosItem(currentSosIndex);
       withQ.style.display = 'block';
     }
   } catch (e) {
@@ -4003,7 +4288,9 @@ function renderSosItem(idx) {
   // 회원 정보
   document.getElementById('sosUserName').textContent  = item.userName  || '(이름 없음)';
   document.getElementById('sosUserEmail').textContent = item.userEmail || '';
-  document.getElementById('sosChapter').textContent   = '챕터: ' + (item.chapter || '미지정');
+  document.getElementById('sosChapter').innerHTML     = esc('챕터: ' + (item.chapter || '미지정')) + ' · ' + elapsedHtml(item.createdAt);
+  // SOS 카드는 본문(질문·영상·수치)을 그대로 보여 주므로 화면에 띄운 건을 읽음으로 남긴다
+  markRequestRead('sos', item.id);
 
   // 영상 플레이어
   // 2026-10-20 이후 SOS 는 videoUrl 이 비어 있고 videoPath(sos_videos/{uid}/{문서 ID}.mp4)만 있다

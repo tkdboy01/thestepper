@@ -1,0 +1,13 @@
+{
+  "name": "thestepper-notify-functions",
+  "private": true,
+  "description": "THE STEPPER 관리자 접수 알림 (Firestore onCreate → 텔레그램·이메일)",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.6.0"
+  }
+}

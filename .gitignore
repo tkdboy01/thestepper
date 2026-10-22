@@ -8,6 +8,9 @@ outputs/package*.json
 %TEMP%/
 /더 스텝퍼 AI 코치 프로그램/
 
+# 비밀번호 화면 캡처 — 절대 커밋 금지
+입시 센터/앱 비밀번호.png
+
 # Cloud Functions(관리자 알림) — 의존성·에뮬레이터용 로컬 비밀값은 커밋 금지
 functions/node_modules/
 functions/.env*

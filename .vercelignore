@@ -13,3 +13,6 @@ outputs/node_modules/
 *.pdf
 *.mp4
 *.ai
+
+# Cloud Functions 소스 — Firebase 로 배포, 사이트 배포본에는 안 넣는다
+functions/

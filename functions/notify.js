@@ -6,6 +6,8 @@
 //   inquiry — inquiries            (board.html 1:1 문의, status 'pending' → 'answered')
 //   coaching — ai_coaching         (코칭 피드백 요청, '대기중' → '검토대기' → '답변완료')
 //   sos     — ai_interview(trackType 'sos')  ('대기중' → '답변완료')
+//   form    — form_submissions         (구글 폼 세미나 신청·회원 도장 가입 문의, '접수' → '처리완료', 2026-10-23)
+//             api/form-notify.js 가 저장 직후 바로 알린다. 신청자 이름·도장명 등은 알림에 넣되 연락처·주소는 넣지 않는다.
 //
 // 알림 상태는 각 요청 문서에 Admin SDK 로만 남긴다(회원 화면·규칙과 무관한 필드).
 //   notifyCount     보낸 알림 횟수(접수 알림 = 1)
@@ -25,8 +27,15 @@ const PREVIEW_MAX = 200;
 const KINDS = {
   inquiry: { collection: 'inquiries', label: '💬 1:1 문의', tab: 'inquiries' },
   coaching: { collection: 'ai_coaching', label: '🎯 코칭 피드백 요청', tab: 'coaching' },
-  sos: { collection: 'ai_interview', label: '🆘 SOS 동작 분석 요청', tab: 'coaching' }
+  sos: { collection: 'ai_interview', label: '🆘 SOS 동작 분석 요청', tab: 'coaching' },
+  form: { collection: 'form_submissions', label: '📝 구글 폼 접수', tab: 'forms' }
 };
+
+// 폼 접수는 문서에 저장된 폼 이름(세미나 신청 / 회원 도장 가입 문의)으로 표시한다
+function labelOf(kind, d) {
+  if (kind === 'form' && d && d.formLabel) return `${d.formIcon || '📝'} ${d.formLabel}`;
+  return KINDS[kind].label;
+}
 
 const COACHING_OPEN = ['대기중', '검토대기'];
 
@@ -36,6 +45,7 @@ function isOpen(kind, d) {
   if (kind === 'inquiry') return d.status === 'pending';
   if (kind === 'coaching') return COACHING_OPEN.includes(d.status);
   if (kind === 'sos') return d.trackType === 'sos' && d.status === '대기중';
+  if (kind === 'form') return d.status === '접수';
   return false;
 }
 
@@ -71,6 +81,14 @@ function preview(kind, d) {
   if (kind === 'inquiry') raw = `${d.title || ''}\n${d.content || ''}`;
   else if (kind === 'coaching') raw = d.question || '';
   else if (kind === 'sos') raw = `[${d.chapter || ''}] ${d.question || ''}`;
+  else if (kind === 'form') {
+    // 연락처·도장 주소·희망 날짜 2·3순위는 admin.html 상세에서만
+    const f = d.fields || {};
+    if (d.formKind === 'seminar') raw = `소속 단체: ${f.org || '-'}
+희망 날짜 1순위: ${f.date1 || '-'}`;
+    else raw = `도장명: ${f.dojangName || '-'}
+문의: ${f.message || ''}`;
+  }
   const t = maskPii(raw.trim());
   return t.length > PREVIEW_MAX ? t.slice(0, PREVIEW_MAX) + '…' : t;
 }
@@ -94,6 +112,7 @@ async function nicknameOf(db, kind, d) {
     } catch (_) {}
   }
   if (kind === 'inquiry' && d.nickname) return maskPii(String(d.nickname).slice(0, 40));
+  if (kind === 'form') return maskPii(String((d.fields && d.fields.name) || '(이름 없음)').slice(0, 40));
   return '회원';
 }
 
@@ -111,8 +130,8 @@ async function formatItem(db, kind, id, d, nowMs, opts = {}) {
   if (opts.reminder) {
     lines.push(`🔔 ${opts.reminder.count}번째 알림, 접수 후 ${opts.reminder.hours}시간 경과`);
   }
-  lines.push(`${KINDS[kind].label}${opts.reminder ? ' (아직 확인 안 함)' : ' 새로 접수'}`);
-  lines.push(`닉네임: ${nick}`);
+  lines.push(`${labelOf(kind, d)}${opts.reminder ? ' (아직 확인 안 함)' : ' 새로 접수'}`);
+  lines.push(`${kind === 'form' ? '신청자' : '닉네임'}: ${nick}`);
   lines.push(`접수: ${created == null ? '-' : kstParts(created).text} (KST)`);
   const p = preview(kind, d);
   if (p) lines.push('', p);
@@ -172,7 +191,7 @@ async function sendAll(cfg, subject, text) {
 }
 
 module.exports = {
-  ADMIN_MAIL_TO, SITE_BASE, KINDS, COACHING_OPEN,
+  ADMIN_MAIL_TO, SITE_BASE, KINDS, COACHING_OPEN, labelOf,
   isOpen, toMillis, kstParts, maskPii, preview, adminLink, uidOf, nicknameOf, elapsedHours,
   formatItem, sendAll, escapeHtml
 };

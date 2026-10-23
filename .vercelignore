@@ -19,3 +19,6 @@ functions/
 
 # 링크되지 않는 예전 홈페이지 사본 — 배포 제외 (2026-10-23, 파일 삭제는 별도 결정)
 새 폴더/
+
+# 구글 폼 Apps Script 소스 — clasp 로 배포, 사이트 배포본에는 안 넣는다
+google-apps-script/

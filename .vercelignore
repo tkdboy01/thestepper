@@ -1,24 +1,41 @@
-# Vercel 배포에서 제외 — 사이트가 쓰지 않는 원본 자료 (이미지는 Firebase Storage에서 서빙)
-# git 에는 그대로 남고, 배포본에만 안 들어감
-입시 센터/
-THE STEPPER 스텝 사진/
-채팅창 옮길 아티팩트/
-*_files/
-docs/
-tests/
-outputs/node_modules/
+# Vercel 배포 허용 목록 (2026-10-23)
+# 루트의 파일·폴더를 전부 제외(/*)하고, 아래 ! 줄로 허용한 것만 운영·미리보기에 배포한다.
+# 새 공개 페이지·리소스를 만들면 여기에 ! 줄을 추가해야 사이트에 나온다(빠지면 운영에서 404).
+# Firebase 설정·보안 규칙·확장 설정·초안·작업 문서는 배포하지 않는다.
+# 이미지(OG 이미지·아이콘·사진 등)는 대부분 Firebase Storage 에서 서빙되어 이 목록과 무관하다.
+# main · renewal-a 두 브랜치가 같은 파일을 쓴다(없는 파일을 허용해도 문제없음).
+/*
 
-# 바이너리·원본 파일 (THE STEPPER 가맹점 마크/files.zip 도 여기서 걸러짐 — 폴더 자체는 index.html 이 사용)
-*.zip
-*.pdf
-*.mp4
-*.ai
+# ── 공개 페이지 ──
+!/index.html
+!/admin.html
+!/ai.html
+!/board.html
+!/center.html
+!/contact.html
+!/locations.html
+!/motion.html
+!/motion-legacy.html
+!/quiz.html
+!/schedule.html
+!/staff.html
+!/virtual.html
+!/voice.html
+# renewal-a 메뉴(js/stepper-layout.js "활동 갤러리")가 링크하고 있어 결정 전까지 공개 유지
+!/gallery.html
 
-# Cloud Functions 소스 — Firebase 로 배포, 사이트 배포본에는 안 넣는다
-functions/
+# ── 페이지가 불러오는 파일 ──
+!/admin-nav.js
+!/voice-manifest.json
+# 가맹점 로고(index.html 가맹 도장 목록). 메인 로고 원본·압축 파일은 어디서도 쓰지 않아 제외
+!/THE STEPPER 가맹점 마크
+/THE STEPPER 가맹점 마크/THE STEPPER 메인 로고.png
+/THE STEPPER 가맹점 마크/*.zip
 
-# 링크되지 않는 예전 홈페이지 사본 — 배포 제외 (2026-10-23, 파일 삭제는 별도 결정)
-새 폴더/
+# ── renewal-a 리뉴얼 자산(main 에는 아직 없음) ──
+!/css
+!/js
+!/images
 
-# 구글 폼 Apps Script 소스 — clasp 로 배포, 사이트 배포본에는 안 넣는다
-google-apps-script/
+# ── 훈련 공지 안내문(hwpx) — 공개 유지 여부 결정 전까지 그대로 ──
+!/훈련 공지

@@ -153,6 +153,13 @@ service cloud.firestore {
     match /comparison_results/{docId} {
       allow read, write: if isAdmin();
     }
+    // 구글 폼 접수(세미나 신청·회원 도장 가입 문의) — api/form-notify.js 가 Admin SDK 로만 저장한다 (2026-10-23).
+    // 관리자 admin.html "폼 접수" 탭이 실시간으로 읽기만 한다. 읽음·처리완료도 서버(manage-member) 경유라
+    // 브라우저 쓰기는 관리자 포함 전부 막는다. 연락처·주소가 들어 있으므로 관리자 외 읽기 금지.
+    match /form_submissions/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
     match /user_messages/{docId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow update: if request.auth != null && resource.data.userId == request.auth.uid

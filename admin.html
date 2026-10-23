@@ -157,12 +157,20 @@ select.form-control{cursor:pointer}
 .inq-filter{display:flex;gap:6px;margin-bottom:12px}
 .inq-filter button{border:1px solid var(--border);background:#fff;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:var(--sub)}
 .inq-filter button.active{border-color:var(--red);color:var(--red)}
+.inq-chip.purge{background:#eee;color:#777}
+/* 상세 패널로 스크롤할 때 위의 고정 헤더(사이트 52px + 관리 60px)에 제목이 가리지 않게 */
+.tab-content .form-card{scroll-margin-top:124px}
+.form-fields{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;font-size:14px}
+.form-fields .ff-label{color:var(--sub);font-size:12px;font-weight:700;padding-top:2px}
+.form-fields .ff-value{white-space:pre-wrap;word-break:break-word;line-height:1.6}
 
 /* RESPONSIVE */
 @media(max-width:640px){
   .header-logo{font-size:15px;letter-spacing:1px;white-space:nowrap}
   .req-badges{margin-right:8px;flex-direction:column;align-items:flex-end;gap:3px}
   .req-badge{padding:2px 8px;font-size:11px}
+  .form-fields{grid-template-columns:1fr;gap:2px}   /* 폼 접수 상세 — 항목명 위, 값 아래 */
+  .form-fields .ff-value{margin-bottom:8px}
   .logout-btn{white-space:nowrap;padding:5px 10px}
   .login-box{padding:36px 24px}
   .tab-content{padding:20px 16px}
@@ -237,7 +245,7 @@ select.form-control{cursor:pointer}
 <div id="adminSection" style="display:none">
   <header class="admin-header">
     <div class="header-logo">THE STEPPER · ADMIN</div>
-    <div class="req-badges" id="reqBadges" title="1:1 문의 · 코칭 피드백 · SOS 요청 기준. 미확인 = 본문을 아직 열지 않음, 미답변 = 답변하지 않은 전체">
+    <div class="req-badges" id="reqBadges" title="1:1 문의 · 코칭 피드백 · SOS 요청 · 구글 폼 접수 기준. 미확인 = 본문을 아직 열지 않음, 미답변 = 답변(폼은 처리완료)하지 않은 전체">
       <button class="req-badge" id="reqUnreadBadge" onclick="jumpToFirstRequest(true)">미확인 –</button>
       <button class="req-badge" id="reqOpenBadge" onclick="jumpToFirstRequest(false)">미답변 –</button>
     </div>
@@ -252,6 +260,7 @@ select.form-control{cursor:pointer}
     <button class="tab-btn" id="tab-locations-btn" onclick="switchTab('locations')">🏠 회원 도장</button>
     <button class="tab-btn" id="tab-members-btn" onclick="switchTab('members')">👥 회원 목록</button>
     <button class="tab-btn" id="tab-inquiries-btn" onclick="switchTab('inquiries')" style="position:relative">💬 1:1 문의<span id="inquiryBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:8px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
+    <button class="tab-btn" id="tab-forms-btn" onclick="switchTab('forms')" style="position:relative">📝 폼 접수<span id="formBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:8px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-coaching-btn" onclick="switchTab('coaching')" style="position:relative">📋 코칭 관리<span id="coachingBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-knowledge-btn" onclick="switchTab('knowledge')" style="position:relative">🧠 코칭 지식<span id="knowledgeBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
     <button class="tab-btn" id="tab-quiz-btn" onclick="switchTab('quiz')" style="position:relative">🎮 OX 퀴즈 관리<span id="quizBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#C8102E;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:1"></span></button>
@@ -500,6 +509,43 @@ select.form-control{cursor:pointer}
       <div class="list-wrap wide-list">
         <div class="list-head" style="grid-template-columns:1fr 110px 90px 80px"><div>제목 · 닉네임</div><div>접수</div><div>상태</div><div style="text-align:right">관리</div></div>
         <div id="inquiryList"><div class="loading-msg">로딩 중...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📝 폼 접수 (2026-10-23) — 구글 폼(세미나 신청 / 회원 도장 가입 문의) 응답. 서버(api/form-notify)가 저장한 form_submissions.
+       열면 adminReadAt 기록, "처리완료" 로 answeredAt 기록(둘 다 manage-member — 브라우저 쓰기는 규칙이 막는다).
+       처리완료 후 365일이 지나면 서버가 개인정보를 비우고 삭제 대기로 표시 → 구글 폼에서 지운 뒤 문서 삭제. -->
+  <div id="tab-forms" class="tab-content" style="display:none">
+    <div class="form-card" id="formDetailPanel" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px">
+        <div>
+          <div class="form-card-title" id="formDetailTitle" style="margin-bottom:4px;word-break:break-word"></div>
+          <div style="font-size:12px;color:var(--sub)" id="formDetailMeta"></div>
+        </div>
+        <button class="btn-secondary" style="padding:6px 12px;flex-shrink:0" onclick="closeFormDetail()">닫기</button>
+      </div>
+      <div id="formDetailFields" class="form-fields"></div>
+      <div class="form-actions">
+        <button class="btn-primary" id="formCompleteBtn" onclick="completeFormSubmission()">처리완료</button>
+      </div>
+      <div id="formCompleteErr" style="color:var(--red);font-size:12px;margin-top:6px"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">📝 폼 접수 <span id="formCountInfo" style="font-size:12px;font-weight:400;color:var(--sub)"></span></div>
+      <div class="inq-filter" style="flex-wrap:wrap">
+        <button id="formKindAll" class="active" onclick="setFormFilter('kind','all')">전체</button>
+        <button id="formKindSeminar" onclick="setFormFilter('kind','seminar')">세미나 신청</button>
+        <button id="formKindDojang" onclick="setFormFilter('kind','dojang_inquiry')">회원 도장 가입 문의</button>
+        <span style="width:8px"></span>
+        <button id="formStatusOpen" class="active" onclick="setFormFilter('status','open')">미처리</button>
+        <button id="formStatusAll" onclick="setFormFilter('status','all')">전체 상태</button>
+        <button onclick="downloadFormsCsv()" style="margin-left:auto" title="지금 보이는 목록(필터 기준)을 엑셀에서 열 수 있는 CSV 로 내려받기">⬇ CSV 내려받기</button>
+      </div>
+      <div class="list-wrap wide-list">
+        <div class="list-head" style="grid-template-columns:1fr 120px 100px 80px"><div>신청자 · 폼</div><div>접수</div><div>상태</div><div style="text-align:right">관리</div></div>
+        <div id="formList"><div class="loading-msg">로딩 중...</div></div>
       </div>
     </div>
   </div>
@@ -1103,7 +1149,7 @@ onAuthStateChanged(auth, (user) => {
     // 알림 링크로 들어온 경우 — 해당 요청을 바로 연다(한 번만)
     const qp = new URLSearchParams(location.search);
     const linkKind = qp.get('kind'), linkId = qp.get('id'), linkTab = qp.get('tab');
-    if (linkKind && linkId && ['inquiry', 'coaching', 'sos'].includes(linkKind)) openRequest(linkKind, linkId);
+    if (linkKind && linkId && ['inquiry', 'coaching', 'sos', 'form'].includes(linkKind)) openRequest(linkKind, linkId);
     else if (linkTab && document.getElementById('tab-' + linkTab + '-btn')) switchTab(linkTab);
     if (linkKind || linkId || linkTab) history.replaceState(null, '', location.pathname);
   } else if (user) {
@@ -1165,6 +1211,7 @@ window.switchTab = (tab) => {
   if (tab === 'evalq') { loadEvalQuestionsMgmt(); }
   if (tab === 'compare' && !compareLoaded) { compareLoaded = true; initCompareTab(); }
   if (tab === 'inquiries' && !inquiriesLoaded) { inquiriesLoaded = true; initInquiriesTab(); }
+  if (tab === 'forms' && !formsLoaded) { formsLoaded = true; initFormsTab(); }
 };
 
 /* ---- 회원 요청 배지·읽음 기록 (2026-10-22) ----
@@ -1173,7 +1220,7 @@ window.switchTab = (tab) => {
      미확인 = adminReadAt 없음(본문을 아직 안 열었음), 미답변 = 답변 안 한 전체(미확인 포함)
    탭 배지 숫자 = 그 탭의 미답변 수, 빨강 = 미확인이 섞여 있음 / 주황 = 모두 열어 봤음.
    본문을 열 때만 markRequestRead 로 서버에 adminReadAt 을 남긴다(목록에 보이는 것만으로는 아님). */
-const reqOpen = { inquiry: new Map(), coaching: new Map(), sos: new Map() };
+const reqOpen = { inquiry: new Map(), coaching: new Map(), sos: new Map(), form: new Map() };
 let reqWatchStarted = false;
 const REQ_LATE_DAYS = 3;
 
@@ -1199,6 +1246,7 @@ function startRequestWatch() {
   watch('inquiry', query(collection(db, 'inquiries'), where('status', '==', 'pending')));
   watch('coaching', query(collection(db, 'ai_coaching'), where('status', 'in', ['대기중', '검토대기'])));
   watch('sos', query(collection(db, 'ai_interview'), where('trackType', '==', 'sos'), where('status', '==', '대기중')));
+  watch('form', query(collection(db, 'form_submissions'), where('status', '==', '접수')));   // 구글 폼 접수 (2026-10-23)
 }
 
 function setTabBadge(id, list) {
@@ -1213,7 +1261,7 @@ function setTabBadge(id, list) {
 }
 
 function renderRequestBadges() {
-  const all = [...reqOpen.inquiry.values(), ...reqOpen.coaching.values(), ...reqOpen.sos.values()];
+  const all = [...reqOpen.inquiry.values(), ...reqOpen.coaching.values(), ...reqOpen.sos.values(), ...reqOpen.form.values()];
   const unread = all.filter(d => !d.adminReadAt).length;
   const u = document.getElementById('reqUnreadBadge'), o = document.getElementById('reqOpenBadge');
   u.textContent = `미확인 ${unread}건`;
@@ -1222,6 +1270,7 @@ function renderRequestBadges() {
   o.className = 'req-badge open' + (all.length ? ' on' : '');
   setTabBadge('inquiryBadge', [...reqOpen.inquiry.values()]);
   setTabBadge('coachingBadge', [...reqOpen.coaching.values(), ...reqOpen.sos.values()]);
+  setTabBadge('formBadge', [...reqOpen.form.values()]);
 }
 
 const readMarking = new Set();
@@ -1248,6 +1297,7 @@ async function markRequestRead(kind, id) {
 let sosFocusId = null;
 window.openRequest = async (kind, id) => {
   if (kind === 'inquiry') { switchTab('inquiries'); return openInquiry(id); }
+  if (kind === 'form') { switchTab('forms'); return openFormSubmission(id); }
   if (kind === 'sos') {
     sosFocusId = id;   // SOS 카드가 아직 안 불러왔으면 불러온 뒤 이 건부터 보여 준다(loadSosCard)
     switchTab('coaching');
@@ -1270,11 +1320,185 @@ window.openRequest = async (kind, id) => {
 // 상단 배지 — 가장 오래 기다린 요청(미확인 배지는 미확인 중에서)을 연다
 window.jumpToFirstRequest = (unreadOnly) => {
   const all = [];
-  for (const kind of ['inquiry', 'coaching', 'sos']) reqOpen[kind].forEach(d => all.push({ kind, d }));
+  for (const kind of ['inquiry', 'coaching', 'sos', 'form']) reqOpen[kind].forEach(d => all.push({ kind, d }));
   const list = all.filter(x => !unreadOnly || !x.d.adminReadAt)
     .sort((a, b) => (a.d.createdAt?.toMillis?.() || 0) - (b.d.createdAt?.toMillis?.() || 0));
   if (!list.length) { showToast(unreadOnly ? '미확인 요청이 없습니다.' : '미답변 요청이 없습니다.'); return; }
   openRequest(list[0].kind, list[0].d.id);
+};
+
+/* ---- 📝 폼 접수 탭 (2026-10-23) ----
+   form_submissions 를 실시간으로 보여 준다. 쓰기(읽음·처리완료)는 manage-member 로만 한다.
+   fields 는 서버가 항목 ID 로 매핑한 값, fieldLabels 는 표시 순서·이름, others 는 매핑에 없는 항목. */
+let formsLoaded = false;
+let formAll = [];
+const formFilter = { kind: 'all', status: 'open' };
+let activeFormId = null;
+const FORM_KIND_LABEL = { seminar: '세미나 신청', dojang_inquiry: '회원 도장 가입 문의' };
+
+function formState(d) {
+  if (d.purgeStatus === 'pending') return 'purge';
+  if (d.status === '처리완료' || d.answeredAt) return 'done';
+  return d.adminReadAt ? 'read' : 'unread';
+}
+const FORM_CHIP = { unread: '미확인', read: '확인 · 미처리', done: '처리완료', purge: '보유 기간 만료' };
+const FORM_CHIP_CLASS = { unread: 'unread', read: 'read', done: 'done', purge: 'purge' };
+const fmtFormTime = t => t?.toDate ? t.toDate().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+
+function initFormsTab() {
+  onSnapshot(query(collection(db, 'form_submissions'), orderBy('createdAt', 'desc')), (snap) => {
+    formAll = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderFormList();
+    if (activeFormId) { const d = formAll.find(x => x.id === activeFormId); if (d) renderFormDetail(d); }
+  }, (err) => {
+    document.getElementById('formList').innerHTML = `<div class="empty-msg">오류: ${esc(err.message)}</div>`;
+  });
+}
+
+window.setFormFilter = (which, v) => {
+  formFilter[which] = v;
+  const on = (id, c) => document.getElementById(id).classList.toggle('active', c);
+  on('formKindAll', formFilter.kind === 'all'); on('formKindSeminar', formFilter.kind === 'seminar'); on('formKindDojang', formFilter.kind === 'dojang_inquiry');
+  on('formStatusOpen', formFilter.status === 'open'); on('formStatusAll', formFilter.status === 'all');
+  renderFormList();
+};
+
+function filteredForms() {
+  return formAll.filter(d => (formFilter.kind === 'all' || d.formKind === formFilter.kind)
+    && (formFilter.status === 'all' || ['unread', 'read'].includes(formState(d))));
+}
+
+function renderFormList() {
+  const list = document.getElementById('formList');
+  const open = formAll.filter(d => ['unread', 'read'].includes(formState(d)));
+  document.getElementById('formCountInfo').textContent = `(미처리 ${open.length}건 / 전체 ${formAll.length}건)`;
+  const rows = filteredForms();
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-msg" style="padding:12px;font-size:13px">${formFilter.status === 'open' ? '처리하지 않은 폼 접수가 없습니다. ✅' : '폼 접수가 없습니다.'}</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(d => {
+    const st = formState(d);
+    const f = d.fields || {};
+    const sub = d.formKind === 'seminar' ? (f.org || '') : (f.dojangName || '');
+    const dateStr = d.createdAt?.toDate
+      ? d.createdAt.toDate().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+    return `<div class="list-row" style="grid-template-columns:1fr 120px 100px 80px${d.id === activeFormId ? ';background:rgba(200,16,46,0.04)' : ''}">` +
+      `<div><div style="font-size:13px;font-weight:700;word-break:break-word">${esc(st === 'purge' ? '(개인정보 삭제됨)' : (f.name || '(이름 없음)'))}${sub && st !== 'purge' ? ` <span style="font-weight:400;color:#666">· ${esc(sub)}</span>` : ''}</div>` +
+      `<div style="font-size:11px;color:#0055b3;margin-top:3px;font-weight:600">${esc((d.formIcon || '📝') + ' ' + (d.formLabel || FORM_KIND_LABEL[d.formKind] || '폼'))}</div></div>` +
+      `<div style="font-size:11px;color:#888">${dateStr}${['unread', 'read'].includes(st) ? '<br>' + elapsedHtml(d.createdAt) : ''}</div>` +
+      `<div><span class="inq-chip ${FORM_CHIP_CLASS[st]}">${FORM_CHIP[st]}</span></div>` +
+      `<div style="text-align:right"><button class="btn-edit" onclick="openFormSubmission('${d.id}')">${st === 'unread' || st === 'read' ? '열기' : '보기'}</button></div>` +
+      `</div>`;
+  }).join('');
+}
+
+function renderFormDetail(d) {
+  const st = formState(d);
+  const f = d.fields || {};
+  document.getElementById('formDetailTitle').textContent = `${d.formIcon || '📝'} ${d.formLabel || FORM_KIND_LABEL[d.formKind] || '폼 접수'}`;
+  document.getElementById('formDetailMeta').innerHTML =
+    `접수 ${esc(fmtFormTime(d.createdAt))} · ` +
+    (st === 'done' ? `<span class="inq-chip done">처리완료 ${esc(fmtFormTime(d.answeredAt))}</span>`
+      : st === 'purge' ? '<span class="inq-chip purge">보유 기간 만료 — 개인정보 삭제됨</span>'
+      : elapsedHtml(d.createdAt)) +
+    ` · 개인정보 동의 ${d.consentGiven ? '✓' : '<b style="color:var(--red)">응답 없음</b>'}`;
+  const rows = [];
+  (d.fieldLabels || []).forEach(({ key, label }) => rows.push([label, f[key]]));
+  // fieldLabels 에 없는 저장 필드(스키마가 바뀐 경우)도 빠뜨리지 않는다
+  Object.keys(f).filter(k => !(d.fieldLabels || []).some(x => x.key === k)).forEach(k => rows.push([k, f[k]]));
+  (d.others || []).forEach(o => rows.push([`기타 항목: ${o.title || o.id}`, o.value]));
+  document.getElementById('formDetailFields').innerHTML = rows.length
+    ? rows.map(([l, v]) => `<div class="ff-label">${esc(l)}</div><div class="ff-value">${esc(v == null || v === '' ? '-' : v)}</div>`).join('')
+    : '<div class="ff-value" style="grid-column:1/-1;color:#888">표시할 항목이 없습니다.</div>';
+  const btn = document.getElementById('formCompleteBtn');
+  btn.style.display = (st === 'unread' || st === 'read') ? '' : 'none';
+}
+
+window.openFormSubmission = async (id) => {
+  activeFormId = id;
+  let d = formAll.find(x => x.id === id);
+  if (!d) {
+    const snap = await getDoc(doc(db, 'form_submissions', id)).catch(() => null);
+    if (!snap || !snap.exists()) { showToast('폼 접수를 찾을 수 없습니다.', 'error'); return; }
+    d = { id, ...snap.data() };
+  }
+  document.getElementById('formCompleteErr').textContent = '';
+  renderFormDetail(d);
+  const panel = document.getElementById('formDetailPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  renderFormList();
+  if (formState(d) === 'unread') markRequestRead('form', id);
+};
+
+window.closeFormDetail = () => {
+  activeFormId = null;
+  document.getElementById('formDetailPanel').style.display = 'none';
+  renderFormList();
+};
+
+window.completeFormSubmission = async () => {
+  const id = activeFormId;
+  if (!id) return;
+  const btn = document.getElementById('formCompleteBtn');
+  const errEl = document.getElementById('formCompleteErr');
+  btn.disabled = true; errEl.textContent = '';
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'complete-form', id })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    showToast('처리완료로 표시했습니다. 반복 알림이 멈춥니다.');
+    closeFormDetail();
+  } catch (e) {
+    errEl.textContent = '처리완료 실패: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// 지금 보이는 목록(필터 기준) → CSV. 엑셀에서 한글이 깨지지 않게 UTF-8 BOM, 수식으로 읽히지 않게 = + - @ 로 시작하는 값 앞에 '
+window.downloadFormsCsv = () => {
+  const rows = filteredForms();
+  if (!rows.length) { showToast('내려받을 폼 접수가 없습니다.', 'error'); return; }
+  // 모든 행의 항목(표시 순서 유지). 두 폼을 함께 내려받으면 같은 칸의 이름이 다를 수 있어 함께 적는다(예: "성함 (대표자명) / 성함")
+  const labels = [];
+  rows.forEach(d => (d.fieldLabels || []).forEach(({ key, label }) => {
+    const x = labels.find(l => l.key === key);
+    if (!x) labels.push({ key, label, names: [label] });
+    else if (!x.names.includes(label)) { x.names.push(label); x.label = x.names.join(' / '); }
+  }));
+  const head = ['접수 시각', '폼', '상태', '처리완료 시각', ...labels.map(x => x.label), '개인정보 동의', '기타 항목', '응답 ID'];
+  const cell = v => {
+    let s = v == null ? '' : String(v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [head.map(cell).join(',')];
+  rows.forEach(d => {
+    const f = d.fields || {};
+    lines.push([
+      fmtFormTime(d.createdAt), d.formLabel || FORM_KIND_LABEL[d.formKind] || '', FORM_CHIP[formState(d)], fmtFormTime(d.answeredAt),
+      ...labels.map(x => f[x.key]),
+      d.consentGiven ? '동의' : '응답 없음',
+      (d.others || []).map(o => `${o.title || o.id}: ${o.value}`).join(' / '),
+      d.id
+    ].map(cell).join(','));
+  });
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  const kindName = formFilter.kind === 'all' ? '전체' : FORM_KIND_LABEL[formFilter.kind];
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  a.href = URL.createObjectURL(blob);
+  a.download = `폼접수_${kindName}_${formFilter.status === 'open' ? '미처리' : '전체상태'}_${today}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
 
 /* ---- 💬 1:1 문의 탭 (2026-10-22) ---- */

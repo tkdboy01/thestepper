@@ -58,6 +58,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'inquiries', 'q-alice'), { ...inquiryPayload(), createdAt: new Date() });
     await setDoc(doc(db, 'inquiries', 'q-bob'), { ...inquiryPayload({ uid: 'bob', email: 'bob@example.com' }), createdAt: new Date() });
     await setDoc(doc(db, 'schedules', 's1'), { title: '세미나' });
+    await setDoc(doc(db, 'form_submissions', 'f1'), { formKind: 'seminar', status: '접수', fields: { name: '홍길동', phone: '010-0000-0000' } });
     await setDoc(doc(db, 'locations', 'l1'), { name: '도장' });
     await setDoc(doc(db, 'users', 'alice'), { nickname: '앨리스' });
     await setDoc(doc(db, 'quiz_questions', 'confirmed1'), { status: 'confirmed' });
@@ -150,6 +151,17 @@ describe('Firestore 회귀 (배포본과 같은 동작)', () => {
   test('voice_drafts 일반회원 거부', () => assertFails(getDocs(collection(alice().firestore(), 'voice_drafts'))));
   test('voice_drafts 관리자 허용', () => assertSucceeds(getDocs(collection(admin().firestore(), 'voice_drafts'))));
   test('comparison_results 관리자 쓰기 허용', () => assertSucceeds(addDoc(collection(admin().firestore(), 'comparison_results'), { a: 1 })));
+  // 구글 폼 접수 (2026-10-23) — 서버(Admin SDK)만 쓰고 관리자만 읽는다. 연락처·주소가 들어 있다.
+  test('form_submissions 비로그인 읽기 거부', () => assertFails(getDoc(doc(anon().firestore(), 'form_submissions', 'f1'))));
+  test('form_submissions 일반회원 읽기 거부', () => assertFails(getDoc(doc(alice().firestore(), 'form_submissions', 'f1'))));
+  test('form_submissions 미인증 관리자 이메일 읽기 거부', () => assertFails(getDoc(doc(fakeAdmin().firestore(), 'form_submissions', 'f1'))));
+  test('form_submissions 관리자 읽기 허용', () => assertSucceeds(getDoc(doc(admin().firestore(), 'form_submissions', 'f1'))));
+  test('form_submissions 관리자 목록 쿼리 허용', () => assertSucceeds(getDocs(query(collection(admin().firestore(), 'form_submissions'), where('status', '==', '접수')))));
+  test('form_submissions 일반회원 목록 쿼리 거부', () => assertFails(getDocs(collection(alice().firestore(), 'form_submissions'))));
+  test('form_submissions 관리자도 생성 거부', () => assertFails(setDoc(doc(admin().firestore(), 'form_submissions', 'f2'), { status: '접수' })));
+  test('form_submissions 관리자도 수정 거부(읽음·처리완료는 서버 경유)', () => assertFails(updateDoc(doc(admin().firestore(), 'form_submissions', 'f1'), { status: '처리완료' })));
+  test('form_submissions 관리자도 삭제 거부', () => assertFails(deleteDoc(doc(admin().firestore(), 'form_submissions', 'f1'))));
+  test('form_submissions 일반회원 생성 거부', () => assertFails(setDoc(doc(alice().firestore(), 'form_submissions', 'f3'), { status: '접수' })));
   test('user_messages 생성 거부', () => assertFails(addDoc(collection(alice().firestore(), 'user_messages'), { userId: 'alice' })));
 });
 

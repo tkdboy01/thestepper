@@ -19,6 +19,7 @@
 | `deployed/2026-10-21-2-after/` (SOS 문서·영상에 이메일 인증 요구. 직전 상태는 2026-10-21-after) | `be070b5c-18ec-4070-9805-66efe8ad56ad` (2026-10-21 09:12:46 GMT) | `093fc575-0316-4b99-8d92-85166722f35f` (2026-10-21 09:12:43 GMT) |
 | `deployed/2026-10-21-3-after/` (SOS 접수 서버 이전 — ai_interview 회원 생성 금지·sosUsage 잠금. Storage 본문은 2-after 와 같고 함께 배포돼 ruleset 만 새로 생김) | `cd946a41-ea96-4a2f-861b-866435acb91f` (2026-10-21 10:13:05 GMT) | `dc95c012-9f0d-4413-9f39-5144d3add47e` (2026-10-21 10:13:02 GMT) |
 | `deployed/2026-10-22-after/` (1:1 문의 스팸 방지 — inquiries 생성에 이메일 인증·제목 100자·본문 5000자·닉네임 40자. Firestore 만 — 직전 상태는 2026-10-21-3-after 와 같음. Storage 는 "already up to date" 로 업로드 생략) | `ade6238a-9518-4bbc-9cc9-689316386b63` (2026-10-22 08:03:41 GMT) | (변경 없음) |
+| `deployed/2026-10-23-after/` (구글 폼 접수 form_submissions — 관리자 읽기만, 쓰기 전부 금지. Firestore 만 — 직전 상태는 2026-10-22-after 와 같음. Storage 는 업로드 생략) | `b7a11ed8-3594-4789-a8d2-dac3ef6d014e` (2026-10-23 08:02:56 GMT) | (변경 없음) |
 
 ## 권한 원칙
 

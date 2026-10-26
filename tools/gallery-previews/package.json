@@ -1,0 +1,9 @@
+{
+  "name": "gallery-previews",
+  "private": true,
+  "description": "Storage gallery/ 원본 → 미리보기 WebP(목록용·크게 보기용) 맞추기. 사용법은 docs/gallery-previews.md",
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "sharp": "^0.34.2"
+  }
+}

@@ -21,6 +21,8 @@
 <style>
 /* 활동 갤러리 (2026-10-26 리뉴얼 레이아웃으로 정비)
    사진은 Firebase Storage gallery/ 폴더 — 올린 시각 최신순, 8장씩 페이지 넘김.
+   화면에는 원본(장당 2~5MB) 대신 미리보기 WebP 를 쓴다: 목록 gallery/_preview/thumb/, 크게 보기 gallery/_preview/view/
+   (만들고 정리하는 법: docs/gallery-previews.md). 미리보기가 아직 없으면 원본으로 대신 보여 준다.
    예전 페이지는 페이지 버튼을 이 페이지에 없는 .gallery-section 에 붙이다 오류가 나 사진이 하나도 안 나왔다 → 버튼 칸을 따로 둔다 */
 .gal-head { margin-bottom: 48px; }
 .gal-head .sa-lead { margin-top: 16px; }
@@ -94,7 +96,7 @@
 <script src="js/stepper-layout.js"></script>
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getStorage, ref, listAll, getDownloadURL, getMetadata } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getStorage, ref, listAll, getMetadata } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const app = getApps().length ? getApps()[0] : initializeApp({
   apiKey: "AIzaSyBD96_snsYdbET2vzkF7MY8nMJlfHiAxi4",
@@ -107,6 +109,11 @@ const app = getApps().length ? getApps()[0] : initializeApp({
 const storage = getStorage(app);
 
 const PER_PAGE = 8;
+// 공개 읽기(storage.rules gallery/**) 주소 — 파일마다 getDownloadURL 을 부르지 않는다. v= 는 원본이 바뀌면 캐시를 새로
+const fileUrl = (p, v) => 'https://firebasestorage.googleapis.com/v0/b/' + storage.app.options.storageBucket + '/o/' + encodeURIComponent(p) + '?alt=media&v=' + v;
+const previewUrl = (kind, ph) => fileUrl('gallery/_preview/' + kind + '/' + ph.file + '.webp', ph.v);
+// 미리보기가 없으면(새로 올린 직후 등) 원본으로 한 번만 바꿔 보여 줌
+const withFallback = (img, ph) => { img.onerror = () => { img.onerror = null; img.src = ph.orig; }; };
 const grid = document.getElementById('galleryGrid');
 const pages = document.getElementById('galleryPages');
 const countEl = document.getElementById('galleryCount');
@@ -119,8 +126,8 @@ async function load() {
     const res = await listAll(ref(storage, 'gallery/'));
     if (!res.items.length) { msg('등록된 사진이 없습니다.'); return; }
     photos = (await Promise.all(res.items.map(async (it) => {
-      const [url, meta] = await Promise.all([getDownloadURL(it), getMetadata(it)]);
-      return { url, time: new Date(meta.timeCreated).getTime() };
+      const meta = await getMetadata(it);
+      return { file: it.name, v: meta.generation, orig: fileUrl(it.fullPath, meta.generation), time: new Date(meta.timeCreated).getTime() };
     }))).sort((a, b) => b.time - a.time);   // 올린 시각 최신순
     render(1);
   } catch (e) {
@@ -138,7 +145,7 @@ function render(p) {
     const li = document.createElement('li'); li.className = 'gal-item';
     const b = document.createElement('button'); b.type = 'button'; b.className = 'gal-btn';
     b.setAttribute('aria-label', '사진 ' + (start + i + 1) + ' 크게 보기');
-    const img = document.createElement('img'); img.src = ph.url; img.alt = 'THE STEPPER 활동 사진 ' + (start + i + 1); img.loading = 'lazy';
+    const img = document.createElement('img'); withFallback(img, ph); img.src = previewUrl('thumb', ph); img.alt = 'THE STEPPER 활동 사진 ' + (start + i + 1); img.loading = 'lazy';
     b.appendChild(img); b.addEventListener('click', () => openView(start + i));
     li.appendChild(b); grid.appendChild(li);
   });
@@ -162,7 +169,7 @@ function render(p) {
 // 크게 보기 (Esc 닫기, ← → 이동)
 const view = document.getElementById('galView'), viewImg = document.getElementById('galViewImg'), pos = document.getElementById('galPos');
 let cur = 0, lastFocus = null;
-function show(i) { cur = (i + photos.length) % photos.length; viewImg.src = photos[cur].url; viewImg.alt = 'THE STEPPER 활동 사진 ' + (cur + 1); pos.textContent = (cur + 1) + ' / ' + photos.length; }
+function show(i) { cur = (i + photos.length) % photos.length; withFallback(viewImg, photos[cur]); viewImg.src = previewUrl('view', photos[cur]); viewImg.alt = 'THE STEPPER 활동 사진 ' + (cur + 1); pos.textContent = (cur + 1) + ' / ' + photos.length; }
 function openView(i) { lastFocus = document.activeElement; show(i); view.hidden = false; document.body.classList.add('sa-scroll-locked'); document.getElementById('galClose').focus(); }
 function closeView() { view.hidden = true; document.body.classList.remove('sa-scroll-locked'); if (lastFocus) lastFocus.focus(); }
 document.getElementById('galClose').addEventListener('click', closeView);

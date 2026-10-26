@@ -26,9 +26,9 @@
     { label: 'AI 코치',  href: 'ai.html' },
     { label: '세미나',   href: 'schedule.html' },
     { label: '회원 도장', href: 'locations.html' },
-    { label: '문의',     href: 'contact.html' }
+    { label: '신청·문의', href: 'contact.html' }
   ];
-  var CTA = { label: '세미나 신청', href: 'contact.html' };
+  var CTA = { label: '세미나 신청', href: 'contact.html#seminar' };
 
   // 관리자 전용 (기존 index.html 메뉴의 admin-only-nav 링크를 그대로 옮김)
   var ADMIN_LINKS = [

@@ -158,11 +158,11 @@
     <img class="img-pc" src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_01.png?alt=media" alt="메인 포스터">
     <img class="img-m"  src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_01_m.jpg?alt=media" alt="메인 포스터">
   </div>
-  <div class="slide">
+  <div class="slide" id="adult">
     <img class="img-pc" src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_02.png?alt=media" alt="성인반">
     <img class="img-m"  src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_02_m.jpg?alt=media" alt="성인반">
   </div>
-  <div class="slide">
+  <div class="slide" id="entrance">
     <img class="img-pc" src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_03.png?alt=media" alt="대학 입시반">
     <img class="img-m"  src="https://firebasestorage.googleapis.com/v0/b/thestepper-c9bfb.firebasestorage.app/o/center%2Fcenter_03_m.jpg?alt=media" alt="대학 입시반">
   </div>
@@ -221,7 +221,7 @@
   function changeSlide(dir) { current = (current + dir + total) % total; updateSlider(); }
   function goToSlide(n) { current = n; updateSlider(); }
 
-  setInterval(() => changeSlide(1), 5000);
+  let autoPlay = setInterval(() => changeSlide(1), 5000);
 
   let startX = 0;
   const wrap = document.querySelector('.slider-wrap');
@@ -232,6 +232,19 @@
   });
 
   function toggleMenu() { document.getElementById('menuOverlay').classList.toggle('active'); }
+
+  // 메뉴 "성인 겨루기반"(#adult)·"대학 입시반"(#entrance) → 해당 포스터 슬라이드로 (같은 페이지에서 눌러도 메뉴 닫고 이동)
+  // 그 포스터를 보러 온 것이므로 자동 넘김은 멈춘다(화살표·점·썸네일로는 계속 넘길 수 있음)
+  function openHashSlide() {
+    const slides = [...document.querySelectorAll('.slide')];
+    const n = slides.findIndex(s => s.id && '#' + s.id === location.hash);
+    if (n < 0) return;
+    clearInterval(autoPlay);
+    goToSlide(n);
+    document.getElementById('menuOverlay').classList.remove('active');
+  }
+  openHashSlide();
+  window.addEventListener('hashchange', openHashSlide);
 </script>
 </body>
 </html>

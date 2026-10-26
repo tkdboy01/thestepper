@@ -63,8 +63,11 @@ function props_() { return PropertiesService.getScriptProperties(); }
 
 // ── 제출 → 서버 전달 ─────────────────────────────────────────────
 function onFormSubmit(e) {
+  // 편집기에서 직접 실행하면 제출 이벤트(e.response)가 없다 — 아무것도 보내지 않는다
+  // (예전엔 마지막 응답을 찾다가 응답이 0건이면 "전달 실패" 메일을 보냈다)
+  if (!e || !e.response) { console.log('[폼 알림] 제출 이벤트 없이 실행됨(편집기에서 직접 실행) — 아무것도 보내지 않음. 점검은 inspect() 를 쓰세요.'); return; }
   var form = FormApp.getActiveForm();
-  var response = (e && e.response) ? e.response : form.getResponses().pop();
+  var response = e.response;
   var kind, payload;
   try {
     kind = formKind_(form);

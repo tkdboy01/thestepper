@@ -217,3 +217,13 @@ h1, h2, h3 { margin: 0; font-weight: 900; }
 .sa-footer__sub a { display: inline-flex; align-items: center; min-height: var(--touch); font-size: 14px; color: var(--dark-muted); }
 .sa-footer__sub a:hover { color: var(--dark-ink); }
 .sa-footer__sub + .sa-footer__copy { margin-top: 16px; }
+
+/* 떠 있는 채널 버튼(유튜브·카카오톡·인스타그램) — 기존 페이지(contact.html 등)와 같은 크기·색·위치 (2026-10-26)
+   헤더(1000)·전체 메뉴(1100)보다 아래 층이라 메뉴를 열면 가려진다 */
+.floating-btns { position: fixed; bottom: 30px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 900; }
+.float-btn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; }
+.float-btn:hover { transform: translateY(-3px) scale(1.08); box-shadow: 0 8px 28px rgba(0,0,0,0.25); }
+.float-kakao { background: #FEE500; }
+.float-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.float-youtube { background: #FF0000; }
+@media (max-width: 480px) { .floating-btns { bottom: 20px; right: 16px; } .float-btn { width: 46px; height: 46px; } }

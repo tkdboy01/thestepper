@@ -15,3 +15,6 @@ outputs/package*.json
 functions/node_modules/
 functions/.env*
 functions/.secret*
+
+# 운영 Firestore 백업(로컬 보관, 커밋·배포 안 함)
+backups/

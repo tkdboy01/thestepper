@@ -295,7 +295,7 @@ footer{background:#ffffff;border-top:1px solid #1a1a1a;padding:36px 24px;text-al
 .footer-sns a{color:#1d1d1f;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:1px;transition:color 0.2s;display:flex;align-items:center;gap:6px}
 .footer-sns a:hover{color:var(--gold)}
 
-.contact-tabs{display:flex;gap:0;max-width:800px;margin:0 auto 0;border-radius:12px 12px 0 0;overflow:hidden;border:1px solid #e5e5e7;border-bottom:none}
+.contact-tabs{display:flex;gap:0;max-width:800px;margin:0 auto 0;border-radius:12px 12px 0 0;overflow:hidden;border:1px solid #e5e5e7;border-bottom:none;scroll-margin-top:86px}
 .contact-tab{flex:1;padding:18px;text-align:center;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;background:#f5f5f7;color:#6e6e73;transition:all 0.2s;border:none}
 .contact-tab.active{background:var(--red);color:#fff}
 .contact-tab:hover:not(.active){background:#1a1a1a;color:#1d1d1f}
@@ -345,7 +345,7 @@ footer{background:#ffffff;border-top:1px solid #1a1a1a;padding:36px 24px;text-al
   <a href="locations.html" onclick="toggleMenu()">회원 도장</a>
   <a href="index.html#reviews" onclick="toggleMenu()">회원 도장 후기</a>
   <a href="index.html#gallery" onclick="toggleMenu()">활동 갤러리</a>
-  <a href="contact.html" onclick="toggleMenu()" style="color:var(--gold);font-weight:800">문의</a>
+  <a href="contact.html" onclick="toggleMenu()" style="color:var(--gold);font-weight:800">세미나 신청·가입 문의</a>
   <a href="ai.html" onclick="toggleMenu()">AI 겨루기 코치</a>
   <!-- 관리자 전용 메뉴 — 아래 admin-nav 스크립트가 표시를 제어한다.
        전체 공개 전환 시: style="display:none" 을 지우고
@@ -461,6 +461,21 @@ function switchTab(tab, btn){
   document.getElementById('tab-'+tab).classList.add('active');
   btn.classList.add('active');
 }
+
+// 주소 뒤 #seminar / #franchise(회원 도장 가입 문의, #dojang 도 같음) / #info 로 해당 탭을 바로 연다 (2026-10-26)
+// 세미나 일정 페이지의 "세미나 신청하기" 등에서 contact.html#seminar 로 들어온다. 탭이 보이도록 탭 위치로 스크롤
+function openTabFromHash(){
+  var key = (location.hash || '').replace('#', '');
+  if (key === 'dojang') key = 'franchise';
+  if (['seminar', 'franchise', 'info'].indexOf(key) < 0) return;
+  var btn = document.querySelector('.contact-tab[onclick*="\'' + key + '\'"]');
+  if (!btn) return;
+  switchTab(key, btn);
+  var tabs = document.querySelector('.contact-tabs');
+  if (tabs) tabs.scrollIntoView({ block: 'start' });
+}
+openTabFromHash();
+window.addEventListener('hashchange', openTabFromHash);
 </script>
 
 <!-- 관리자 전용 메뉴 표시 제어 (상세 주석은 admin-nav.js 참고) -->

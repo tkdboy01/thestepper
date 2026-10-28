@@ -1,8 +1,8 @@
 /* THE STEPPER 리뉴얼 A안 — index.html 동작
    1) 유튜브: 썸네일 + 재생 버튼 → 누르면 그 자리에서 youtube-nocookie iframe
    2) 15단계 커리큘럼: js/curriculum-data.js 로 목록을 그리고 한 번에 하나만 펼침
-   3) 방문자 집계: 리뉴얼 전 index.html 과 같은 방식으로 stats/visitors 의 count +1
-         (화면에는 표시하지 않음)
+   3) 방문자 집계: stats/visitors 의 count +1 (같은 브라우저는 한국 날짜 기준 하루 1회)
+         수치 띠 "누적 방문자" 칸에 표시
    4) Firestore 공개 읽기(로그인 없음):
         locations → 회원 도장 수 [N] 와 시·도별 목록
         schedules → 다가오는 세미나 최대 3개, 없으면 가장 최근 지난 세미나 3개
@@ -155,19 +155,32 @@ function scheduleList(items) {
     return; // SDK 로드 실패 — 기본값 유지
   }
 
-  // ── 방문자 집계 ── 리뉴얼 전 index.html updateVisitor() 와 동일:
-  //    문서 stats/visitors 를 읽어 없으면 { count: 1 } 생성, 있으면 count 를 increment(1).
-  //    페이지를 열 때마다 1회 실행(중복 방지 장치 없음 — 기존과 같음).
-  //    기존 코드에 있던 "증가 후 다시 읽어 숫자 애니메이션 표시" 부분은 화면 표시용이라 뺐다.
+  // ── 방문자 집계·표시 ── 문서 stats/visitors 의 count (리뉴얼 전 값을 그대로 이어 씀).
+  //    없으면 { count: 1 } 생성, 있으면 count 를 increment(1) — firestore.rules 가 +1 만 허용한다.
+  //    같은 브라우저는 한국 날짜 기준 하루 1회만 센다(2026-10-28): localStorage 'stepper_visit_day' 에
+  //    센 날짜를 적어 두고, 같은 날 다시 열면 읽어서 표시만 한다. 저장소를 못 쓰는 브라우저(사생활 보호 모드 등)는
+  //    예전처럼 열 때마다 센다.
+  //    점검·크롤 도구는 아래 updateDoc 한 줄을 바꿔치기해 증가를 막는다 — 이 줄 문구를 바꾸면 도구도 같이 고칠 것.
+  //    수치 띠의 [data-visitor-count] 에 숫자를 넣는다(실패하면 '···' 그대로).
   (async function updateVisitor() {
+    var VISIT_KEY = 'stepper_visit_day';
+    var today = todayISO();
+    var countedToday = false;
+    try { countedToday = localStorage.getItem(VISIT_KEY) === today; } catch (e) { /* 저장소 사용 불가 */ }
     try {
       var ref = fs.doc(db, 'stats', 'visitors');
       var snap = await fs.getDoc(ref);
-      if (!snap.exists()) {
-        await fs.setDoc(ref, { count: 1 });
-      } else {
-        await fs.updateDoc(ref, { count: fs.increment(1) });
+      var n = snap.exists() ? (Number(snap.data().count) || 0) : 0;
+      if (!countedToday) {
+        if (!snap.exists()) {
+          await fs.setDoc(ref, { count: 1 });
+        } else {
+          await fs.updateDoc(ref, { count: fs.increment(1) });
+        }
+        n += 1;
+        try { localStorage.setItem(VISIT_KEY, today); } catch (e) { /* 저장소 사용 불가 */ }
       }
+      document.querySelectorAll('[data-visitor-count]').forEach(function (e) { e.textContent = n.toLocaleString('ko-KR'); });
     } catch (e) {
       console.log('카운터 오류:', e);
     }

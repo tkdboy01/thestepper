@@ -56,6 +56,8 @@
   // 보조 링크 — 메뉴 7개에 없는 기존 페이지. 이름은 각 페이지 <title> 에서 그대로 가져옴
   var SUB_LINKS = [
     { label: '스텝 소개',         href: 'staff.html' },
+    // 리뉴얼 전 메뉴의 "회원 도장 후기" — 메인 후기 섹션(2026-10-28)
+    { label: '회원 도장 후기',     href: 'index.html#reviews' },
     { label: '성인부 & 입시센터',  href: 'center.html' },
     { label: '활동 갤러리',       href: 'gallery.html' },
     { label: 'OX 겨루기 퀴즈',    href: 'quiz.html' },
@@ -133,7 +135,7 @@
       return '<li><a href="' + esc(c.href) + '"' + (c.external ? ' target="_blank" rel="noopener"' : '') + '>' + esc(c.label) + '</a></li>';
     }).join('');
     var subs = SUB_LINKS.map(function (l) {
-      return '<li><a href="' + esc(l.href) + '"' + (isCurrent(l.href) ? ' aria-current="page"' : '') + '>' + esc(l.label) + '</a></li>';
+      return '<li><a href="' + esc(resolve(l.href)) + '"' + (isCurrent(l.href) ? ' aria-current="page"' : '') + '>' + esc(l.label) + '</a></li>';
     }).join('');
     return '' +
       '<footer class="sa-footer">' +

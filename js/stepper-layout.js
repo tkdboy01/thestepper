@@ -30,6 +30,12 @@
   ];
   var CTA = { label: '세미나 신청', href: 'contact.html#seminar' };
 
+  // 전체 화면 메뉴(760px 이하 "메뉴" 버튼)에만 더하는 항목 — 가로 메뉴는 768px 에서 한 줄을 유지하려고
+  // 7개로 두고, 세로 목록인 휴대폰 메뉴에만 넣는다(2026-10-28). after: 이 라벨 바로 뒤에 넣음
+  var OVERLAY_EXTRA = [
+    { label: '스텝 소개', href: 'staff.html', after: '브랜드' }
+  ];
+
   // 관리자 전용 (기존 index.html 메뉴의 admin-only-nav 링크를 그대로 옮김)
   var ADMIN_LINKS = [
     { id: 'navMotionLink', label: '동작 분석', href: 'motion.html' },
@@ -92,7 +98,12 @@
     var items = MENU.map(function (m) {
       return '<li><a ' + linkAttrs(m, 'sa-nav__link') + '>' + esc(m.label) + '</a></li>';
     }).join('');
-    var overlayItems = MENU.map(function (m) {
+    var overlayMenu = MENU.slice();
+    OVERLAY_EXTRA.forEach(function (x) {
+      var i = overlayMenu.map(function (m) { return m.label; }).indexOf(x.after);
+      overlayMenu.splice(i < 0 ? overlayMenu.length : i + 1, 0, x);
+    });
+    var overlayItems = overlayMenu.map(function (m) {
       return '<li><a ' + linkAttrs(m, 'sa-overlay__link') + '>' + esc(m.label) + '</a></li>';
     }).join('');
     return '' +

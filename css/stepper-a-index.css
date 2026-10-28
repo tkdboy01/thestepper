@@ -25,6 +25,7 @@
 .ix-video figcaption { margin-top: 12px; font-size: 15px; font-weight: 700; line-height: 1.5; }
 
 /* 3. 수치 */
+.ix-why__more { margin: 24px 0 0; }
 .ix-stats { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .ix-stats__list { list-style: none; margin: 0 auto; padding: 0; max-width: var(--wrap); display: grid; grid-template-columns: repeat(5, 1fr); }
 .ix-stats__item { padding: 36px var(--gutter); border-left: 1px solid var(--line); }

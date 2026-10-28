@@ -40,6 +40,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255
 .nav-user-email{font-size:11px;color:#6e6e73;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-logout-btn{background:transparent;border:1px solid #d2d2d7;color:#6e6e73;font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px}
 .nav-logout-btn:hover{border-color:var(--red);color:var(--red)}
+/* 좁은 화면 머리글 한 줄 유지 (2026-10-28) — 375px 로그인 상태에서 줄이 약 403px 가 되어
+   "메인으로"·"로그아웃"이 한 글자씩 세로로 줄바꿈되고 메뉴 버튼이 화면 밖으로 나갔다.
+   글자는 줄바꿈하지 않고, 480px 이하에선 로고 옆 "THE STEPPER" 글자를 숨기고 간격을 줄인다. */
+.nav-back,.nav-logout-btn{white-space:nowrap;flex-shrink:0}
 .hamburger{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;gap:5px;padding:4px;z-index:1001}
 .hamburger span{display:block;width:24px;height:2px;background:#1d1d1f;transition:all 0.3s}
 .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
@@ -223,6 +227,26 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 .modal-submit-btn{background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:16px;font-family:'Noto Sans KR',sans-serif;transition:opacity 0.2s;letter-spacing:0.5px}
 .modal-submit-btn:disabled{opacity:0.5;cursor:not-allowed}
 .modal-cancel-btn{background:transparent;border:none;color:#6e6e73;font-size:13px;cursor:pointer;width:100%;margin-top:8px;padding:8px;font-family:'Noto Sans KR',sans-serif}
+/* 좁은 화면 머리글 (위 .nav-back 주석 참고) — 뒤쪽 .inbox-nav-btn·.lang-btn 규칙보다 뒤에 두어야 적용된다 */
+@media(max-width:480px){
+  nav{padding:0 12px}
+  .nav-left{gap:8px}
+  .nav-right{gap:6px}
+  .nav-brand{display:none}
+  .nav-logo-img{height:38px}
+  .nav-logout-btn{padding:5px 8px}
+  .inbox-nav-btn{padding:5px 8px}
+}
+@media(max-width:374px){
+  nav{padding:0 8px}
+  .nav-left{gap:6px}
+  .nav-right{gap:4px}
+  .nav-back{font-size:12px}
+  .nav-logo-img{height:32px}
+  .lang-btn{padding:4px 7px}
+  .nav-logout-btn{padding:5px 6px}
+  .inbox-nav-btn{padding:4px 6px}
+}
 </style>
 </head>
 <body>
@@ -456,6 +480,8 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
       회원가입 중 일시적인 오류로 프로필 정보가 저장되지 않았습니다.<br>이용을 위해 정보를 다시 입력해 주세요.
     </div>
 
+    <!-- 이름은 저장된 이름이 없을 때만 보인다(있으면 서버도 덮어쓰지 않음) -->
+    <input type="text" class="auth-input" id="pcName" placeholder="이름 (실명)" style="display:none">
     <input type="text" class="auth-input" id="pcNickname" placeholder="닉네임 (홈페이지에서 사용될 이름)">
     <input type="text" class="auth-input" id="pcRegion" placeholder="거주 지역">
 
@@ -979,6 +1005,7 @@ function revealApp(user) {
 
 // ===== 프로필 보완 모달 (회원가입 실패로 빈 프로필이 된 계정 복구) =====
 var profileCompleteUser = null;
+var profileCompleteHasName = false;
 
 function showProfileCompleteModal(user, profile) {
   document.getElementById('authSection').style.display = 'none';
@@ -987,6 +1014,9 @@ function showProfileCompleteModal(user, profile) {
   document.getElementById('navUserArea').style.display = 'none';
 
   profileCompleteUser = user;
+  profileCompleteHasName = typeof profile.name === 'string' && profile.name.trim() !== '';
+  document.getElementById('pcName').value = '';
+  document.getElementById('pcName').style.display = profileCompleteHasName ? 'none' : '';
   document.getElementById('pcNickname').value = profile.nickname || '';
   document.getElementById('pcRegion').value = profile.region || '';
   setRadioValue('pcRole', profile.role);
@@ -1021,6 +1051,9 @@ async function submitProfileComplete() {
   var levelEl2   = document.querySelector('input[name="pcLevel"]:checked');
   var gymEl2     = document.querySelector('input[name="pcGym"]:checked');
 
+  var name = document.getElementById('pcName').value.trim();
+
+  if (!profileCompleteHasName && !name) { showErr('profileCompleteError', '이름을 입력해주세요.'); return; }
   if (!nickname)  { showErr('profileCompleteError', '닉네임을 입력해주세요.'); return; }
   if (!roleEl2)   { showErr('profileCompleteError', '구분을 선택해주세요.'); return; }
   if (!purposeEl2){ showErr('profileCompleteError', '수련 목적을 선택해주세요.'); return; }
@@ -1038,9 +1071,8 @@ async function submitProfileComplete() {
 
   try {
     var user = profileCompleteUser;
-    // complete-profile 은 name 이 필수라, 이 화면에는 안 보이지만 기존
-    // 값/구글 표시 이름/이메일 아이디 중 있는 값으로 채워서 함께 보낸다.
-    var fallbackName = (user.displayName || '').trim() || (user.email || '').split('@')[0] || '(미등록)';
+    // 이름은 저장된 이름이 없을 때만 회원이 직접 입력한 값을 보낸다. 예전엔 화면에 없는 이름을
+    // 구글 표시 이름/이메일 아이디로 채워 보내 기존 실명을 덮어썼다(2026-10-28 수정, 서버도 기존 이름은 유지).
     var token = await user.getIdToken();
     var res = await fetch(MANAGE_MEMBER_URL, {
       method: 'POST',
@@ -1048,7 +1080,7 @@ async function submitProfileComplete() {
       body: JSON.stringify({
         action: 'complete-profile',
         uid: user.uid,
-        name: fallbackName,
+        name: profileCompleteHasName ? '' : name,
         nickname: nickname,
         region: region,
         role: roleEl2.value,

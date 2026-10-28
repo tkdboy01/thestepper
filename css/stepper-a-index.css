@@ -104,6 +104,11 @@
   font-family: var(--font-mono); font-size: 14px; color: var(--muted); text-align: center; padding: 24px;
 }
 
+/* 자리표시 상자(.ix-ai-shot·.ix-map)를 숨긴 섹션 — 오른쪽 칸 없이 한 칸(최대 760px)으로 (2026-10-28)
+   상자를 다시 켤 때는 HTML 의 hidden 과 .ix-solo 를 함께 뺀다(docs/renewal/placeholders.md) */
+.ix-solo { grid-template-columns: minmax(0, 760px); }
+.ix-ai-shot[hidden], .ix-map[hidden] { display: none; }
+
 /* 10. 후기 */
 .ix-reviews { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px 32px; }
 .ix-review { border-top: 2px solid var(--line); padding-top: 24px; margin: 0; }

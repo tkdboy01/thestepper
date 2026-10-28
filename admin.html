@@ -476,6 +476,42 @@ select.form-control{cursor:pointer}
     </div>
   </div>
 
+  <!-- 이름 정정 모달 (관리자 전용, 2026-10-28) — 1단계 새 이름 입력, 2단계 확인.
+       서버 manage-member correct-name 이 users.name 을 바꾸고 name_corrections 에 기록을 남긴다.
+       (프로필 보완/complete-profile 은 기존 이름을 절대 덮어쓰지 않으므로 이름 수정은 여기서만) -->
+  <div id="nameFixModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800;color:#1d1d1f">이름 정정</div>
+        <button onclick="closeNameFix()" style="background:transparent;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1">✕</button>
+      </div>
+      <div style="font-size:12px;color:#888;margin-bottom:16px" id="nameFixWho"></div>
+      <div id="nameFixStep1">
+        <div class="form-group">
+          <label class="form-label">지금 이름</label>
+          <div id="nameFixCurrent" style="font-size:14px;font-weight:700;color:#1d1d1f;padding:4px 0"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label">새 이름 (회원에게 확인한 실명)</label>
+          <input class="form-control" id="nameFixInput" maxlength="50" placeholder="새 이름">
+        </div>
+        <button id="nameFixNext" onclick="nameFixNext()" style="margin-top:12px;width:100%;background:#1d1d1f;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">다음</button>
+      </div>
+      <div id="nameFixStep2" style="display:none">
+        <div style="font-size:14px;line-height:1.9;color:#1d1d1f;background:#f7f7f9;border-radius:10px;padding:14px">
+          <div>이전 이름: <b id="nameFixPrev"></b></div>
+          <div>새 이름: <b id="nameFixNew" style="color:#C8102E"></b></div>
+        </div>
+        <div style="font-size:12px;color:#888;margin-top:10px">정정하면 변경 기록(이전·새 이름, 시각, 관리자)이 남습니다. 이대로 정정할까요?</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button onclick="nameFixBack()" style="flex:1;background:#fff;color:#1d1d1f;border:1px solid #d2d2d7;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">뒤로</button>
+          <button id="nameFixSubmit" onclick="submitNameFix()" style="flex:1;background:#C8102E;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">정정</button>
+        </div>
+      </div>
+      <div id="nameFixErr" style="font-size:12px;color:#C8102E;margin-top:12px;min-height:16px"></div>
+    </div>
+  </div>
+
   <!-- ===== 코칭 관리 탭 ===== -->
   <!-- 💬 1:1 문의 (2026-10-22) — board.html 1:1 문의(inquiries)를 여기서 열고 답변한다.
        답변 저장은 board.html 과 같은 {answer, answeredAt, status:'answered'} — 회원 화면은 그대로 동작.
@@ -2093,6 +2129,7 @@ function renderMembersPage(page) {
       actionHtml += '<button onclick="openMemberProfileModal(\'' + safeUid + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #0071e3;border-radius:5px;background:#f0f6ff;color:#0055b3;cursor:pointer;margin-right:3px;margin-bottom:3px">프로필 보완</button>';
       actionHtml += '<button onclick="promptCompleteProfile(\'' + safeUid + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #8a5b00;border-radius:5px;background:#fff7e6;color:#8a5b00;cursor:pointer;margin-right:3px;margin-bottom:3px">안내 발송</button>';
     }
+    actionHtml += '<button onclick="openNameFix(\'' + safeUid + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #6e6e73;border-radius:5px;background:#fff;color:#3a3a3c;cursor:pointer;margin-right:3px;margin-bottom:3px">이름 정정</button>';
     const deleteBtnHtml = '<button onclick="deleteMember(\'' + safeUid + '\',\'' + safeEmail + '\')" style="font-size:11px;padding:3px 7px;border:1px solid #C8102E;border-radius:5px;background:#fff5f5;color:#C8102E;cursor:pointer;margin-bottom:3px">삭제</button>';
 
     if (m.disabled) {
@@ -2334,6 +2371,61 @@ window.submitMemberProfile = async () => {
     errEl.textContent = '오류: ' + e.message;
   } finally {
     btn.disabled = false; btn.textContent = '저장';
+  }
+};
+
+// ── 이름 정정 (관리자 전용) — 1단계 입력 → 2단계 확인 → manage-member correct-name ──
+let nameFixTarget = null;
+window.openNameFix = (uid) => {
+  const m = membersData.find(x => x.uid === uid);
+  if (!m) return;
+  nameFixTarget = m;
+  document.getElementById('nameFixWho').textContent = (m.nickname ? '닉네임 ' + m.nickname + ' · ' : '') + m.email;
+  document.getElementById('nameFixCurrent').textContent = m.name || '(없음)';
+  document.getElementById('nameFixInput').value = '';
+  document.getElementById('nameFixErr').textContent = '';
+  nameFixBack();
+  document.getElementById('nameFixModal').style.display = 'flex';
+  document.getElementById('nameFixInput').focus();
+};
+window.closeNameFix = () => { document.getElementById('nameFixModal').style.display = 'none'; nameFixTarget = null; };
+window.nameFixBack = () => {
+  document.getElementById('nameFixStep1').style.display = '';
+  document.getElementById('nameFixStep2').style.display = 'none';
+};
+window.nameFixNext = () => {
+  const errEl = document.getElementById('nameFixErr');
+  const nm = document.getElementById('nameFixInput').value.trim();
+  if (!nm) { errEl.textContent = '새 이름을 입력해주세요.'; return; }
+  if (nm === (nameFixTarget.name || '')) { errEl.textContent = '지금 이름과 같습니다.'; return; }
+  errEl.textContent = '';
+  document.getElementById('nameFixPrev').textContent = nameFixTarget.name || '(없음)';
+  document.getElementById('nameFixNew').textContent = nm;
+  document.getElementById('nameFixStep1').style.display = 'none';
+  document.getElementById('nameFixStep2').style.display = '';
+};
+window.submitNameFix = async () => {
+  if (!nameFixTarget) return;
+  const errEl = document.getElementById('nameFixErr');
+  const btn = document.getElementById('nameFixSubmit');
+  btn.disabled = true; btn.textContent = '정정 중...';
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(MANAGE_MEMBER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'correct-name', uid: nameFixTarget.uid, newName: document.getElementById('nameFixNew').textContent })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '정정 실패');
+    showToast(data.message || '이름을 정정했습니다.', 'success');
+    closeNameFix();
+    membersLoaded = false;
+    await loadMembers();
+  } catch (e) {
+    errEl.textContent = '오류: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '정정';
   }
 };
 

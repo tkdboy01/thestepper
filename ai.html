@@ -431,6 +431,16 @@ footer{background:#f5f5f7;border-top:1px solid #e5e5e7;padding:28px 24px;text-al
 
 </div>
 
+<!-- 프로필 확인 실패 안내 — users 문서를 읽지 못했을 때(네트워크 등) 프로필 보완 모달 대신 뜬다.
+     읽기 실패를 "프로필 없음"으로 보고 재입력 창을 띄우면 정상 회원도 프로필을 다시 쓰게 된다(2026-10-28). -->
+<div id="profileRetryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:18px;padding:28px 24px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.28);text-align:center">
+    <div style="font-size:16px;font-weight:800;color:#1d1d1f;margin-bottom:8px">회원 정보를 불러오지 못했습니다</div>
+    <div style="font-size:13px;color:#555;line-height:1.8;margin-bottom:22px">네트워크 상태를 확인하고 잠시 후 다시 시도해 주세요.</div>
+    <button type="button" class="auth-btn" id="profileRetryBtn" style="margin-bottom:0" onclick="retryProfileCheck()">다시 시도</button>
+  </div>
+</div>
+
 <!-- 프로필 보완 모달 — 회원가입 중 오류 등으로 nickname/role/level 이
      비어있는 계정이 로그인하면 뜬다. 닫기 버튼이 없고, 저장 전까지는
      챗봇 등 다른 기능을 열지 않는다(onLoggedIn 참고).
@@ -885,26 +895,42 @@ async function onLoggedIn(user) {
     showVerifyCard(user);
     return;
   }
-  // 이메일 인증 완료 상태를 Firestore에 동기화 (문서 없으면 최소 생성)
-  db.collection('users').doc(user.uid).set(
-    { emailVerified: true },
-    { merge: true }
-  ).catch(function(){});
-
   // 프로필 완성도 확인 — 회원가입 중 오류(force-verify 버그 등)로
   // nickname/role/level 이 비어있는 계정이면, 그 정보를 다시 입력받기
   // 전까지는 챗봇 등 다른 기능을 열어주지 않는다. admin.html "회원
   // 목록"의 프로필 보완 대상 판정과 동일한 기준(하나라도 없으면
   // 미완료)을 쓴다 — 문서가 아예 없는 계정도 당연히 여기 포함된다.
-  var profile = {};
-  try {
-    var docSnap = await db.collection('users').doc(user.uid).get();
-    if (docSnap.exists) profile = docSnap.data() || {};
-  } catch (e) {
-    profile = {};
+  //
+  // 읽기를 먼저 한다(2026-10-28 수정). 예전엔 아래 emailVerified set(merge) 를
+  // 기다리지 않고 바로 읽었는데, 그 쓰기가 서버에 반영되기 전에는 SDK 가 문서를
+  // { emailVerified } 하나만 있는 것으로 돌려줘서 정상 회원에게도 재입력 창이 떴다.
+  // 또 읽기 실패를 "프로필 없음"으로 보던 것을 "다시 시도" 안내로 나눈다.
+  var docSnap = null;
+  for (var attempt = 0; attempt < 3 && !docSnap; attempt++) {
+    try {
+      docSnap = await db.collection('users').doc(user.uid).get({ source: 'server' });
+    } catch (e) {
+      console.warn('[profile] users 문서 읽기 실패', attempt + 1, e && e.code);
+      if (attempt < 2) await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
+    }
   }
 
   hideInitLoading();
+
+  if (!docSnap) {
+    showProfileRetry(user);
+    return;
+  }
+  var profile = docSnap.exists ? (docSnap.data() || {}) : {};
+
+  // 이메일 인증 완료 상태를 Firestore에 동기화 (문서 없으면 최소 생성) — 이미 true 면 쓰지 않는다.
+  // 쓰는 경우에도 끝날 때까지 기다린다(이후 이 문서를 읽는 곳이 위와 같은 일을 겪지 않게).
+  if (profile.emailVerified !== true) {
+    await db.collection('users').doc(user.uid).set(
+      { emailVerified: true },
+      { merge: true }
+    ).catch(function(){});
+  }
 
   if (!profile.nickname || !profile.role || !profile.level) {
     showProfileCompleteModal(user, profile);
@@ -912,6 +938,26 @@ async function onLoggedIn(user) {
   }
 
   revealApp(user);
+}
+
+// ===== 프로필 확인 실패 → 다시 시도 =====
+var profileRetryUser = null;
+function showProfileRetry(user) {
+  profileRetryUser = user;
+  document.getElementById('authSection').style.display = 'none';
+  document.getElementById('chatSection').style.display = 'none';
+  document.getElementById('chatInputArea').style.display = 'none';
+  document.getElementById('navUserArea').style.display = 'none';
+  document.getElementById('profileRetryModal').style.display = 'flex';
+}
+async function retryProfileCheck() {
+  if (!profileRetryUser) return;
+  var btn = document.getElementById('profileRetryBtn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  document.getElementById('profileRetryModal').style.display = 'none';
+  document.getElementById('initLoading').style.display = '';
+  try { await onLoggedIn(profileRetryUser); }
+  finally { btn.disabled = false; btn.textContent = '다시 시도'; }
 }
 
 function revealApp(user) {

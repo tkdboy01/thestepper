@@ -924,12 +924,16 @@ async function onLoggedIn(user) {
   var profile = docSnap.exists ? (docSnap.data() || {}) : {};
 
   // 이메일 인증 완료 상태를 Firestore에 동기화 (문서 없으면 최소 생성) — 이미 true 면 쓰지 않는다.
-  // 쓰는 경우에도 끝날 때까지 기다린다(이후 이 문서를 읽는 곳이 위와 같은 일을 겪지 않게).
+  // 쓰는 경우에는 끝날 때까지(최대 3초) 기다린다 — 이후 이 문서를 읽는 곳이 위와 같은 일을 겪지 않게.
+  // 네트워크가 끊겨 쓰기가 끝나지 않아도 화면이 멈추지 않도록 3초 뒤엔 그냥 진행한다.
   if (profile.emailVerified !== true) {
-    await db.collection('users').doc(user.uid).set(
-      { emailVerified: true },
-      { merge: true }
-    ).catch(function(){});
+    await Promise.race([
+      db.collection('users').doc(user.uid).set(
+        { emailVerified: true },
+        { merge: true }
+      ).catch(function(){}),
+      new Promise(function(r) { setTimeout(r, 3000); })
+    ]);
   }
 
   if (!profile.nickname || !profile.role || !profile.level) {

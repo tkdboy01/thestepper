@@ -2,7 +2,7 @@
    1) 유튜브: 썸네일 + 재생 버튼 → 누르면 그 자리에서 youtube-nocookie iframe
    2) 15단계 커리큘럼: js/curriculum-data.js 로 목록을 그리고 한 번에 하나만 펼침
    3) 방문자 집계: stats/visitors 의 count +1 (같은 브라우저는 한국 날짜 기준 하루 1회)
-         수치 띠 "누적 방문자" 칸에 표시
+         첫 화면 버튼 아래 "누적 방문자 N명" 에 표시
    4) Firestore 공개 읽기(로그인 없음):
         locations → 회원 도장 수 [N] 와 시·도별 목록
         schedules → 다가오는 세미나 최대 3개, 없으면 가장 최근 지난 세미나 3개
@@ -161,7 +161,7 @@ function scheduleList(items) {
   //    센 날짜를 적어 두고, 같은 날 다시 열면 읽어서 표시만 한다. 저장소를 못 쓰는 브라우저(사생활 보호 모드 등)는
   //    예전처럼 열 때마다 센다.
   //    점검·크롤 도구는 아래 updateDoc 한 줄을 바꿔치기해 증가를 막는다 — 이 줄 문구를 바꾸면 도구도 같이 고칠 것.
-  //    수치 띠의 [data-visitor-count] 에 숫자를 넣는다(실패하면 '···' 그대로).
+  //    첫 화면의 [data-visitor-count] 에 숫자를 넣는다(실패하면 '···' 그대로).
   (async function updateVisitor() {
     var VISIT_KEY = 'stepper_visit_day';
     var today = todayISO();

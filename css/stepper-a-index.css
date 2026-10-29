@@ -145,6 +145,21 @@
   .ix-regions { grid-template-columns: 1fr; }
   .ix-schedule li { grid-template-columns: 1fr; gap: 2px; }
 }
+/* 모바일 첫 화면 — "누적 방문자" 줄까지 첫 화면 안에 들어오게 (2026-10-29).
+   사진 자리(윗여백)를 화면 높이(svh, 주소창 등을 뺀 높이)에 맞춰 112~260px 로 줄이고,
+   사진 높이도 같은 비율(윗여백 + 60px, 원래 260 → 320)로 따라 줄인다.
+   글자 사이 간격을 조금 줄이고 버튼 2개를 한 줄로. 큰 화면(가용 높이 약 720px 이상)은 예전과 같다. PC 는 그대로 */
+@media (max-width: 760px) {
+  .ix-hero { --hero-top: clamp(112px, calc(100svh - 456px), 260px); }
+  .ix-hero .sa-photo--right { height: calc(var(--hero-top) + 60px); }
+  .ix-hero__text { padding-top: var(--hero-top); padding-bottom: 48px; }
+  .ix-hero__text .sa-label { margin-bottom: 10px; }
+  .ix-hero__text .sa-h1 { margin-bottom: 16px; }
+  .ix-hero__text .sa-lead { font-size: 16px; line-height: 1.6; margin-bottom: 0; }
+  .ix-hero .sa-btns { margin-top: 20px; flex-wrap: nowrap; gap: 8px; }
+  .ix-hero .sa-btns .sa-btn { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 14px; }
+  .ix-hero__visitors { margin-top: 16px; padding-top: 12px; }
+}
 .ix-reviews-head { margin-bottom: 48px; }
 .ix-schedule__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 0 0 12px; }
 .ix-schedule__label { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--accent); }

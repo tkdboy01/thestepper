@@ -27,10 +27,9 @@
 # ── 페이지가 불러오는 파일 ──
 !/admin-nav.js
 !/voice-manifest.json
-# 가맹점 로고(index.html 가맹 도장 목록). 메인 로고 원본·압축 파일은 어디서도 쓰지 않아 제외
-!/THE STEPPER 가맹점 마크
-/THE STEPPER 가맹점 마크/THE STEPPER 메인 로고.png
-/THE STEPPER 가맹점 마크/*.zip
+# "THE STEPPER 가맹점 마크/" 폴더(회원 도장 로고 원본)는 배포하지 않는다(2026-10-29).
+# 어느 페이지·Firestore 데이터도 이 폴더를 쓰지 않는다 — 회원 도장 로고는 Firebase Storage logos/ 에서 서빙.
+# 폴더는 원본 보관용으로 저장소에만 둔다(위 /* 로 자동 제외).
 
 # ── renewal-a 리뉴얼 자산(main 에는 아직 없음) ──
 !/css

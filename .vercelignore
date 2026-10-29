@@ -27,6 +27,12 @@
 # ── 페이지가 불러오는 파일 ──
 !/admin-nav.js
 !/voice-manifest.json
+# 사이트 아이콘(2026-10-29, tools/favicon/make.cjs 로 만듦) — 모든 html head 가 /favicon.ico 등을 부른다
+!/favicon.ico
+!/favicon-32x32.png
+!/apple-touch-icon.png
+!/icon-192.png
+!/icon-512.png
 # "THE STEPPER 가맹점 마크/" 폴더(회원 도장 로고 원본)는 배포하지 않는다(2026-10-29).
 # 어느 페이지·Firestore 데이터도 이 폴더를 쓰지 않는다 — 회원 도장 로고는 Firebase Storage logos/ 에서 서빙.
 # 폴더는 원본 보관용으로 저장소에만 둔다(위 /* 로 자동 제외).

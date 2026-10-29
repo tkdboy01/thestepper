@@ -7,6 +7,7 @@
      <script src="admin-nav.js" defer></script>          ← 관리자 전용 링크 표시
 
    - 메뉴 7개는 아래 MENU 한 곳에서만 관리한다.
+   - 떠 있는 채널 버튼(유튜브·카카오톡·인스타그램)도 여기서 그린다(renderFloating). 페이지에 따로 넣지 않는다.
    - 현재 페이지 메뉴(해시 없는 링크가 현재 파일과 같을 때)는 빨강 밑줄.
    - 관리자 전용 링크(동작 분석·음성 답변·ADMIN)는 기존 페이지와 같은 방식으로
      class="admin-only-nav" + display:none 으로 넣고, admin-nav.js 가
@@ -200,11 +201,87 @@
     });
   }
 
+  // ── 떠 있는 채널 버튼(유튜브·카카오톡·인스타그램) — 2026-10-29 각 페이지에 복사돼 있던 것을 여기로 모음 ──
+  // 이 스크립트를 불러오는 페이지에 모두 나온다(<body data-no-channels> 면 안 나옴). 관리자 페이지 등 이 스크립트를
+  // 쓰지 않는 페이지에는 원래처럼 없다.
+  //   PC(761px 이상): 기존과 같은 52px 동그란 버튼 3개를 오른쪽 아래에 세로로.
+  //   모바일(760px 이하): 48px 버튼 1개로 접어 두고, 누르면 3개가 위로 펼쳐짐. 다시 누르기·바깥 누르기·Esc 로 접힘.
+  //   메인(index.html) 모바일은 첫 화면(.ix-hero)이 보이는 동안 숨김 — 「회원 도장 가입 문의」·「누적 방문자」를 가리지 않게.
+  // 모양(FLOAT_CSS)도 여기서 넣는다 — stepper-a.css 를 쓰지 않는 locations.html 에서도 같게 나오도록.
+  var FLOAT_LINKS = '<a href="https://www.youtube.com/@%ED%83%9C%EA%B6%8C%EB%AF%BC%EA%B5%AD" target="_blank" class="float-btn float-youtube" title="유튜브"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a><a href="https://open.kakao.com/o/gFVIg0Dh" target="_blank" class="float-btn float-kakao" title="카카오톡"><svg width="22" height="22" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.674 1.58 5.025 3.978 6.418L5 21l4.773-2.487C10.468 18.833 11.224 19 12 19c5.523 0 10-3.477 10-7.5S17.523 3 12 3z"/></svg></a><a href="https://www.instagram.com/the_stepper_kms" target="_blank" class="float-btn float-insta" title="인스타그램"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>';
+  var FLOAT_TOGGLE_ICONS =
+    '<svg class="sa-float__ico-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><circle cx="8" cy="11" r="1" fill="currentColor"/><circle cx="12" cy="11" r="1" fill="currentColor"/><circle cx="16" cy="11" r="1" fill="currentColor"/></svg>' +
+    '<svg class="sa-float__ico-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var FLOAT_CSS = [
+    // PC — 기존 stepper-a.css 와 같은 크기·색·위치. 헤더(1000)·전체 메뉴(1100)보다 아래 층이라 메뉴를 열면 가려진다
+    '.floating-btns { position: fixed; bottom: 30px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 900; }',
+    '.sa-float__list { display: flex; flex-direction: column; gap: 10px; }',
+    '.float-btn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; }',
+    '.float-btn:hover { transform: translateY(-3px) scale(1.08); box-shadow: 0 8px 28px rgba(0,0,0,0.25); }',
+    '.float-kakao { background: #FEE500; }',
+    '.float-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }',
+    '.float-youtube { background: #FF0000; }',
+    '.sa-float__toggle { display: none; }',
+    // 모바일 — 접힌 버튼 1개, 펼치면 3개가 그 위로
+    '@media (max-width: 760px) {',
+    '  .floating-btns { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); right: 16px; transition: opacity 0.2s, visibility 0.2s; }',
+    '  .sa-float__list { position: absolute; right: 1px; bottom: calc(100% + 10px); transition: opacity 0.2s, transform 0.2s, visibility 0.2s; }',
+    '  .floating-btns:not(.is-open) .sa-float__list { opacity: 0; visibility: hidden; transform: translateY(12px); }',
+    '  .float-btn { width: 46px; height: 46px; }',
+    '  .sa-float__toggle { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: #111; color: #fff; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.18); -webkit-tap-highlight-color: transparent; }',
+    '  .sa-float__ico-close, .floating-btns.is-open .sa-float__ico-open { display: none; }',
+    '  .floating-btns.is-open .sa-float__ico-close { display: block; }',
+    '  .floating-btns.is-hero { opacity: 0; visibility: hidden; }',
+    '}'
+  ];
+
+  function renderFloating() {
+    if (document.body.hasAttribute('data-no-channels') || document.querySelector('.floating-btns')) return;
+    var style = document.createElement('style');
+    style.id = 'sa-float-style';
+    style.textContent = FLOAT_CSS.join('\n');
+    document.head.appendChild(style);
+
+    var box = document.createElement('div');
+    box.className = 'floating-btns';
+    box.innerHTML = '<div class="sa-float__list" id="sa-float-list">' + FLOAT_LINKS + '</div>' +
+      '<button type="button" class="sa-float__toggle" aria-expanded="false" aria-controls="sa-float-list" aria-label="채널 바로가기 열기">' + FLOAT_TOGGLE_ICONS + '</button>';
+    document.body.appendChild(box);
+
+    var btn = box.querySelector('.sa-float__toggle');
+    function setOpen(open) {
+      box.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? '채널 바로가기 닫기' : '채널 바로가기 열기');
+    }
+    btn.addEventListener('click', function () { setOpen(!box.classList.contains('is-open')); });
+    box.addEventListener('click', function (e) {                       // 채널을 누르면(새 창) 접어 둔다
+      if (e.target.closest && e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('click', function (e) {                  // 바깥을 누르면 접힘
+      if (box.classList.contains('is-open') && !box.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && box.classList.contains('is-open')) { setOpen(false); btn.focus(); }
+    });
+
+    // 메인 첫 화면이 보이는 동안은 숨김(모바일만 — .is-hero 는 760px 이하에서만 모양이 있음)
+    var hero = ON_INDEX && document.querySelector('.ix-hero');
+    if (hero && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        var inView = entries[0].isIntersecting;
+        box.classList.toggle('is-hero', inView);
+        if (inView) setOpen(false);
+      }).observe(hero);
+    }
+  }
+
   function render() {
     var h = document.getElementById('site-header');
     var f = document.getElementById('site-footer');
     if (h) { h.innerHTML = headerHTML(); bindOverlay(h); }
     if (f) { f.innerHTML = footerHTML(); }
+    renderFloating();
   }
 
   if (document.readyState === 'loading') {

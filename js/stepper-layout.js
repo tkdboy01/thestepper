@@ -232,6 +232,8 @@
     '  .sa-float__ico-close, .floating-btns.is-open .sa-float__ico-open { display: none; }',
     '  .floating-btns.is-open .sa-float__ico-close { display: block; }',
     '  .floating-btns.is-hero { opacity: 0; visibility: hidden; }',
+    // 맨 아래까지 내려도 바닥글 마지막 줄·링크가 접힌 버튼(48px + 아래 16px)에 가리지 않게 바닥글 안쪽 맨 아래에 빈 공간
+    '  .sa-float-pad::after { content: ""; display: block; height: calc(72px + env(safe-area-inset-bottom, 0px)); }',
     '}'
   ];
 
@@ -245,14 +247,18 @@
     var box = document.createElement('div');
     box.className = 'floating-btns';
     box.innerHTML = '<div class="sa-float__list" id="sa-float-list">' + FLOAT_LINKS + '</div>' +
-      '<button type="button" class="sa-float__toggle" aria-expanded="false" aria-controls="sa-float-list" aria-label="채널 바로가기 열기">' + FLOAT_TOGGLE_ICONS + '</button>';
+      '<button type="button" class="sa-float__toggle" aria-expanded="false" aria-controls="sa-float-list" aria-label="채널 바로가기">' + FLOAT_TOGGLE_ICONS + '</button>';
+    // 채널 버튼 3개는 그림만 있어 화면 읽기 프로그램용 이름을 title(유튜브·카카오톡·인스타그램)에서 붙인다
+    Array.prototype.forEach.call(box.querySelectorAll('.float-btn'), function (a) { a.setAttribute('aria-label', a.title); });
     document.body.appendChild(box);
+    // 페이지 마지막 바닥글(리뉴얼 #site-footer 의 footer, 옛 페이지의 footer)에 모바일용 아래 공간
+    var footers = document.querySelectorAll('footer');
+    if (footers.length) footers[footers.length - 1].classList.add('sa-float-pad');
 
     var btn = box.querySelector('.sa-float__toggle');
-    function setOpen(open) {
+    function setOpen(open) {             // 펼침/접힘은 aria-expanded 로 알린다(이름은 「채널 바로가기」 그대로)
       box.classList.toggle('is-open', open);
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      btn.setAttribute('aria-label', open ? '채널 바로가기 닫기' : '채널 바로가기 열기');
     }
     btn.addEventListener('click', function () { setOpen(!box.classList.contains('is-open')); });
     box.addEventListener('click', function (e) {                       // 채널을 누르면(새 창) 접어 둔다

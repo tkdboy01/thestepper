@@ -121,32 +121,6 @@
 
 <script src="js/stepper-layout.js"></script>
 <script>
-function toggleAccordion(header) {
-  var item = header.parentElement;
-  var body = item.querySelector('.accordion-body');
-  var arrow = header.querySelector('.accordion-arrow');
-  var isOpen = item.classList.contains('open');
-  var parent = item.parentElement;
-  parent.querySelectorAll('.accordion-item.open').forEach(function(el) {
-    if (el !== item) {
-      el.classList.remove('open');
-      var b = el.querySelector('.accordion-body');
-      var a = el.querySelector('.accordion-arrow');
-      if (b) b.style.maxHeight = '0';
-      if (a) a.style.transform = 'rotate(0deg)';
-    }
-  });
-  if (isOpen) {
-    item.classList.remove('open');
-    if (body) body.style.maxHeight = '0';
-    if (arrow) arrow.style.transform = 'rotate(0deg)';
-  } else {
-    item.classList.add('open');
-    if (body) body.style.maxHeight = body.scrollHeight + 'px';
-    if (arrow) arrow.style.transform = 'rotate(180deg)';
-  }
-}
-
 function switchTab(btn, tabName) {
   btn.closest('.schedule-tabs').querySelectorAll('.schedule-tab').forEach(function(b){
     b.classList.remove('active');
@@ -155,17 +129,6 @@ function switchTab(btn, tabName) {
   document.getElementById('panel-upcoming').style.display = tabName === 'upcoming' ? '' : 'none';
   document.getElementById('panel-past').style.display = tabName === 'past' ? '' : 'none';
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.accordion-body').forEach(function(body) {
-    body.style.maxHeight = '0';
-    body.style.overflow = 'hidden';
-    body.style.transition = 'max-height 0.3s ease';
-  });
-  document.querySelectorAll('.accordion-arrow').forEach(function(arrow) {
-    arrow.style.transition = 'transform 0.3s ease';
-  });
-});
 </script>
 
 <script type="module">
@@ -215,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var upEl = document.getElementById('upcomingList');
       upEl.innerHTML = upcoming.length > 0
         ? upcoming.map(makeCard).join('')
-        : '<div style="text-align:center;padding:40px;color:#333;font-size:14px">예정된 세미나가 없습니다.</div>';
+        : '<div class="sc-empty"><p>예정된 세미나가 없습니다.</p><p>일정이 정해지면 이곳에 안내합니다.</p><div class="sa-btns"><a class="sa-btn sa-btn--black" href="contact.html#seminar">세미나 신청·문의</a></div></div>';
 
       // 지난 일정 (날짜 내림차순)
       var paEl = document.getElementById('pastList');
@@ -234,20 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   loadSchedules();
-</script>
-<script>
-// 예정 일정이 없을 때의 안내를 리뉴얼 모양으로 (2026-10-29).
-// loadSchedules 코드는 그대로 두고, 그 함수가 "예정된 세미나가 없습니다." 안내를 넣으면 이 블록으로 바꿔 끼운다.
-(function () {
-  var list = document.getElementById('upcomingList');
-  if (!list || !window.MutationObserver) return;
-  var EMPTY = '<div class="sc-empty"><p>예정된 세미나가 없습니다.</p><p>일정이 정해지면 이곳에 안내합니다.</p>' +
-    '<div class="sa-btns"><a class="sa-btn sa-btn--black" href="contact.html#seminar">세미나 신청·문의</a></div></div>';
-  new MutationObserver(function () {
-    if (list.querySelector('.schedule-item, .sc-empty')) return;
-    if (list.textContent.indexOf('예정된 세미나가 없습니다') >= 0) list.innerHTML = EMPTY;
-  }).observe(list, { childList: true });
-})();
 </script>
 
 <!-- 관리자 전용 메뉴 표시 제어 (상세 주석은 admin-nav.js 참고) -->

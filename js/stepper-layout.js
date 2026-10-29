@@ -222,13 +222,13 @@
     '.float-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }',
     '.float-youtube { background: #FF0000; }',
     '.sa-float__toggle { display: none; }',
-    // 모바일 — 접힌 버튼 1개, 펼치면 3개가 그 위로
+    // 모바일 — 접힌 버튼 1개, 펼치면 3개가 그 위로. 접힌 버튼의 옅은 흰 테두리는 검은 바닥글 위에서도 보이게 하려는 것
     '@media (max-width: 760px) {',
     '  .floating-btns { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); right: 16px; transition: opacity 0.2s, visibility 0.2s; }',
     '  .sa-float__list { position: absolute; right: 1px; bottom: calc(100% + 10px); transition: opacity 0.2s, transform 0.2s, visibility 0.2s; }',
     '  .floating-btns:not(.is-open) .sa-float__list { opacity: 0; visibility: hidden; transform: translateY(12px); }',
     '  .float-btn { width: 46px; height: 46px; }',
-    '  .sa-float__toggle { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: #111; color: #fff; cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.18); -webkit-tap-highlight-color: transparent; }',
+    '  .sa-float__toggle { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: #111; color: #fff; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,0.35), 0 2px 12px rgba(0,0,0,0.18); -webkit-tap-highlight-color: transparent; }',
     '  .sa-float__ico-close, .floating-btns.is-open .sa-float__ico-open { display: none; }',
     '  .floating-btns.is-open .sa-float__ico-close { display: block; }',
     '  .floating-btns.is-hero { opacity: 0; visibility: hidden; }',

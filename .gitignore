@@ -21,3 +21,9 @@ backups/
 
 # 갤러리 미리보기 도구 의존성
 tools/gallery-previews/node_modules/
+
+# Firebase 에뮬레이터·CLI 디버그 로그 — 커밋 금지
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
+*-debug.log

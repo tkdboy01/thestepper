@@ -1,0 +1,29 @@
+# 줄바꿈 규칙 (2026-10-29) — 저장소와 작업 파일 모두 LF.
+# 이 PC 의 git 설정(core.autocrlf=true)이 있어도 텍스트 파일은 LF 로 꺼내고 LF 로 저장한다.
+* text=auto eol=lf
+
+# 바이너리 — 줄바꿈을 바꾸지 않고 diff 도 하지 않는다
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.ai    binary
+*.psd   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.hwp   binary
+*.hwpx  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.mp4   binary
+*.mov   binary
+*.mp3   binary
+*.wav   binary
+*.wfp   binary
